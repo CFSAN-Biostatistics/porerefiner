@@ -7,8 +7,13 @@ from .notifiers import REGISTRY, NOTIFIERS
 
 config_file = Path(environ.get('POREREFINER_CONFIG', '/etc/porerefiner/config/config.yml'))
 
+
+#Logging
+log = log.getLogger('config')
+
 try:
     config = yaml.load(config_file)
+    log.info(f"Config file loaded from {config_file}")
 
 except OSError:
     log.warning(f'No config file at {config_file}, creating...')

@@ -2,10 +2,16 @@
 
 """Main module."""
 
+from .config import config
+
 import asyncio
 import aiohttp
 import hachiko
 import watchdog
+
+from logging import log
+
+log.getLogger('service')
 
 def register_new_run(path): #TODO
     pass
