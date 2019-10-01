@@ -11,11 +11,21 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = ['Click>=7.0', ]
+requirements = ['Click>=7.0',
+                'flask>=1.1.1',
+                'peewee>=3.11.2',
+                'fabric>=2.5.0',
+                'asyncio>=3.4.3',
+                'gunicorn>=19.9.0',
+                'watchdog>=0.9.0',
+                'hachiko>=0.2.0',
+                'aiohttp>=3.6.1',
+                'namesgenerator>=0.3'
+                ]
 
 setup_requirements = [ ]
 
-test_requirements = [ ]
+test_requirements = [ 'hypothesis>=4.38.0', ]
 
 setup(
     author="Justin Payne",
@@ -36,7 +46,7 @@ setup(
     description="To help you manage your pores",
     entry_points={
         'console_scripts': [
-            'porerefiner=porerefiner.cli:main',
+            'porerefiner=porerefiner.cli:cli',
         ],
     },
     install_requires=requirements,
