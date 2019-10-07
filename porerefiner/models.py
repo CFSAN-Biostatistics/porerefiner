@@ -34,6 +34,14 @@ class Run(PorerefinerModel): #TODO
         "Docker-style random name from namesgenerator"
         return namesgenerator.get_random_name()
 
+class QA(PorerefinerModel): #TODO
+    "A QA is a set of quality-control analysis metrics"
+
+    pk = AutoField()
+    coverage = FloatField()
+    quality = FloatField()
+
+
 class File(PorerefinerModel): #TODO
     "A file is a path on the filesystem"
     pk = AutoField()

@@ -24,8 +24,8 @@ class Notifier(metaclass=_MetaRegistry):
         raise NotImplementedError('Notifier not implemented.')
 
     @classmethod
-    def to_yaml(cls):
-
+    def to_yaml(cls): #TODO
+        pass
 
 
 

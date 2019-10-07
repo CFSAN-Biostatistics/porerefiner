@@ -21,7 +21,8 @@ requirements = ['Click>=7.0',
                 'hachiko>=0.2.0',
                 'aiohttp>=3.6.1',
                 'namesgenerator>=0.3',
-                'python-daemon>=2.2.3'
+                'python-daemon>=2.2.3',
+                'protobuf>=3.10.0'
                 ]
 
 setup_requirements = [ ]
