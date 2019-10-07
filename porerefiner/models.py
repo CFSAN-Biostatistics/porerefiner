@@ -1,6 +1,7 @@
 from peewee import *
-from config import config
+from porerefiner.config import config
 
+import asyncio
 import namesgenerator
 
 class PorerefinerModel(Model):
@@ -23,6 +24,10 @@ class Run(PorerefinerModel): #TODO
     library_id = CharField()
     run_human_name = CharField(default = Run.create_readable_name)
     status = CharField(choices=PorerefinerModel.statuses)
+    path = CharField(index=True)
+    flowcell_type = CharField()
+    flowcell_id = CharField()
+    basecalling_model = CharField()
 
     @staticmethod
     def create_readable_name():
@@ -34,6 +39,7 @@ class File(PorerefinerModel): #TODO
     pk = AutoField()
     run = ForeignKeyField(Run, backref='files')
     path = CharField(index=True)
+    checksum = CharField(index=True)
 
 
 class Job(PorerefinerModel): #TODO
@@ -47,19 +53,35 @@ class SampleSheet(PorerefinerModel): #TODO
     pk = AutoField()
     path = CharField(index=True)
     run = ForeignKeyField(Run, backref='samplesheet', unique=True, null=True)
+    date = DateField()
+    sequencing_kit = CharField()
 
     @classmethod
-    def from_csv(cls, path_to_file, delimiter=','):
+    async def from_csv(cls, path_to_file, delimiter=','):
         "import a sample sheet in csv/tsv format"
         pass
 
     @classmethod
-    def from_excel(cls, path_to_file):
+    async def from_excel(cls, path_to_file):
         "import a sample sheet in xlsx format"
         pass
 
 class Sample(PorerefinerModel): #TODO
     "A sample is an entry originally from a sample sheet"
+
+    BARCODES = {}
+
     pk = AutoField()
     name = CharField()
+    barcode_id = IntegerField()
+    cfsan_id = CharField(null=False)
+    serotype = CharField()
+    extraction_kit = CharField()
+
+
+
     samplesheet = ForeignKeyField(SampleSheet, backref='samples')
+
+    @property
+    def barcode_seq(self):
+        return self.BARCODES.get(self.barcode_id, "")

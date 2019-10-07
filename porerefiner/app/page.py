@@ -1,4 +1,4 @@
-from app.main import app
+from porerefiner.app.main import app
 
 @app.route('/')
 def index(): #TODO - make a webpage

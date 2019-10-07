@@ -1,5 +1,4 @@
-
-from notifiers import states, Notifier
+from porerefiner.notifiers import states, Notifier
 from logging import log
 
 class SqsNotifier(Notifier): #TODO

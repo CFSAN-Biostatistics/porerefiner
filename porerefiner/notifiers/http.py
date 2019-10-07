@@ -1,4 +1,4 @@
-from notifiers import Notifier
+from porerefiner.notifiers import Notifier
 
 class HttpCallbackNotifier(Notifier):
 

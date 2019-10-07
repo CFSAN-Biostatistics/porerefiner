@@ -12,7 +12,8 @@ config_file = Path(environ.get('POREREFINER_CONFIG', '/etc/porerefiner/config/co
 log = log.getLogger('config')
 
 try:
-    config = yaml.load(config_file)
+    with open(config_file, 'r') as conf:
+        config = yaml.load(conf)
     log.info(f"Config file loaded from {config_file}")
 
 except OSError:
@@ -22,11 +23,13 @@ except OSError:
     defaults = tree()
     defaults['db'] = '/etc/porerefiner/database.db'
     defaults['socket'] = '/var/run/porerefiner'
+    defaults['nanopore_output_path'] = '///gridion/stuff'
     defaults['notifiers'] = [{'class':'ToastNotifier', 'config':dict(name='Default notifier', max=3)}]
     defaults['minknow_api'] = "https://localhost:9999"
+    defaults['log_level'] = logging.INFO
     # defaults['']['']
-
-    yaml.dump(defaults, config_file)
+    with open(config_file, 'w') as conf:
+        yaml.dump(defaults, conf)
 
 except yaml.YAMLError as e:
     log.error(f"Couldn't read config file at {config_file}, error was:")
@@ -44,5 +47,12 @@ for notifier_config in config['notifiers']:
     log.info(f"Found notifier {notifier_config['config']['name']}")
     notifier = REGISTRY[notifier_config['class']](**notifier_config['config'])
     NOTIFIERS.append(notifier)
+
+
+def add_notifier_stub(notifier_cls):
+    cp = config.copy() #we don't want the stub to actually take effect until reload
+    cp['notifiers'].append(notifier_cls.toStub())
+    with open(config_file, 'w') as conf:
+        yaml.dump(cp, conf)
 
 

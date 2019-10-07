@@ -20,7 +20,8 @@ requirements = ['Click>=7.0',
                 'watchdog>=0.9.0',
                 'hachiko>=0.2.0',
                 'aiohttp>=3.6.1',
-                'namesgenerator>=0.3'
+                'namesgenerator>=0.3',
+                'python-daemon>=2.2.3'
                 ]
 
 setup_requirements = [ ]
@@ -46,7 +47,7 @@ setup(
     description="To help you manage your pores",
     entry_points={
         'console_scripts': [
-            'porerefiner=porerefiner.cli:cli',
+            'prfr=porerefiner.cli:cli',
         ],
     },
     install_requires=requirements,

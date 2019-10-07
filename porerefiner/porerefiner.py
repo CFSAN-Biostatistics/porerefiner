@@ -6,6 +6,7 @@ from .config import config
 
 import asyncio
 import aiohttp
+import daemon
 import hachiko
 import watchdog
 
@@ -35,3 +36,24 @@ def poll_active_run(): #TODO
 
 def end_run(run): #TODO
     "Put run in closed status"
+
+
+class PoreRefinerFSEventhandler(hachiko.hachiko.AIOEventHandler):
+
+    def on_created(self, event):
+        pass
+
+    def on_modified(self, event):
+        pass
+
+def setup():
+    "Initialize stuff"
+
+def main(): #TODO
+    "Main event loop and async"
+
+
+if __name__ == '__main__':
+    setup()
+    with daemon.DaemonContext():
+        main()
