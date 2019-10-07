@@ -23,6 +23,10 @@ class Notifier(metaclass=_MetaRegistry):
     def notify(self, *args):
         raise NotImplementedError('Notifier not implemented.')
 
+    @classmethod
+    def to_yaml(cls):
+
+
 
 
 NOTIFIERS = []
