@@ -13,6 +13,7 @@ import purerpc
 import watchdog
 
 from logging import log
+from peewee import JOIN
 from porerefiner.models import Run, QA, File, Job, SampleSheet, Sample
 from porerefiner.cli_utils import relativize_path as r, absolutize_path as a
 from os.path import split
@@ -37,6 +38,13 @@ async def register_new_run(path): #TODO
 
     run.save()
 
+    query = SampleSheet.select().where(SampleSheet.run == None)
+    if query.count() == 1:
+        #if there's an unattached sheet, attach it to this run
+        sheet = query.next()
+        sheet.run = run
+        sheet.save()
+
 
 
 
@@ -51,9 +59,27 @@ async def get_run_info(run_id): #TODO
         raise ValueError(f"Run id or name '{run_id}' not found.")
     return run.to_json()
 
-async def attach_samplesheet_to_run(sheet, run=None): #TODO
+async def attach_samplesheet_to_run(sheet, run_id=None): #TODO
     "Determine file format of sample sheet and load"
-    pass
+    if '.xls' in sheet:
+        sheet = await SampleSheet.from_excel(sheet)
+    else:
+        sheet = await SampleSheet.from_csv(sheet)
+    if run_id:
+        run = Run.get_or_none(Run.pk == run_id)
+        if not run:
+            run = Run.get_or_none(Run.human_name == run_id)
+        if not run:
+            raise ValueError(f"Run id or name '{run_id}' not found.")
+        sheet.run = run
+    else:
+        #find unassociated run
+        query = Run.query().join(SampleSheet, JOIN.OUTER_JOIN).where(SampleSheet.pk == None, Run.status == 'RUNNING')
+        if query.count() == 1:
+            sheet.run = query.next()
+    sheet.save()
+
+
 
 async def list_runs(): #TODO
     return [run.to_json() for run in Run.select()]
@@ -86,11 +112,13 @@ class PoreRefinerFSEventhandler(hachiko.hachiko.AIOEventHandler):
                 fi.last_modified = datetime.datetime.now()
                 fi.save()
 
-def setup():
+def setup(): #TODO
     "Initialize stuff"
+    pass
 
 def main(): #TODO
     "Main event loop and async"
+    pass
 
 
 if __name__ == '__main__':

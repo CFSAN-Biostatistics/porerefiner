@@ -27,6 +27,7 @@ class Run(PorerefinerModel): #TODO
     pk = AutoField()
     library_id = CharField()
     human_name = CharField(default = Run.create_readable_name)
+    started = DateTimeField(default = datetime.datetime.now)
     status = CharField(choices=PorerefinerModel.statuses)
     path = CharField(index=True)
     flowcell_type = CharField()
