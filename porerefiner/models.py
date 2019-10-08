@@ -2,6 +2,7 @@ from peewee import *
 from porerefiner.config import config
 
 import asyncio
+import datetime
 import namesgenerator
 
 class PorerefinerModel(Model):
@@ -16,13 +17,16 @@ class PorerefinerModel(Model):
                 ('DONE', 'Ended'),
                 ('FAILED', 'Ended with Failure'))
 
+    def to_json(self):
+        pass
+
 
 class Run(PorerefinerModel): #TODO
     "A run is an annotated collection of files being produced"
 
     pk = AutoField()
     library_id = CharField()
-    run_human_name = CharField(default = Run.create_readable_name)
+    human_name = CharField(default = Run.create_readable_name)
     status = CharField(choices=PorerefinerModel.statuses)
     path = CharField(index=True)
     flowcell_type = CharField()
@@ -40,14 +44,6 @@ class QA(PorerefinerModel): #TODO
     pk = AutoField()
     coverage = FloatField()
     quality = FloatField()
-
-
-class File(PorerefinerModel): #TODO
-    "A file is a path on the filesystem"
-    pk = AutoField()
-    run = ForeignKeyField(Run, backref='files')
-    path = CharField(index=True)
-    checksum = CharField(index=True)
 
 
 class Job(PorerefinerModel): #TODO
@@ -93,3 +89,14 @@ class Sample(PorerefinerModel): #TODO
     @property
     def barcode_seq(self):
         return self.BARCODES.get(self.barcode_id, "")
+
+
+
+class File(PorerefinerModel): #TODO
+    "A file is a path on the filesystem"
+    pk = AutoField()
+    run = ForeignKeyField(Run, backref='files')
+    sample = ForeignKeyField(Sample, backref='files', null=True)
+    path = CharField(index=True, unique=True)
+    checksum = CharField(index=True)
+    last_modified = DateTimeField(default=datetime.datetime.now)

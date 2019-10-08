@@ -2,6 +2,15 @@
 
 import click
 
+#these two functions are hooks in case we decide to store only relative paths.
+#paths going into the database will be relativized; paths going out will be
+#absolutized.
+#Whatever they do, they need to invert each other
+def relativize_path(path):
+    return path
+
+def absolutize_path(path):
+    return path
 
 class RunID:
     "can be either a string name or a numeric id"
