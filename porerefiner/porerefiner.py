@@ -17,11 +17,20 @@ from peewee import JOIN
 from porerefiner.models import Run, QA, File, Job, SampleSheet, Sample
 from porerefiner.cli_utils import relativize_path as r, absolutize_path as a
 from os.path import split
+from os import remove
 
 from porerefiner.minknow_api.minknow.rpc.manager_pb2 import ManagerStub #probably not right
 
 log.getLogger('service')
 
+
+def get_run(run_id):
+    run = Run.get_or_none(Run.pk == run_id)
+    if not run:
+        run = Run.get_or_none(Run.human_name == run_id)
+    if not run:
+        raise ValueError(f"Run id or name '{run_id}' not found.")
+    return run
 
 async def register_new_run(path): #TODO
 
@@ -48,30 +57,43 @@ async def register_new_run(path): #TODO
 
 
 
-async def clean_up_run(run): #TODO
-    pass
+async def clean_up_run(run_id):
+    def delete_file(file_records):
+        for file_record in file_records:
+            try:
+                remove(a(file_record.path))
+            except OSError as e:
+                if e.errno != 2:
+                    raise
+    run = get_run(run_id)
+    await asyncio.get_running_loop().run_in_executor(
+        None,
+        delete_file,
+        run.files
+    )
+    File.delete().where(File.run == run)
+    remove(a(run.path))
+    run.delete()
 
-async def get_run_info(run_id): #TODO
-    run = Run.get_or_none(Run.pk == run_id)
-    if not run:
-        run = Run.get_or_none(Run.human_name == run_id)
-    if not run:
-        raise ValueError(f"Run id or name '{run_id}' not found.")
-    return run.to_json()
 
-async def attach_samplesheet_to_run(sheet, run_id=None): #TODO
+
+
+async def get_run_info(run_id):
+    return get_run(run_id).to_json()
+
+async def attach_samplesheet_to_run(sheet, run_id=None):
     "Determine file format of sample sheet and load"
     if '.xls' in sheet:
         sheet = await SampleSheet.from_excel(sheet)
     else:
         sheet = await SampleSheet.from_csv(sheet)
     if run_id:
-        run = Run.get_or_none(Run.pk == run_id)
-        if not run:
-            run = Run.get_or_none(Run.human_name == run_id)
-        if not run:
-            raise ValueError(f"Run id or name '{run_id}' not found.")
-        sheet.run = run
+        # run = Run.get_or_none(Run.pk == run_id)
+        # if not run:
+        #     run = Run.get_or_none(Run.human_name == run_id)
+        # if not run:
+        #     raise ValueError(f"Run id or name '{run_id}' not found.")
+        sheet.run = get_run(run_id)
     else:
         #find unassociated run
         query = Run.query().join(SampleSheet, JOIN.OUTER_JOIN).where(SampleSheet.pk == None, Run.status == 'RUNNING')
@@ -82,7 +104,7 @@ async def attach_samplesheet_to_run(sheet, run_id=None): #TODO
 
 
 async def list_runs(): #TODO
-    return [run.to_json() for run in Run.select()]
+    return [run.to_json() async for run in Run.select()]
 
 async def poll_active_run(): #TODO
     "Scan run in progress, check for updated files, check for stale files, dispatch demultiplexing jobs"
