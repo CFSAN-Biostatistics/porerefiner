@@ -12,6 +12,8 @@ import hachiko
 import purerpc
 import watchdog
 
+from grpclib.server import Server
+from grpclib.utils import graceful_exit
 from logging import log
 from peewee import JOIN
 from porerefiner.models import Run, QA, File, Job, SampleSheet, Sample
@@ -19,10 +21,11 @@ from porerefiner.cli_utils import relativize_path as r, absolutize_path as a
 from os.path import split
 from os import remove
 
-from porerefiner.minknow_api.minknow.rpc.manager_pb2 import ManagerStub #probably not right
+from porerefiner.protocols.minknow.rpc.manager_pb2 import ManagerServiceStub #probably not right
+from porerefiner.protocols.porerefiner.rpc.porerefiner_pb2 import Run as RunMessage, File as FileMessage
+from porerefiner.protocols.porerefiner.rpc.porerefiner_grpc import PoreRefinerBase
 
 log.getLogger('service')
-
 
 def get_run(run_id):
     run = Run.get_or_none(Run.pk == run_id)
@@ -56,7 +59,7 @@ async def register_new_run(path): #TODO
 
 
 
-
+#Have to decide whether to keep this - we could just track FS events and clean up runs that way.
 async def clean_up_run(run_id):
     def delete_file(file_records):
         for file_record in file_records:
@@ -79,7 +82,7 @@ async def clean_up_run(run_id):
 
 
 async def get_run_info(run_id):
-    return get_run(run_id).to_json()
+    return RunMessage(**vars(get_run(run_id)))
 
 async def attach_samplesheet_to_run(sheet, run_id=None):
     "Determine file format of sample sheet and load"
@@ -104,7 +107,7 @@ async def attach_samplesheet_to_run(sheet, run_id=None):
 
 
 async def list_runs(): #TODO
-    return [run.to_json() async for run in Run.select()]
+    return [RunMessage(**vars(run)) async for run in Run.select()]
 
 async def poll_active_run(): #TODO
     "Scan run in progress, check for updated files, check for stale files, dispatch demultiplexing jobs"
@@ -115,8 +118,8 @@ async def end_run(run): #TODO
     pass
 
 
-class PoreRefinerFSEventhandler(hachiko.hachiko.AIOEventHandler):
-
+class PoreRefinerFSEventHandler(hachiko.hachiko.AIOEventHandler):
+    "Eventhandler for file system events via Hachiko/Watchdog"
     async def on_created(self, event):
         "New run folder, or new file in run"
         if event.is_directory:
@@ -134,16 +137,35 @@ class PoreRefinerFSEventhandler(hachiko.hachiko.AIOEventHandler):
                 fi.last_modified = datetime.datetime.now()
                 fi.save()
 
-def setup(): #TODO
-    "Initialize stuff"
+    def on_deleted(self, event): #TODO
+        "Update database if files are deleted."
+        pass
+
+class PoreRefinerDispatchServer(PoreRefinerBase):
+    "Eventhandler for RPC events coming from command line or Flask app"
     pass
 
-def main(): #TODO
+async def start_server(socket):
+    server = Server([PoreRefinerDispatchServer()])
+    with graceful_exit([server]):
+        await server.start(socket)
+        log.info(f"RPC server listening on {socket}...")
+        await server.wait_closed()
+        log.info(f"RPC server shutting down.")
+
+async def start_fs_watchdog(nanopore_output_path):
+    watcher = hachiko.hachiko.AIOWatchdog(nanopore_output_path, event_handler=PoreRefinerFSEventHandler())
+    await watcher.start()
+    log.info(f"Filesystem events being watched in {nanopore_output_path}...")
+    await watcher.stop()
+    log.info(f"Filesystem event watcher shutting down.")
+
+def main():
     "Main event loop and async"
-    pass
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(asyncio.gather(start_server(), start_fs_watchdog()))
 
 
 if __name__ == '__main__':
-    setup()
     with daemon.DaemonContext():
         main()

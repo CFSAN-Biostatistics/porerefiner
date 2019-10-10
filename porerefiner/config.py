@@ -19,7 +19,7 @@ try:
 except OSError:
     log.warning(f'No config file at {config_file}, creating...')
     from collections import defaultdict
-    tree = lambda: defaultdict(tree)
+    tree = lambda: defaultdict(tree) #this is a trick for defining a recursive defaultdict
     defaults = tree()
     defaults['db'] = '/etc/porerefiner/database.db'
     defaults['socket'] = '/var/run/porerefiner'
@@ -30,6 +30,8 @@ except OSError:
     # defaults['']['']
     with open(config_file, 'w') as conf:
         yaml.dump(defaults, conf)
+
+    config = defaults
 
 except yaml.YAMLError as e:
     log.error(f"Couldn't read config file at {config_file}, error was:")

@@ -27,6 +27,7 @@ class Run(PorerefinerModel): #TODO
     pk = AutoField()
     library_id = CharField()
     human_name = CharField(default = Run.create_readable_name)
+    run_id = CharField(null=True)
     started = DateTimeField(default = datetime.datetime.now)
     status = CharField(choices=PorerefinerModel.statuses)
     path = CharField(index=True)
@@ -79,6 +80,7 @@ class Sample(PorerefinerModel): #TODO
     pk = AutoField()
     name = CharField()
     barcode_id = IntegerField()
+    #barcode_seq = CharField() #maybe set this when we load a sheet
     cfsan_id = CharField(null=False)
     serotype = CharField()
     extraction_kit = CharField()
