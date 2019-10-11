@@ -1,8 +1,105 @@
-syntax = "proto2";
+syntax = "proto3";
 
-package porerefiner;
+package porerefiner.rpc;
 
-message Run{
 
+
+
+message Run {
+    int32 id = 1;
+    string name = 2;
+    string mnemonic_name =  3;
+    string library_id = 4;
+    string status = 5;
+    string path = 6;
+    string flowcell_type = 7;
+    string flowcell_id = 8;
+    string basecalling_mdel = 9;
+    string sequencing_kit = 10;
+
+    message Sample {
+
+        int32 id = 1;
+        string name = 2;
+        string accession = 3;
+        string barcode_id = 4;
+        string barcode_seq = 5;
+        string organism = 6;
+        string extraction_kit = 7;
+        string comment = 8;
+        string user = 9;
+
+        message File {
+            string name = 1;
+            string spot_id = 2;
+            uint64 size = 3;
+            bool ready = 4;
+
+            repeated string tags = 30;
+        }
+
+        repeated File files = 20;
+        repeated string tags = 30;
+    }
+
+
+    repeated Sample samples = 20;
+    repeated string tags = 30;
+
+}
+
+message RunListRequest {
+
+}
+
+message RunList {
+
+    repeated Run runs = 1;
+
+}
+
+message RunRequest {
+    oneof term {
+        uint32 id = 1;
+        string name = 2;
+    }
+}
+
+message RunRsyncRequest {
+    oneof term {
+        uint32 id = 1;
+        string name = 2;
+    }
+    string dest = 3;
+}
+
+message RunRsyncResponse {
+
+}
+
+message RunAttachRequest {
+    oneof term {
+        uint32 id = 1;
+        string name = 2;
+    }
+    oneof sheet {
+        string path = 3;
+        bytes file = 4;
+    }
+}
+
+message RunAttachResponse {
+
+}
+
+service PoreRefiner {
+
+    rpc GetRuns (RunListRequest) returns (RunList);
+
+    rpc GetRunInfo (RunRequest) returns (Run);
+
+    rpc AttachSheetToRun (RunAttachRequest) returns (RunAttachResponse);
+
+    rpc RsyncRunTo (RunRsyncRequest) returns (RunRsyncResponse);
 
 }

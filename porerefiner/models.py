@@ -5,10 +5,17 @@ import asyncio
 import datetime
 import namesgenerator
 
+class Tag(Model):
+    "A tag is an informal annotation"
+
+    name = CharField()
+
 class PorerefinerModel(Model):
     "Abstract base class for PoreRefiner models"
     class Meta:
         db = SqliteDatabase(config['db'])
+
+    tags = ManyToManyField(Tag)
 
     statuses = (('READY', 'Ready to Run'),
                 ('QUEUED', 'Scheduled to Run')
@@ -29,11 +36,17 @@ class Run(PorerefinerModel): #TODO
     human_name = CharField(default = Run.create_readable_name)
     run_id = CharField(null=True)
     started = DateTimeField(default = datetime.datetime.now)
+    ended = DateTimeField(null=True, default=None)
     status = CharField(choices=PorerefinerModel.statuses)
     path = CharField(index=True)
     flowcell_type = CharField()
     flowcell_id = CharField()
     basecalling_model = CharField()
+
+    @property
+    def run_duration(self):
+        if self.ended:
+            return self.ended - self.started
 
     @staticmethod
     def create_readable_name():
@@ -78,12 +91,15 @@ class Sample(PorerefinerModel): #TODO
     BARCODES = {}
 
     pk = AutoField()
-    name = CharField()
+    sample_id = CharField(null=False)
+    accession = CharField()
     barcode_id = IntegerField()
     #barcode_seq = CharField() #maybe set this when we load a sheet
-    cfsan_id = CharField(null=False)
-    serotype = CharField()
+    organism = CharField()
     extraction_kit = CharField()
+    comment = CharField()
+    user = CharField()
+
 
 
 
@@ -103,3 +119,4 @@ class File(PorerefinerModel): #TODO
     path = CharField(index=True, unique=True)
     checksum = CharField(index=True)
     last_modified = DateTimeField(default=datetime.datetime.now)
+

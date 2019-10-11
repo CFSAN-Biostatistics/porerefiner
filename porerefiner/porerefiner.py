@@ -22,10 +22,10 @@ from os.path import split
 from os import remove
 
 from porerefiner.protocols.minknow.rpc.manager_pb2 import ManagerServiceStub #probably not right
-from porerefiner.protocols.porerefiner.rpc.porerefiner_pb2 import Run as RunMessage, File as FileMessage
-from porerefiner.protocols.porerefiner.rpc.porerefiner_grpc import PoreRefinerBase
+from porerefiner.protocols.porerefiner.porerefiner_pb2 import Run as RunMessage, File as FileMessage
+from porerefiner.protocols.porerefiner.porerefiner_grpc import PoreRefinerBase
 
-log.getLogger('service')
+log.getLogger('porerefiner.service')
 
 def get_run(run_id):
     run = Run.get_or_none(Run.pk == run_id)
@@ -42,6 +42,8 @@ async def register_new_run(path): #TODO
     async with purerpc.insecure_channel(config['minknow_api']) as channel:
         client = ManagerStub(channel)
         reply = await client.DoSomething(path)
+
+    #somehow need to link to the correct run - is it just the current run in progress?
 
     run.library_id = reply.LibraryID #probably doesn't work
     run.flowcell_type = reply.FlowcellType
@@ -60,23 +62,23 @@ async def register_new_run(path): #TODO
 
 
 #Have to decide whether to keep this - we could just track FS events and clean up runs that way.
-async def clean_up_run(run_id):
-    def delete_file(file_records):
-        for file_record in file_records:
-            try:
-                remove(a(file_record.path))
-            except OSError as e:
-                if e.errno != 2:
-                    raise
-    run = get_run(run_id)
-    await asyncio.get_running_loop().run_in_executor(
-        None,
-        delete_file,
-        run.files
-    )
-    File.delete().where(File.run == run)
-    remove(a(run.path))
-    run.delete()
+# async def clean_up_run(run_id):
+#     def delete_file(file_records):
+#         for file_record in file_records:
+#             try:
+#                 remove(a(file_record.path))
+#             except OSError as e:
+#                 if e.errno != 2:
+#                     raise
+#     run = get_run(run_id)
+#     await asyncio.get_running_loop().run_in_executor(
+#         None,
+#         delete_file,
+#         run.files
+#     )
+#     File.delete().where(File.run == run)
+#     remove(a(run.path))
+#     run.delete()
 
 
 
@@ -130,22 +132,37 @@ class PoreRefinerFSEventHandler(hachiko.hachiko.AIOEventHandler):
             run = Run.get(Run.path == r(containing_folder))
             fi = File.create(run=run, path=r(event.src_path))
 
-    def on_modified(self, event):
+    async def on_modified(self, event):
         if not event.is_directory: #we don't care about directory modifications
             fi = File.get_or_none(File.path == r(event.src_path))
             if fi:
                 fi.last_modified = datetime.datetime.now()
                 fi.save()
 
-    def on_deleted(self, event): #TODO
+    async def on_deleted(self, event): #TODO
         "Update database if files are deleted."
-        pass
+        if event.is_dictionary:
+            Run.delete().where(Run.path == r(event.src_path))
+        else:
+            File.delete().where(File.path == r(event.src_path))
 
 class PoreRefinerDispatchServer(PoreRefinerBase):
     "Eventhandler for RPC events coming from command line or Flask app"
-    pass
 
-async def start_server(socket):
+    async def GetRuns(self, stream: 'grpclib.server.Stream[porerefiner_pb2.RunListRequest, porerefiner_pb2.RunList]') -> None:
+        pass
+
+    async def GetRunInfo(self, stream: 'grpclib.server.Stream[porerefiner_pb2.RunRequest, porerefiner_pb2.Run]') -> None:
+        pass
+
+    async def AttachSheetToRun(self, stream: 'grpclib.server.Stream[porerefiner_pb2.RunAttachRequest, porerefiner_pb2.RunAttachResponse]') -> None:
+        pass
+
+    async def RsyncRunTo(self, stream: 'grpclib.server.Stream[porerefiner_pb2.RunRsyncRequest, porerefiner_pb2.RunRsyncResponse]') -> None:
+        pass
+
+async def start_server(socket, *a, **k):
+    "Coroutine to bring up the rpc server"
     server = Server([PoreRefinerDispatchServer()])
     with graceful_exit([server]):
         await server.start(socket)
@@ -153,7 +170,8 @@ async def start_server(socket):
         await server.wait_closed()
         log.info(f"RPC server shutting down.")
 
-async def start_fs_watchdog(nanopore_output_path):
+async def start_fs_watchdog(nanopore_output_path, *a, **k):
+    "Coroutine to bring up the filesystem watchdog"
     watcher = hachiko.hachiko.AIOWatchdog(nanopore_output_path, event_handler=PoreRefinerFSEventHandler())
     await watcher.start()
     log.info(f"Filesystem events being watched in {nanopore_output_path}...")
@@ -163,7 +181,7 @@ async def start_fs_watchdog(nanopore_output_path):
 def main():
     "Main event loop and async"
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(asyncio.gather(start_server(), start_fs_watchdog()))
+    loop.run_until_complete(asyncio.gather(start_server(**config), start_fs_watchdog(**config)))
 
 
 if __name__ == '__main__':

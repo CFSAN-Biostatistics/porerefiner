@@ -9,7 +9,7 @@ config_file = Path(environ.get('POREREFINER_CONFIG', '/etc/porerefiner/config/co
 
 
 #Logging
-log = log.getLogger('config')
+log = log.getLogger('porerefiner.config')
 
 try:
     with open(config_file, 'r') as conf:
@@ -25,7 +25,7 @@ except OSError:
     defaults['socket'] = '/var/run/porerefiner'
     defaults['nanopore_output_path'] = '///gridion/stuff'
     defaults['notifiers'] = [{'class':'ToastNotifier', 'config':dict(name='Default notifier', max=3)}]
-    defaults['minknow_api'] = "https://localhost:9999"
+    defaults['minknow_api'] = "localhost:9501"
     defaults['log_level'] = logging.INFO
     # defaults['']['']
     with open(config_file, 'w') as conf:
