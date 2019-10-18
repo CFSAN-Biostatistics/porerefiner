@@ -23,12 +23,13 @@ requirements = ['Click>=7.0',
                 'namesgenerator>=0.3',
                 'python-daemon>=2.2.3',
                 'protobuf>=3.10.0',
-                'purerpc>=0.5.2'
+                'grpclib>=0.3.0'
                 ]
 
 setup_requirements = [ ]
 
-test_requirements = [ 'hypothesis>=4.38.0', ]
+test_requirements = [ 'hypothesis>=4.38.0',
+                      'hypothesis-fspaths>=0.1']
 
 setup(
     author="Justin Payne",

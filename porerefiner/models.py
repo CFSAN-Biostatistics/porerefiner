@@ -1,24 +1,20 @@
 from peewee import *
-from porerefiner.config import config
+#from porerefiner.config import config
 
 import asyncio
 import datetime
 import namesgenerator
 
-class Tag(Model):
-    "A tag is an informal annotation"
+class BaseModel(Model):
+    pass
 
-    name = CharField()
-
-class PorerefinerModel(Model):
+class PorerefinerModel(BaseModel):
     "Abstract base class for PoreRefiner models"
-    class Meta:
-        db = SqliteDatabase(config['db'])
-
-    tags = ManyToManyField(Tag)
+    # class Meta:
+    #     db = SqliteDatabase(config['db'])
 
     statuses = (('READY', 'Ready to Run'),
-                ('QUEUED', 'Scheduled to Run')
+                ('QUEUED', 'Scheduled to Run'),
                 ('RUNNING', 'Running'),
                 ('STOPPING', 'Stopping'),
                 ('DONE', 'Ended'),
@@ -27,13 +23,28 @@ class PorerefinerModel(Model):
     def to_json(self):
         pass
 
+    @property
+    @classmethod
+    def tags(cls, self):
+        pass
+
+class Tag(BaseModel):
+    "A tag is an informal annotation"
+
+    name = CharField()
+
+
+
+def create_readable_name():
+    "Docker-style random name from namesgenerator"
+    return namesgenerator.get_random_name()
 
 class Run(PorerefinerModel): #TODO
     "A run is an annotated collection of files being produced"
 
     pk = AutoField()
     library_id = CharField()
-    human_name = CharField(default = Run.create_readable_name)
+    human_name = CharField(default = create_readable_name)
     run_id = CharField(null=True)
     started = DateTimeField(default = datetime.datetime.now)
     ended = DateTimeField(null=True, default=None)
@@ -48,10 +59,6 @@ class Run(PorerefinerModel): #TODO
         if self.ended:
             return self.ended - self.started
 
-    @staticmethod
-    def create_readable_name():
-        "Docker-style random name from namesgenerator"
-        return namesgenerator.get_random_name()
 
 class QA(PorerefinerModel): #TODO
     "A QA is a set of quality-control analysis metrics"
@@ -119,4 +126,15 @@ class File(PorerefinerModel): #TODO
     path = CharField(index=True, unique=True)
     checksum = CharField(index=True)
     last_modified = DateTimeField(default=datetime.datetime.now)
+
+
+class TagJunction(BaseModel):
+    tag = ForeignKeyField(Tag)
+    run = ForeignKeyField(Run, null=True)
+    qa = ForeignKeyField(QA, null=True)
+    job = ForeignKeyField(Job, null=True)
+    samplesheet = ForeignKeyField(SampleSheet, null=True)
+    sample = ForeignKeyField(Sample, null=True)
+    file = ForeignKeyField(File, null=True)
+
 

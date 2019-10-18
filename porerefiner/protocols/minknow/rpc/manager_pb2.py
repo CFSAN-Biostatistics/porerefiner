@@ -13,7 +13,7 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 
-from minknow.rpc import instance_pb2 as minknow_dot_rpc_dot_instance__pb2
+from . import instance_pb2 as minknow_dot_rpc_dot_instance__pb2
 
 
 DESCRIPTOR = _descriptor.FileDescriptor(

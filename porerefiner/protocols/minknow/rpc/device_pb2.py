@@ -13,7 +13,7 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 
-from minknow.rpc import rpc_options_pb2 as minknow_dot_rpc_dot_rpc__options__pb2
+from . import rpc_options_pb2 as minknow_dot_rpc_dot_rpc__options__pb2
 from google.protobuf import wrappers_pb2 as google_dot_protobuf_dot_wrappers__pb2
 
 

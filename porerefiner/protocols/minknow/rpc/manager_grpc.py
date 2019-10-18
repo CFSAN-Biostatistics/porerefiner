@@ -9,8 +9,8 @@ import grpclib.client
 if typing.TYPE_CHECKING:
     import grpclib.server
 
-import minknow.rpc.instance_pb2
-import minknow.rpc.manager_pb2
+from . import instance_pb2
+from . import manager_pb2
 
 
 class ManagerServiceBase(abc.ABC):

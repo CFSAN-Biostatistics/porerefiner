@@ -9,10 +9,10 @@ import grpclib.client
 if typing.TYPE_CHECKING:
     import grpclib.server
 
-import minknow.rpc.acquisition_pb2
-import minknow.rpc.device_pb2
-import minknow.rpc.protocol_pb2
-import minknow.rpc.instance_pb2
+from . import acquisition_pb2
+from . import device_pb2
+from . import protocol_pb2
+from . import instance_pb2
 
 
 class InstanceServiceBase(abc.ABC):

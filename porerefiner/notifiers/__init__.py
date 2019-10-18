@@ -1,7 +1,7 @@
 
-from ..models import PorerefinerModel
+# from ..models import PorerefinerModel
 
-states = PorerefinerModel.statuses
+# states = PorerefinerModel.statuses
 
 REGISTRY = {}
 

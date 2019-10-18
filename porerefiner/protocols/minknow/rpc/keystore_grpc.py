@@ -10,8 +10,8 @@ if typing.TYPE_CHECKING:
     import grpclib.server
 
 import google.protobuf.any_pb2
-import minknow.rpc.rpc_options_pb2
-import minknow.rpc.keystore_pb2
+from . import rpc_options_pb2
+from . import keystore_pb2
 
 
 class KeyStoreServiceBase(abc.ABC):

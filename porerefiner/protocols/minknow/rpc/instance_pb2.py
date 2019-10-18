@@ -13,9 +13,9 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 
-from minknow.rpc import acquisition_pb2 as minknow_dot_rpc_dot_acquisition__pb2
-from minknow.rpc import device_pb2 as minknow_dot_rpc_dot_device__pb2
-from minknow.rpc import protocol_pb2 as minknow_dot_rpc_dot_protocol__pb2
+from . import acquisition_pb2 as minknow_dot_rpc_dot_acquisition__pb2
+from . import device_pb2 as minknow_dot_rpc_dot_device__pb2
+from . import protocol_pb2 as minknow_dot_rpc_dot_protocol__pb2
 
 
 DESCRIPTOR = _descriptor.FileDescriptor(

@@ -2,30 +2,28 @@
 
 """Main module."""
 
-from .config import config
-
 import asyncio
 import aiohttp
 import daemon
 import datetime
-import hachiko
-import purerpc
+
+import logging
 import watchdog
 
 from grpclib.server import Server
 from grpclib.utils import graceful_exit
-from logging import log
+from hachiko.hachiko import AIOEventHandler
 from peewee import JOIN
 from porerefiner.models import Run, QA, File, Job, SampleSheet, Sample
 from porerefiner.cli_utils import relativize_path as r, absolutize_path as a
 from os.path import split
 from os import remove
 
-from porerefiner.protocols.minknow.rpc.manager_pb2 import ManagerServiceStub #probably not right
-from porerefiner.protocols.porerefiner.porerefiner_pb2 import Run as RunMessage, File as FileMessage
-from porerefiner.protocols.porerefiner.porerefiner_grpc import PoreRefinerBase
+from porerefiner.protocols.minknow.rpc.manager_grpc import ManagerServiceStub
+from porerefiner.protocols.porerefiner.rpc.porerefiner_pb2 import Run as RunMessage, RunList, RunAttachResponse, RunRsyncResponse
+from porerefiner.protocols.porerefiner.rpc.porerefiner_grpc import PoreRefinerBase
 
-log.getLogger('porerefiner.service')
+log = logging.getLogger('porerefiner.service')
 
 def get_run(run_id):
     run = Run.get_or_none(Run.pk == run_id)
@@ -119,8 +117,12 @@ async def end_run(run): #TODO
     "Put run in closed status"
     pass
 
+async def send_run(run, dest): #TODO
+    "Use RSYNC to send a run to a destination"
+    pass
 
-class PoreRefinerFSEventHandler(hachiko.hachiko.AIOEventHandler):
+
+class PoreRefinerFSEventHandler(AIOEventHandler):
     "Eventhandler for file system events via Hachiko/Watchdog"
     async def on_created(self, event):
         "New run folder, or new file in run"
@@ -150,16 +152,22 @@ class PoreRefinerDispatchServer(PoreRefinerBase):
     "Eventhandler for RPC events coming from command line or Flask app"
 
     async def GetRuns(self, stream: 'grpclib.server.Stream[porerefiner_pb2.RunListRequest, porerefiner_pb2.RunList]') -> None:
-        pass
+        request = await stream.recv_message()
+        await stream.send_message(RunList(runs = await list_runs()))
 
     async def GetRunInfo(self, stream: 'grpclib.server.Stream[porerefiner_pb2.RunRequest, porerefiner_pb2.Run]') -> None:
-        pass
+        request = await stream.recv_message()
+        await stream.send_message(await get_run_info(request.id or request.name))
 
     async def AttachSheetToRun(self, stream: 'grpclib.server.Stream[porerefiner_pb2.RunAttachRequest, porerefiner_pb2.RunAttachResponse]') -> None:
-        pass
+        request = await stream.recv_message()
+
+        await stream.send_message(RunAttachResponse())
 
     async def RsyncRunTo(self, stream: 'grpclib.server.Stream[porerefiner_pb2.RunRsyncRequest, porerefiner_pb2.RunRsyncResponse]') -> None:
-        pass
+        request = await stream.recv_message()
+
+        await stream.send_message(RunRsyncResponse())
 
 async def start_server(socket, *a, **k):
     "Coroutine to bring up the rpc server"
@@ -180,6 +188,7 @@ async def start_fs_watchdog(nanopore_output_path, *a, **k):
 
 def main():
     "Main event loop and async"
+    from porerefiner.config import config
     loop = asyncio.get_event_loop()
     loop.run_until_complete(asyncio.gather(start_server(**config), start_fs_watchdog(**config)))
 

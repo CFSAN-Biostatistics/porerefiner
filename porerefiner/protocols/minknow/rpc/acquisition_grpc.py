@@ -10,7 +10,7 @@ if typing.TYPE_CHECKING:
     import grpclib.server
 
 import google.protobuf.timestamp_pb2
-import minknow.rpc.acquisition_pb2
+from . import acquisition_pb2
 
 
 class AcquisitionServiceBase(abc.ABC):

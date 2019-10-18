@@ -9,12 +9,12 @@ import grpclib.client
 if typing.TYPE_CHECKING:
     import grpclib.server
 
-import minknow.rpc.acquisition_pb2
-import minknow.rpc.device_pb2
-import minknow.rpc.rpc_options_pb2
+from . import acquisition_pb2
+from . import device_pb2
+from . import rpc_options_pb2
 import google.protobuf.timestamp_pb2
 import google.protobuf.wrappers_pb2
-import minknow.rpc.protocol_pb2
+from . import protocol_pb2
 
 
 class ProtocolServiceBase(abc.ABC):

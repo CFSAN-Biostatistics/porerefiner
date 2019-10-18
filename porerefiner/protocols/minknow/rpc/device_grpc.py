@@ -9,9 +9,9 @@ import grpclib.client
 if typing.TYPE_CHECKING:
     import grpclib.server
 
-import minknow.rpc.rpc_options_pb2
+from . import rpc_options_pb2
 import google.protobuf.wrappers_pb2
-import minknow.rpc.device_pb2
+from . import device_pb2
 
 
 class DeviceServiceBase(abc.ABC):

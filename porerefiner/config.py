@@ -1,15 +1,15 @@
 import yaml
 from pathlib import Path
 from os import environ
-from logging import log
+import logging
 
-from .notifiers import REGISTRY, NOTIFIERS
+from porerefiner.notifiers import REGISTRY, NOTIFIERS
 
 config_file = Path(environ.get('POREREFINER_CONFIG', '/etc/porerefiner/config/config.yml'))
 
 
 #Logging
-log = log.getLogger('porerefiner.config')
+log = logging.getLogger('porerefiner.config')
 
 try:
     with open(config_file, 'r') as conf:
