@@ -1,10 +1,12 @@
+import asyncio
+
 from porerefiner.notifiers import states, Notifier
 from logging import log
 
 class SqsNotifier(Notifier): #TODO
     "Send a message to an SQS queue, requires Boto3"
 
-    def notify(self, run, state, message):
+    async def notify(self, run, state, message):
         try:
             import boto3
 

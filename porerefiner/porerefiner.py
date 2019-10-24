@@ -10,36 +10,74 @@ import datetime
 import logging
 import watchdog
 
+from datetime import datetime, timedelta
 from grpclib.server import Server
 from grpclib.utils import graceful_exit
 from hachiko.hachiko import AIOEventHandler
 from peewee import JOIN
-from porerefiner.models import Run, QA, File, Job, SampleSheet, Sample
+from porerefiner import models
+from porerefiner.models import Run, Qa, File, Job, SampleSheet, Sample
 from porerefiner.cli_utils import relativize_path as r, absolutize_path as a
+from porerefiner.jobs import poll_jobs
 from os.path import split
 from os import remove
 
 from porerefiner.protocols.minknow.rpc.manager_grpc import ManagerServiceStub
-from porerefiner.protocols.porerefiner.rpc.porerefiner_pb2 import Run as RunMessage, RunList, RunAttachResponse, RunRsyncResponse
+from porerefiner.protocols.porerefiner.rpc.porerefiner_pb2 import Run as RunMessage, RunList, RunResponse, Error, RunAttachResponse, RunRsyncResponse
 from porerefiner.protocols.porerefiner.rpc.porerefiner_grpc import PoreRefinerBase
+from porerefiner.notifiers import NOTIFIERS
 
 log = logging.getLogger('porerefiner.service')
 
 def get_run(run_id):
-    run = Run.get_or_none(Run.pk == run_id)
-    if not run:
-        run = Run.get_or_none(Run.human_name == run_id)
+    run = Run.get_or_none(Run.pk == run_id) or Run.get_or_none(Run.name == run_id) or Run.get_or_none(Run.alt_name == run_id)
     if not run:
         raise ValueError(f"Run id or name '{run_id}' not found.")
     return run
+
+def make_run_msg(run):
+    return RunMessage(id=run.pk,
+                      name=run.name,
+                      mnemonic_name=run.alt_name,
+                      library_id=run.library_id,
+                      status=run.status,
+                      path=a(run.path),
+                      flowcell_type=run.flowcell.consumable_type,
+                      flowcell_id=run.flowcell.consumable_id,
+                      basecalling_model=run.basecalling_model,
+                      sequencing_kit=run.sample_sheet.sequencing_kit,
+                      samples=[
+                          Sample(id=sample.pk,
+                                 name=sample.name,
+                                 accession=sample.accession,
+                                 barcode_id=sample.barcode_id,
+                                 barcode_seq=sample.barcode_seq,
+                                 organism=sample.organism,
+                                 extraction_kit=sample.extraction_kit,
+                                 comment=sample.comment,
+                                 user=sample.user,
+                                 files=[
+                                    File(name=file.name,
+                                         path=a(file.path),
+                                         spot_id=None,
+                                         size=0,
+                                         ready=False,
+                                         tags=[tag.name for tag in file.tags])
+                                 for file in sample.files],
+                                 tags=[tag.name for tag in sample.tags]) for sample in run.samples],
+                      tags=[tag.name for tag in run.tags]
+                      )
+
+async def register_new_flowcell(path): #TODO
+    pass
 
 async def register_new_run(path): #TODO
 
     run = Run(path=path, status='RUNNING')
 
-    async with purerpc.insecure_channel(config['minknow_api']) as channel:
-        client = ManagerStub(channel)
-        reply = await client.DoSomething(path)
+    #async with glibrpc.utils.insecure_channel(config['minknow_api']) as channel:
+    #    client = ManagerStub(channel)
+        # reply = await client.DoSomething(path)
 
     #somehow need to link to the correct run - is it just the current run in progress?
 
@@ -82,7 +120,8 @@ async def register_new_run(path): #TODO
 
 
 async def get_run_info(run_id):
-    return RunMessage(**vars(get_run(run_id)))
+    return make_run_msg(get_run(run_id))
+
 
 async def attach_samplesheet_to_run(sheet, run_id=None):
     "Determine file format of sample sheet and load"
@@ -106,16 +145,24 @@ async def attach_samplesheet_to_run(sheet, run_id=None):
 
 
 
-async def list_runs(): #TODO
-    return [RunMessage(**vars(run)) async for run in Run.select()]
+async def list_runs():
+    return [make_run_msg(run) for run in Run.select()]
 
-async def poll_active_run(): #TODO
-    "Scan run in progress, check for updated files, check for stale files, dispatch demultiplexing jobs"
-    pass
+async def poll_active_run():
+    "Scan run(s) in progress, close out runs that have been stable for an hour"
+    runs = list(Run.select(Run.ended.is_null(False)))
+    for run in runs:
+        if all([datetime.now() - file.last_modified > timedelta(hours=1) for file in run.files]):
+            await end_run(run)
+    return len(runs)
+
 
 async def end_run(run): #TODO
     "Put run in closed status"
-    pass
+    run.ended = datetime.now()
+    async for notifier in NOTIFIERS:
+        await notifier.notify(run, None, "Run finished")
+
 
 async def send_run(run, dest): #TODO
     "Use RSYNC to send a run to a destination"
@@ -125,10 +172,14 @@ async def send_run(run, dest): #TODO
 class PoreRefinerFSEventHandler(AIOEventHandler):
     "Eventhandler for file system events via Hachiko/Watchdog"
     async def on_created(self, event):
-        "New run folder, or new file in run"
+        "New flowcell folder, new run folder, or new file in run"
         if event.is_directory:
-            if not Run.get_or_none(Run.path == r(event.src_path)):
-                await register_new_run(r(event.src_path))
+            #new flowcell
+            if True:
+                pass#new run
+            else:
+                if not Run.get_or_none(Run.path == r(event.src_path)):
+                    await register_new_run(r(event.src_path))
         else:
             containing_folder, filename = split(event.src_path)
             run = Run.get(Run.path == r(containing_folder))
@@ -144,9 +195,9 @@ class PoreRefinerFSEventHandler(AIOEventHandler):
     async def on_deleted(self, event): #TODO
         "Update database if files are deleted."
         if event.is_dictionary:
-            Run.delete().where(Run.path == r(event.src_path))
+            Run.delete().where(Run.path == r(event.src_path)).execute()
         else:
-            File.delete().where(File.path == r(event.src_path))
+            File.delete().where(File.path == r(event.src_path)).execute()
 
 class PoreRefinerDispatchServer(PoreRefinerBase):
     "Eventhandler for RPC events coming from command line or Flask app"
@@ -155,9 +206,15 @@ class PoreRefinerDispatchServer(PoreRefinerBase):
         request = await stream.recv_message()
         await stream.send_message(RunList(runs = await list_runs()))
 
-    async def GetRunInfo(self, stream: 'grpclib.server.Stream[porerefiner_pb2.RunRequest, porerefiner_pb2.Run]') -> None:
+    async def GetRunInfo(self, stream: 'grpclib.server.Stream[porerefiner_pb2.RunRequest, porerefiner_pb2.RunResponse]') -> None:
         request = await stream.recv_message()
-        await stream.send_message(await get_run_info(request.id or request.name))
+        try:
+            run_msg = await get_run_info(request.id or request.name)
+            reply_msg = RunResponse(run=run_msg)
+        except ValueError as e:
+            err_msg = Error(type='ValueError', err_message=e.message)
+            reply_msg = RunResponse(error=err_msg)
+        return await stream.send_message(reply_msg)
 
     async def AttachSheetToRun(self, stream: 'grpclib.server.Stream[porerefiner_pb2.RunAttachRequest, porerefiner_pb2.RunAttachResponse]') -> None:
         request = await stream.recv_message()
@@ -178,19 +235,54 @@ async def start_server(socket, *a, **k):
         await server.wait_closed()
         log.info(f"RPC server shutting down.")
 
-async def start_fs_watchdog(nanopore_output_path, *a, **k):
+async def start_fs_watchdog(path, *a, **k):
     "Coroutine to bring up the filesystem watchdog"
-    watcher = hachiko.hachiko.AIOWatchdog(nanopore_output_path, event_handler=PoreRefinerFSEventHandler())
+    watcher = hachiko.hachiko.AIOWatchdog(
+        path,
+        event_handler=PoreRefinerFSEventHandler()
+        )
+    log.info(f"Filesystem events being watched in {path}...")
     await watcher.start()
-    log.info(f"Filesystem events being watched in {nanopore_output_path}...")
-    await watcher.stop()
     log.info(f"Filesystem event watcher shutting down.")
 
-def main():
+async def start_run_end_polling(run_polling_interval, *a, **k):
+    "Coro to bring up the run termination polling"
+    log.info(f"Starting run polling...")
+    while True:
+        run_num = await poll_active_run()
+        log.info(f"{run_num} runs polled.")
+        await asyncio.sleep(run_polling_interval) #poll every ten minutes
+
+async def start_job_polling(job_polling_interval, *a, **k):
+    log.info(f'Starting job polling...')
+    while True:
+        po, su, co = await poll_jobs()
+        log.info(f'{po} jobs polled, {su} submitted, {co} collected.')
+        await asyncio.sleep(job_polling_interval) #poll every 30 minutes
+
+
+def main(db_path=None, db_pragmas=None, wdog_settings=None, server_settings=None, system_settings=None):
     "Main event loop and async"
-    from porerefiner.config import config
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(asyncio.gather(start_server(**config), start_fs_watchdog(**config)))
+    if not all(db_path, db_pragmas, wdog_settings, server_settings, system_settings): #need to defer loading config for testing purposes
+        from porerefiner.config import config
+        db_path=config['database']['path']
+        db_pragmas=config['database']['pragmas']
+        wdog_settings=config['nanopore']
+        server_settings=config['server']
+        system_settings=config['porerefiner']
+    models._db.init(db_path, db_pragmas)
+    [cls.create_table(safe=True) for cls in models.REGISTRY]
+
+    asyncio.run(asyncio.gather(start_server(**server_settings),
+                               start_fs_watchdog(**wdog_settings),
+                               start_run_end_polling(**system_settings),
+                               start_job_polling(**system_settings),
+                               return_exceptions=True))
+
+async def shutdown(signal, loop):
+    for task in asyncio.all_tasks():
+        if task is not asyncio.current_task():
+            task.cancel()
 
 
 if __name__ == '__main__':

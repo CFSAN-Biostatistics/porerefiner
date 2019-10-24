@@ -61,7 +61,7 @@ test-all: ## run tests on every Python version with tox
 
 coverage: ## check code coverage quickly with the default Python
 	coverage run --source porerefiner setup.py test
-	coverage report -m
+	coverage report -m | grep '^porerefiner'
 	coverage html
 	$(BROWSER) htmlcov/index.html
 

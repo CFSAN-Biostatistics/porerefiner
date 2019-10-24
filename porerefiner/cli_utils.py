@@ -1,6 +1,7 @@
 "Custom argument handler types for Click"
 
 import click
+from pathlib import Path
 
 #these two functions are hooks in case we decide to store only relative paths.
 #paths going into the database will be relativized; paths going out will be

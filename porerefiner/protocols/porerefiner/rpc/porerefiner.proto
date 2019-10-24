@@ -14,7 +14,7 @@ message Run {
     string path = 6;
     string flowcell_type = 7;
     string flowcell_id = 8;
-    string basecalling_mdel = 9;
+    string basecalling_model = 9;
     string sequencing_kit = 10;
 
     message Sample {
@@ -31,9 +31,10 @@ message Run {
 
         message File {
             string name = 1;
-            string spot_id = 2;
-            uint64 size = 3;
-            bool ready = 4;
+            string path = 2;
+            string spot_id = 5;
+            uint64 size = 8;
+            bool ready = 10;
 
             repeated string tags = 30;
         }
@@ -48,14 +49,34 @@ message Run {
 
 }
 
+message Error {
+    oneof error {
+        int32 code = 1;
+        string type = 2;
+    }
+    string err_message = 3;
+}
+
+message RunResponse {
+    oneof reply {
+        Run run = 1;
+        Error error = 2;
+    }
+}
+
 message RunListRequest {
 
 }
 
 message RunList {
-
     repeated Run runs = 1;
+}
 
+message RunListResponse {
+    oneof reply {
+        RunList runs = 1;
+        Error error = 2;
+    }
 }
 
 message RunRequest {
@@ -74,7 +95,7 @@ message RunRsyncRequest {
 }
 
 message RunRsyncResponse {
-
+    Error error = 1;
 }
 
 message RunAttachRequest {
@@ -89,14 +110,14 @@ message RunAttachRequest {
 }
 
 message RunAttachResponse {
-
+    Error error = 1;
 }
 
 service PoreRefiner {
 
-    rpc GetRuns (RunListRequest) returns (RunList);
+    rpc GetRuns (RunListRequest) returns (RunListResponse);
 
-    rpc GetRunInfo (RunRequest) returns (Run);
+    rpc GetRunInfo (RunRequest) returns (RunResponse);
 
     rpc AttachSheetToRun (RunAttachRequest) returns (RunAttachResponse);
 

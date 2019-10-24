@@ -21,12 +21,22 @@ except OSError:
     from collections import defaultdict
     tree = lambda: defaultdict(tree) #this is a trick for defining a recursive defaultdict
     defaults = tree()
-    defaults['db'] = '/etc/porerefiner/database.db'
-    defaults['socket'] = '/var/run/porerefiner'
-    defaults['nanopore_output_path'] = '///gridion/stuff'
+    defaults['database']['path'] = '/etc/porerefiner/database.db'
+    defaults['database']['pragmas']['foreign_keys'] = 1
+    defaults['database']['pragmas']['journal_mode'] = 'wal'
+    defaults['database']['pragmas']['cache_size'] = 1000
+    defaults['database']['pragmas']['ignore_check_constraints'] = 0
+    defaults['database']['pragmas']['synchronous'] = 0
+    defaults['server']['socket'] = '/var/run/porerefiner'
+    defaults['nanopore']['path'] = '///gridion/stuff'
+    defaults['nanopore']['api'] = "localhost:9501"
+    defaults['porerefiner']['log_level'] = logging.INFO
+    defaults['porerefiner']['run_polling_interval'] = 600
+    defaults['porerefiner']['job_polling_interval'] = 1800
+
     defaults['notifiers'] = [{'class':'ToastNotifier', 'config':dict(name='Default notifier', max=3)}]
-    defaults['minknow_api'] = "localhost:9501"
-    defaults['log_level'] = logging.INFO
+
+
     # defaults['']['']
     with open(config_file, 'w') as conf:
         yaml.dump(defaults, conf)

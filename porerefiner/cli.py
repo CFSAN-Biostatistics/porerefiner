@@ -5,7 +5,7 @@ import sys
 import click
 
 
-from .cli_utils import VALID_RUN_ID
+from porerefiner.cli_utils import VALID_RUN_ID
 
 
 @click.group()

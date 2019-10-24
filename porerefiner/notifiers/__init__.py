@@ -1,4 +1,4 @@
-
+import asyncio
 # from ..models import PorerefinerModel
 
 # states = PorerefinerModel.statuses
@@ -20,7 +20,7 @@ class _MetaRegistry(type):
 class Notifier(metaclass=_MetaRegistry):
     "Abstract base class for notifiers"
 
-    def notify(self, *args):
+    async def notify(self, run, state, message):
         raise NotImplementedError('Notifier not implemented.')
 
     @classmethod
