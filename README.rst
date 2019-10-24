@@ -34,26 +34,28 @@ Installation
 PoreRefiner is available as a Python package:
 
 ::
-pip install porerefiner
+
+    pip install porerefiner
 
 Using this software
 -------------------
 ::
-$ prfr
-Usage: prfr [OPTIONS] COMMAND [ARGS]...
 
-  Command line interface for PoreRefiner, a Nanopore integration toolkit.
+    $ prfr
+    Usage: prfr [OPTIONS] COMMAND [ARGS]...
 
-Options:
-  --help  Show this message and exit.
+    Command line interface for PoreRefiner, a Nanopore integration toolkit.
 
-Commands:
-  info      Return information about a run, historical or in progress.
-  load      Load a sample sheet to be attached to a run, or to the next run...
-  proto     Append to the notifiers section of the config a default config...
-  ps        Show runs in progress, or every tracked run (--all).
-  rm        Remove a run and recover hard drive space.
-  template  Write a sample sheet template to STDOUT.
+    Options:
+    --help  Show this message and exit.
+
+    Commands:
+    info      Return information about a run, historical or in progress.
+    load      Load a sample sheet to be attached to a run, or to the next run...
+    proto     Append to the notifiers section of the config a default config...
+    ps        Show runs in progress, or every tracked run (--all).
+    rm        Remove a run and recover hard drive space.
+    template  Write a sample sheet template to STDOUT.
 
 
 Features
