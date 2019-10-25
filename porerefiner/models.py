@@ -6,6 +6,7 @@ import datetime
 import pathlib
 import pickle
 import namesgenerator
+import sys
 
 _db = SqliteDatabase(None)
 
@@ -40,10 +41,14 @@ class PathField(Field):
     field_type = 'blob'
 
     def db_value(self, value):
-        return pickle.dumps(value)
+        if hasattr(value, '__fspath__'):
+            value = str(value)
+        if isinstance(value, bytes):
+            value = value.decode(sys.getfilesystemencoding(), 'surrogateescape')
+        return value
 
     def python_value(self, value):
-        return pickle.loads(value)
+        return pathlib.Path(value)
 
 
 

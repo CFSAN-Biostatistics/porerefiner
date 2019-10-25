@@ -183,7 +183,7 @@ class PoreRefinerFSEventHandler(AIOEventHandler):
         else:
             containing_folder, filename = split(event.src_path)
             run = Run.get(Run.path == r(containing_folder))
-            fi = File.create(run=run, path=r(event.src_path))
+            fi = File.get_or_create(run=run, path=r(event.src_path))
 
     async def on_modified(self, event):
         if not event.is_directory: #we don't care about directory modifications

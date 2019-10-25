@@ -1,4 +1,4 @@
-from models import Job, File
+from porerefiner.models import Job, File
 
 import logging
 

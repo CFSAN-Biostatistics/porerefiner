@@ -8,9 +8,13 @@ from pathlib import Path
 #absolutized.
 #Whatever they do, they need to invert each other
 def relativize_path(path):
+    if isinstance(path, str):
+        return Path(path)
     return path
 
 def absolutize_path(path):
+    if hasattr(path, '__fspath__'):
+        return str(path)
     return path
 
 class RunID:
