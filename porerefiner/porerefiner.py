@@ -16,11 +16,12 @@ from grpclib.utils import graceful_exit
 from hachiko.hachiko import AIOEventHandler
 from peewee import JOIN
 from porerefiner import models
-from porerefiner.models import Run, Qa, File, Job, SampleSheet, Sample
+from porerefiner.models import Flowcell, Run, Qa, File, Job, SampleSheet, Sample, Tag, TagJunction
 from porerefiner.cli_utils import relativize_path as r, absolutize_path as a
 from porerefiner.jobs import poll_jobs
 from os.path import split
 from os import remove
+from pathlib import Path
 
 from porerefiner.protocols.minknow.rpc.manager_grpc import ManagerServiceStub
 from porerefiner.protocols.porerefiner.rpc.porerefiner_pb2 import Run as RunMessage, RunList, RunResponse, Error, RunAttachResponse, RunRsyncResponse
@@ -145,8 +146,14 @@ async def attach_samplesheet_to_run(sheet, run_id=None):
 
 
 
-async def list_runs():
-    return [make_run_msg(run) for run in Run.select()]
+async def list_runs(all=False, tags=[]):
+    if tags:
+        #implies all
+        return [make_run_msg(run)] for run in Run.select().join(TagJunction)
+    if all:
+        return [make_run_msg(run) for run in Run.select()]
+    #only in-progress runs
+
 
 async def poll_active_run():
     "Scan run(s) in progress, close out runs that have been stable for an hour"
@@ -171,15 +178,22 @@ async def send_run(run, dest): #TODO
 
 class PoreRefinerFSEventHandler(AIOEventHandler):
     "Eventhandler for file system events via Hachiko/Watchdog"
+
+    def __init__(self, path):
+        super().__init__()
+        self.path = path
+
     async def on_created(self, event):
         "New flowcell folder, new run folder, or new file in run"
         if event.is_directory:
-            #new flowcell
-            if True:
-                pass#new run
+            path = Path(event.src_path)
+            parent = path.parent
+            if parent == Path(self.path):
+                if not Flowcell.get_or_none(Flowcell.path == r(path)):
+                    await register_new_flowcell(r(path))
             else:
-                if not Run.get_or_none(Run.path == r(event.src_path)):
-                    await register_new_run(r(event.src_path))
+                if not Run.get_or_none(Run.path == r(path)):
+                    await register_new_run(r(path))
         else:
             containing_folder, filename = split(event.src_path)
             run = Run.get(Run.path == r(containing_folder))
@@ -239,7 +253,7 @@ async def start_fs_watchdog(path, *a, **k):
     "Coroutine to bring up the filesystem watchdog"
     watcher = hachiko.hachiko.AIOWatchdog(
         path,
-        event_handler=PoreRefinerFSEventHandler()
+        event_handler=PoreRefinerFSEventHandler(path)
         )
     log.info(f"Filesystem events being watched in {path}...")
     await watcher.start()

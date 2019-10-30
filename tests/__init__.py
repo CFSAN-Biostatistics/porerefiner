@@ -28,11 +28,28 @@ def paths(draw, under=""):
 class TestBase(TestCase):
 
     def setUp(self):
-        self.db = SqliteDatabase(":memory:", pragmas={'foreign_keys':1})
+        self.db = SqliteDatabase(":memory:", pragmas={'foreign_keys':1}, autoconnect=False)
         self.db.bind(models.REGISTRY, bind_refs=False, bind_backrefs=False)
         self.db.connect()
         self.db.create_tables(models.REGISTRY)
 
     def tearDown(self):
         #[cls.delete().where(True).execute() for cls in models.REGISTRY]
+        self.db.drop_tables(models.REGISTRY)
         self.db.close()
+
+from functools import wraps
+
+def with_database(func):
+    @wraps(func)
+    def wrapped_test_function(*a, **k):
+        db = SqliteDatabase(":memory:", pragmas={'foreign_keys':1}, autoconnect=False)
+        db.bind(models.REGISTRY, bind_refs=False, bind_backrefs=False)
+        db.connect()
+        db.create_tables(models.REGISTRY)
+        try:
+            return func(*a, **k)
+        finally:
+            db.drop_tables(models.REGISTRY)
+            db.close()
+    return wrapped_test_function

@@ -4,8 +4,10 @@
 import sys
 import click
 
+from asyncio import run
 
-from porerefiner.cli_utils import VALID_RUN_ID
+from porerefiner.cli_utils import VALID_RUN_ID, server, hr_formatter, json_formatter, xml_formatter
+from porerefiner.protocols.porerefiner.rpc.porerefiner_pb2 import RunRequest, RunListRequest, RunAttachRequest, RunRsyncRequest
 
 
 @click.group()
@@ -15,12 +17,21 @@ def cli():
 
 @cli.command()
 @click.option('-a', '--all', is_flag=True, default=False, help="Show finished and ongoing runs.")
-@click.option('-h', '--human-readable', 'output_format', flag_value='hr', help='Output in a human-readable table.')
-@click.option('-j', '--json', 'output_format', flag_value='json', help='Output in JSON.')
-@click.option('-x', '--xml', 'output_format', flag_value='xml', help='Output in schemaless XML.')
-def ps(output_format, all=False): #TODO
-    "Show runs in progress, or every tracked run (--all)."
-    pass
+@click.option('-h', '--human-readable', 'output_format', flag_value=hr_formatter, help='Output in a human-readable table.', default=hr_formatter)
+@click.option('-j', '--json', 'output_format', flag_value=json_formatter, help='Output in JSON.')
+@click.option('-x', '--xml', 'output_format', flag_value=xml_formatter, help='Output in schemaless XML.')
+@click.option('-t', '--tag', 'tags', multiple=True)
+def ps(output_format, all=False, tags=[]): #TODO
+    "Show runs in progress, or every tracked run (--all), or with a particular tag (--tag)."
+    async def ps_runner(formatter):
+        with server() as serv:
+            resp = await serv.GetRuns(RunListRequest(all=all, tags=tags))
+            for run in resp.runs.runs:
+                formatter(run)
+    with output_format() as formatter:
+        run(ps_runner(formatter=formatter))
+
+
 
 @cli.command()
 @click.argument('run', type=VALID_RUN_ID)
@@ -30,10 +41,23 @@ def rm(run): #TODO
     pass
 
 @cli.command()
+@click.option('-h', '--human-readable', 'output_format', flag_value=hr_formatter, help='Output in a human-readable table.', default=hr_formatter)
+@click.option('-j', '--json', 'output_format', flag_value=json_formatter, help='Output in JSON.')
+@click.option('-x', '--xml', 'output_format', flag_value=xml_formatter, help='Output in schemaless XML.')
 @click.argument('run', type=VALID_RUN_ID)
-def info(run): #TODO
+def info(output_format, run): #TODO
     "Return information about a run, historical or in progress."
-    pass
+    async def info_runner(formatter):
+        with server() as serv:
+            req = RunRequest()
+            if isinstance(run, str):
+                req.name = run
+            else:
+                req.id = run
+            resp = await serv.GetRunInfo(req)
+            formatter(resp.run, extend=True)
+    with output_format() as formatter:
+        run(info_runner(formatter))
 
 @cli.command()
 def template(): #TODO
@@ -47,10 +71,10 @@ def load(samplesheet, run=None): #TODO
     "Load a sample sheet to be attached to a run, or to the next run that is started."
     pass
 
-@cli.command()
-def proto():
-    "Append to the notifiers section of the config a default config for a new notifier."
-    pass
+# @cli.command()
+# def proto():
+#     "Append to the notifiers section of the config a default config for a new notifier."
+#     pass
 
 
 if __name__ == "__main__":

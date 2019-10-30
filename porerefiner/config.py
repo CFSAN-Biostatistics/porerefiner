@@ -28,6 +28,7 @@ except OSError:
     defaults['database']['pragmas']['ignore_check_constraints'] = 0
     defaults['database']['pragmas']['synchronous'] = 0
     defaults['server']['socket'] = '/var/run/porerefiner'
+    defaults['server']['use_ssl'] = False
     defaults['nanopore']['path'] = '///gridion/stuff'
     defaults['nanopore']['api'] = "localhost:9501"
     defaults['porerefiner']['log_level'] = logging.INFO

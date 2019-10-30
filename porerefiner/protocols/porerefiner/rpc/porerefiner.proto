@@ -65,7 +65,8 @@ message RunResponse {
 }
 
 message RunListRequest {
-
+    bool all = 1;
+    repeated string tags = 20;
 }
 
 message RunList {

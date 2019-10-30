@@ -3,16 +3,21 @@
 
 """Tests for `porerefiner` package."""
 
-from unittest import  skip
+from unittest import TestCase, skip
+#from unittest.mock import AsyncMock
+from asyncmock import AsyncMock
 
 from click.testing import CliRunner
 
 from porerefiner import porerefiner
 from porerefiner import cli
 from porerefiner import models
-from tests import paths, TestBase
+from porerefiner.cli_utils import absolutize_path as ap, relativize_path as rp
+from tests import paths, with_database, TestBase as DBSetupTestCase
 
 from shutil import rmtree
+
+from os.path import split
 
 from tempfile import mkdtemp
 
@@ -36,7 +41,7 @@ def _run(task):
 RUN_PK = 100
 RUN_NAME = 'TEST_TEST'
 
-class TestCoreFunctions(TestBase):
+class TestCoreFunctions(DBSetupTestCase):
 
     def setUp(self):
         super().setUp()
@@ -104,7 +109,7 @@ class TestCoreFunctions(TestBase):
 
 
 
-class TestPoreFSEventHander(TestBase):
+class TestPoreFSEventHander(TestCase):
 
     class FakeEvent:
         def __init__(self, path, is_dir=True):
@@ -113,49 +118,52 @@ class TestPoreFSEventHander(TestBase):
 
     def setUp(self):
         super().setUp()
-        self.ut = porerefiner.PoreRefinerFSEventHandler()
+
 
     #@skip('not implemented')
-    @given(paths())
-    def test_on_created_flowcell(self, path):
-        event = self.FakeEvent(path)
+    @given(flowcell_path=paths())
+    @with_database
+    def test_on_created_flowcell(self, flowcell_path):
+        path = pathlib.Path(flowcell_path)
+        ut = porerefiner.PoreRefinerFSEventHandler(path.parent)
+        event = self.FakeEvent(flowcell_path)
         _reg_flow = porerefiner.register_new_flowcell
-        signal = False
-        async def mock(*a, **k):
-            nonlocal signal
-            signal = True
+        mock = AsyncMock()
         porerefiner.register_new_flowcell = mock
-        _run(self.ut.on_created(event))
-        assert signal
+        _run(ut.on_created(event))
         porerefiner.register_new_flowcell = _reg_flow
+        mock.assert_called_once()
 
     #@skip('not implemented')
-    @given(paths()) #non-blank paths
-    def test_on_created_run(self, path):
-        models.Flowcell.create(pk=RUN_PK+1, consumable_id="TEST|TEST|TEST", consumable_type="TEST|TEST|TEST", path=path)
-        event = self.FakeEvent(pathlib.Path(path, 'TEST'))
+    @given(flowcell_path=paths(under='TEST'))
+    @with_database
+    def test_on_created_run(self, flowcell_path):
+        path = pathlib.Path(flowcell_path)
+        ut = porerefiner.PoreRefinerFSEventHandler(path.parent)
+        models.Flowcell.get_or_create(pk=RUN_PK+1, consumable_id="TEST|TEST|TEST", consumable_type="TEST|TEST|TEST", path=path)
+        event = self.FakeEvent(path / 'TEST')
+        self.assertIsNone(models.Run.get_or_none(models.Run.path == rp(event.src_path)))
         _reg_run = porerefiner.register_new_run
-        signal = False
-        async def mock(*a, **k):
-            nonlocal signal
-            signal = True
+        mock = AsyncMock()
         porerefiner.register_new_run = mock
-        _run(self.ut.on_created(event))
-        assert signal
+        _run(ut.on_created(event))
         porerefiner.register_new_run = _reg_run
+        mock.assert_called_once()
 
     # @skip('not implemented')
-    @given(paths(under="TEST/TEST")) #non-blank paths
+    @given(path=paths(under='TEST/TEST'))
+    @with_database
     def test_on_created_file(self, path):
+        ut = porerefiner.PoreRefinerFSEventHandler(split(split(split(path)[0])[0])[0])
         flow = models.Flowcell.create(pk=RUN_PK+1,
                                       consumable_id='TEST',
                                       consumable_type='TEST',
-                                      path="TEST")
-        run = models.Run.create(pk=RUN_PK, library_id='x', name=RUN_NAME, flowcell=flow, path="TEST/TEST")
-        event = self.FakeEvent(path)
-        _run(self.ut.on_created(event))
+                                      path=rp(split(split(path)[0])[0]))
+        run = models.Run.create(pk=RUN_PK, library_id='x', name=RUN_NAME, flowcell=flow, path=rp(split(path)[0]))
+        event = self.FakeEvent(rp(path), is_dir=False)
+        _run(ut.on_created(event))
         self.assertEqual(len(run.files), 1)
-        self.assertEqual(len(list(File.select().where(File.path == path))), 1)
+        self.assertEqual(len(list(models.File.select().where(models.File.path == path))), 1)
 
     @skip('not implemented')
     @given(paths())
@@ -167,7 +175,7 @@ class TestPoreFSEventHander(TestBase):
     def test_on_deleted(self, path):
         assert False
 
-class TestPoreDispatchServer(TestBase):
+class TestPoreDispatchServer(TestCase):
 
     @skip('not implemented')
     def test_get_runs(self):
@@ -185,7 +193,7 @@ class TestPoreDispatchServer(TestBase):
     def test_rsync_run_to(self):
         assert False
 
-class TestServerStart(TestBase):
+class TestServerStart(TestCase):
 
 
     @skip('not implemented')
