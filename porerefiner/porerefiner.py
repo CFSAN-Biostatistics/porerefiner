@@ -149,10 +149,11 @@ async def attach_samplesheet_to_run(sheet, run_id=None):
 async def list_runs(all=False, tags=[]):
     if tags:
         #implies all
-        return [make_run_msg(run)] for run in Run.select().join(TagJunction)
+        return [make_run_msg(run) for run in Run.select().join(TagJunction).join(Tag).where(Tag.name << tags)]
     if all:
         return [make_run_msg(run) for run in Run.select()]
     #only in-progress runs
+    return [make_run_msg(run) for run in Run.select().where(Run.ended.is_null())]
 
 
 async def poll_active_run():
@@ -218,7 +219,7 @@ class PoreRefinerDispatchServer(PoreRefinerBase):
 
     async def GetRuns(self, stream: 'grpclib.server.Stream[porerefiner_pb2.RunListRequest, porerefiner_pb2.RunList]') -> None:
         request = await stream.recv_message()
-        await stream.send_message(RunList(runs = await list_runs()))
+        await stream.send_message(RunList(runs = await list_runs(request.all, request.tags)))
 
     async def GetRunInfo(self, stream: 'grpclib.server.Stream[porerefiner_pb2.RunRequest, porerefiner_pb2.RunResponse]') -> None:
         request = await stream.recv_message()

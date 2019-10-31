@@ -3,7 +3,7 @@
 
 """Tests for `porerefiner` package."""
 
-from unittest import TestCase, skip
+from unittest import TestCase, skip, Mock, patch
 #from unittest.mock import AsyncMock
 from asyncmock import AsyncMock
 
@@ -82,7 +82,17 @@ class TestCoreFunctions(DBSetupTestCase):
 
     #@skip('not implemented')
     def test_list_runs(self):
+        self.assertEqual(len(_run(porerefiner.list_runs(all=True))), 1)
+
+    def test_list_runs_running(self):
+        models.Run.create(library_id='x', name=RUN_NAME, flowcell=self.flow, path="TEST/TEST/TEST", ended=datetime.now())
         self.assertEqual(len(_run(porerefiner.list_runs())), 1)
+
+    def test_list_runs_tags(self):
+        tag = models.Tag.create(name='TEST')
+        models.TagJunction.create(tag=tag, run=self.run)
+        self.assertEqual(len(_run(porerefiner.list_runs(tags=['TEST', 'other tag']))), 1)
+
 
     #@skip('not implemented')
     def test_poll_active_run(self):
@@ -166,26 +176,44 @@ class TestPoreFSEventHander(TestCase):
         self.assertEqual(len(list(models.File.select().where(models.File.path == path))), 1)
 
     @skip('not implemented')
-    @given(paths())
-    def test_on_modified(self, path):
-        assert False
+    @patch('porerefiner.File')
+    def test_on_modified(self, mock):
+        event = self.FakeEvent('TEST', True)
+        _run(porerefiner.on_modified(event))
+        self.assertFalse(mock.get_or_none.called())
 
     @skip('not implemented')
     @given(paths())
     def test_on_deleted(self, path):
         assert False
 
-class TestPoreDispatchServer(TestCase):
+class TestPoreDispatchServer(DBSetupTestCase):
 
-    @skip('not implemented')
-    def test_get_runs(self):
+    def setUp(self):
+        super().setUp()
+        self.flow = flow = models.Flowcell.create(consumable_id="TEST|TEST|TEST", consumable_type="TEST|TEST|TEST", path="TEST/TEST/TEST")
+        self.run = models.Run.create(pk=RUN_PK, library_id='x', name=RUN_NAME, flowcell=flow, path="TEST/TEST/TEST")
+        self.file = models.File.create(run=self.run, path='TEST/TEST/TEST/TEST', last_modified=datetime.now() - timedelta(hours=2))
+        self.tag = models.Tag.create(name='TEST')
+        models.TagJunction.create(tag=tag, run=self.run)
+
+    @skip('no test')
+    def test_get_runs_default(self):
         assert False
 
-    @skip('not implemented')
+    @skip('no test')
+    def test_get_runs_all(self):
+        assert False
+
+    @skip('no test')
+    def test_get_runs_tags(self):
+        assert
+
+    @skip('no test')
     def test_get_run_info(self):
         assert False
 
-    @skip('not implemented')
+    @skip('no test')
     def test_attach_sheet_run(self):
         assert False
 

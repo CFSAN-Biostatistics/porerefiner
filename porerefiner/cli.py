@@ -21,7 +21,7 @@ def cli():
 @click.option('-j', '--json', 'output_format', flag_value=json_formatter, help='Output in JSON.')
 @click.option('-x', '--xml', 'output_format', flag_value=xml_formatter, help='Output in schemaless XML.')
 @click.option('-t', '--tag', 'tags', multiple=True)
-def ps(output_format, all=False, tags=[]): #TODO
+def ps(output_format, all=False, tags=[]):
     "Show runs in progress, or every tracked run (--all), or with a particular tag (--tag)."
     async def ps_runner(formatter):
         with server() as serv:
@@ -33,19 +33,19 @@ def ps(output_format, all=False, tags=[]): #TODO
 
 
 
-@cli.command()
-@click.argument('run', type=VALID_RUN_ID)
-@click.confirmation_option("Are you sure you want to delete the run?")
-def rm(run): #TODO
-    "Remove a run and recover hard drive space."
-    pass
+# @cli.command()
+# @click.argument('run', type=VALID_RUN_ID)
+# @click.confirmation_option("Are you sure you want to delete the run?")
+# def rm(run):
+#     "Remove a run and recover hard drive space."
+#     pass
 
 @cli.command()
 @click.option('-h', '--human-readable', 'output_format', flag_value=hr_formatter, help='Output in a human-readable table.', default=hr_formatter)
 @click.option('-j', '--json', 'output_format', flag_value=json_formatter, help='Output in JSON.')
 @click.option('-x', '--xml', 'output_format', flag_value=xml_formatter, help='Output in schemaless XML.')
 @click.argument('run', type=VALID_RUN_ID)
-def info(output_format, run): #TODO
+def info(output_format, run):
     "Return information about a run, historical or in progress."
     async def info_runner(formatter):
         with server() as serv:
@@ -69,7 +69,23 @@ def template(): #TODO
 @click.argument('run', type=VALID_RUN_ID)
 def load(samplesheet, run=None): #TODO
     "Load a sample sheet to be attached to a run, or to the next run that is started."
-    pass
+    async def load_runner():
+        rec = RunAttachRequest(file=samplesheet.read())
+        if run:
+            if isinstance(run, str):
+                req.name = run
+            else:
+                req.id = run
+        else:
+            with server() as serv:
+                #get most recent in-progress run
+                resp = await serv.GetRuns(RunListRequest(all=False, tags=[]))
+            if not resp.runs:
+                raise ValueError("No in-progress runs to attach samples to. Specify a run for this sample sheet.")
+            rec.id = resp.runs[0].id
+        with server() as serv:
+            resp = await serv.AttachSheetToRun(rec)
+    run(load_runner())
 
 # @cli.command()
 # def proto():
