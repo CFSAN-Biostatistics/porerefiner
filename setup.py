@@ -29,7 +29,8 @@ setup_requirements = [ ]
 
 test_requirements = [ 'hypothesis>=4.38.0',
                       'hypothesis-fspaths>=0.1',
-                      'asyncmock>=0.4.1']
+                      'asyncmock>=0.4.1',
+                      'aiounittest>=1.3.0']
 
 setup(
     author="Justin Payne",

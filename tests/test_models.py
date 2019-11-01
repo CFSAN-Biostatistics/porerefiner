@@ -5,11 +5,12 @@ from tests import paths, with_database, TestBase
 
 from porerefiner import models
 
-from hypothesis import given, strategies as strat
+from hypothesis import given, strategies as strat, example
 #from hypothesis_fspaths import fspaths, _PathLike
 
 from datetime import datetime
 import pathlib
+import sys
 
 # SQLite can't accept a 32-bit integer
 sql_ints = lambda: strat.integers(min_value=-2**16, max_value=2**16)
@@ -21,10 +22,14 @@ sql_ints = lambda: strat.integers(min_value=-2**16, max_value=2**16)
 class TestModels(TestCase):
 
     @given(paths())
+    @example(b'/path/pa')
     def test_path_field(self, path):
-        #path = str(path)
+        try:
+            pa = pathlib.Path(path)
+        except TypeError:
+            pa = pathlib.Path(str(path, encoding=sys.getfilesystemencoding()))
         fld = models.PathField()
-        self.assertEqual(fld.python_value(fld.db_value(path)), pathlib.Path(path))
+        self.assertEqual(fld.python_value(fld.db_value(path)), pa)
 
     def test_models_registered(self):
         self.assertEqual(len(models.REGISTRY), 9)
@@ -107,7 +112,27 @@ class TestSampleSheet(TestCase): #TODO
         assert False
 
 class TestSample(TestCase): #TODO
-    pass
+
+    @given(pk=sql_ints(),
+           sample_id=strat.text(),
+           accession=strat.text(),
+           barcode_id=strat.text(),
+           organism=strat.text(),
+           extraction_kit=strat.text(),
+           comment=strat.text(),
+           user=strat.emails())
+    @with_database
+    def test_sample(self, **k):
+        ss = models.SampleSheet.create(path=k['sample_id'])
+        assert models.Sample.create(samplesheet=ss, **k)
 
 class TestFile(TestCase): #TODO
-    pass
+
+    @given(pk=sql_ints(),
+           path=paths(),
+           checksum=strat.text(),
+           last_modified=strat.datetimes(),
+           exported=strat.booleans())
+    @with_database
+    def test_file(self, **k):
+        assert models.File.create(**k)

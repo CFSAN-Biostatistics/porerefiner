@@ -3,9 +3,11 @@
 
 """Tests for `porerefiner` package."""
 
-from unittest import TestCase, skip, Mock, patch
+from unittest import TestCase, skip
+from unittest.mock import Mock, patch
 #from unittest.mock import AsyncMock
 from asyncmock import AsyncMock
+from aiounittest import async_test
 
 from click.testing import CliRunner
 
@@ -95,23 +97,19 @@ class TestCoreFunctions(DBSetupTestCase):
 
 
     #@skip('not implemented')
-    def test_poll_active_run(self):
-        _end_run = porerefiner.end_run
-        signal = False
-        async def mock(*a, **k):
-            nonlocal signal
-            signal = True
-        porerefiner.end_run = mock
+    @patch('porerefiner.porerefiner.end_run', new_callable=AsyncMock)
+    def test_poll_active_run(self, mock):
         self.assertEqual(_run(porerefiner.poll_active_run()), 1) #checked 1 file
-        #self.assertIn(self.file, self.run.files)
-        #self.assertGreater(datetime.now() - self.run.files[0].last_modified, timedelta(hours=1))
-        assert signal #ran end_run
-        porerefiner.end_run = _end_run
+        mock.assert_called() #ran end_run
 
 
-    @skip('not implemented')
+    #@skip('not implemented')
     def test_end_run(self):
-        assert False
+        mock = AsyncMock()
+        with patch('porerefiner.porerefiner.NOTIFIERS', new_callable=lambda: [mock]) as _:
+            _run(porerefiner.end_run(self.run))
+        self.assertAlmostEqual(datetime.now(), self.run.ended, delta=timedelta(seconds=1))
+        mock.notify.assert_called()
 
     @skip('not implemented')
     def test_send_run(self):
@@ -134,53 +132,49 @@ class TestPoreFSEventHander(TestCase):
     @given(flowcell_path=paths())
     @with_database
     def test_on_created_flowcell(self, flowcell_path):
-        path = pathlib.Path(flowcell_path)
-        ut = porerefiner.PoreRefinerFSEventHandler(path.parent)
-        event = self.FakeEvent(flowcell_path)
-        _reg_flow = porerefiner.register_new_flowcell
-        mock = AsyncMock()
-        porerefiner.register_new_flowcell = mock
-        _run(ut.on_created(event))
-        porerefiner.register_new_flowcell = _reg_flow
-        mock.assert_called_once()
-
-    #@skip('not implemented')
-    @given(flowcell_path=paths(under='TEST'))
-    @with_database
-    def test_on_created_run(self, flowcell_path):
-        path = pathlib.Path(flowcell_path)
-        ut = porerefiner.PoreRefinerFSEventHandler(path.parent)
-        models.Flowcell.get_or_create(pk=RUN_PK+1, consumable_id="TEST|TEST|TEST", consumable_type="TEST|TEST|TEST", path=path)
-        event = self.FakeEvent(path / 'TEST')
-        self.assertIsNone(models.Run.get_or_none(models.Run.path == rp(event.src_path)))
-        _reg_run = porerefiner.register_new_run
-        mock = AsyncMock()
-        porerefiner.register_new_run = mock
-        _run(ut.on_created(event))
-        porerefiner.register_new_run = _reg_run
+        with patch('porerefiner.porerefiner.register_new_flowcell', new_callable=AsyncMock) as mock:
+            path = pathlib.Path(flowcell_path)
+            ut = porerefiner.PoreRefinerFSEventHandler(path.parent)
+            event = self.FakeEvent(flowcell_path)
+            _run(ut.on_created(event))
         mock.assert_called_once()
 
     # @skip('not implemented')
-    @given(path=paths(under='TEST/TEST'))
+    # @given(flowcell_path=paths(under='/A/B/C'))
     @with_database
-    def test_on_created_file(self, path):
-        ut = porerefiner.PoreRefinerFSEventHandler(split(split(split(path)[0])[0])[0])
+    def test_on_created_run(self, flowcell_path='/A/B/C/D'):
+        path = pathlib.Path(flowcell_path)
+        ut = porerefiner.PoreRefinerFSEventHandler(path.parent.parent)
+        models.Flowcell.get_or_create(pk=RUN_PK+1, consumable_id="TEST|TEST|TEST", consumable_type="TEST|TEST|TEST", path=path)
+        event = self.FakeEvent(path / 'TEST')
+        self.assertIsNone(models.Run.get_or_none(models.Run.path == rp(event.src_path)))
+        with patch('porerefiner.porerefiner.register_new_run', new_callable=AsyncMock) as mock:
+            _run(ut.on_created(event))
+        mock.assert_called_once()
+
+    # @skip('not implemented')
+    #@given(path=paths(under='TEST/TEST'))
+    @with_database
+    def test_on_created_file(self, path='/A/B/C/D/E'):
+        path = pathlib.Path(path)
+        ut = porerefiner.PoreRefinerFSEventHandler(path.parent.parent.parent)
         flow = models.Flowcell.create(pk=RUN_PK+1,
                                       consumable_id='TEST',
                                       consumable_type='TEST',
-                                      path=rp(split(split(path)[0])[0]))
-        run = models.Run.create(pk=RUN_PK, library_id='x', name=RUN_NAME, flowcell=flow, path=rp(split(path)[0]))
+                                      path=rp(path.parent.parent))
+        run = models.Run.create(pk=RUN_PK, library_id='x', name=RUN_NAME, flowcell=flow, path=rp(path.parent))
         event = self.FakeEvent(rp(path), is_dir=False)
         _run(ut.on_created(event))
         self.assertEqual(len(run.files), 1)
         self.assertEqual(len(list(models.File.select().where(models.File.path == path))), 1)
 
-    @skip('not implemented')
-    @patch('porerefiner.File')
+    # @skip('not implemented')
+    @patch('porerefiner.porerefiner.File')
     def test_on_modified(self, mock):
-        event = self.FakeEvent('TEST', True)
-        _run(porerefiner.on_modified(event))
-        self.assertFalse(mock.get_or_none.called())
+        ut = porerefiner.PoreRefinerFSEventHandler(pathlib.Path('TEST'))
+        event = self.FakeEvent('TEST', False)
+        _run(ut.on_modified(event))
+        mock.get_or_none.assert_called()
 
     @skip('not implemented')
     @given(paths())
@@ -207,7 +201,7 @@ class TestPoreDispatchServer(DBSetupTestCase):
 
     @skip('no test')
     def test_get_runs_tags(self):
-        assert
+        assert False
 
     @skip('no test')
     def test_get_run_info(self):
@@ -221,13 +215,37 @@ class TestPoreDispatchServer(DBSetupTestCase):
     def test_rsync_run_to(self):
         assert False
 
+
 class TestServerStart(TestCase):
 
-
-    @skip('not implemented')
+    @skip('no test')
     def test_start_fs_watchdog(self):
         assert False
 
-    @skip('not implemented')
-    def test_start_server(self):
-        assert False
+    #@skip('no test')
+    @patch('porerefiner.porerefiner.graceful_exit')
+    @patch('porerefiner.porerefiner.Server')
+    def test_start_server(self, mock, _):
+        mock.return_value = coro = AsyncMock()
+        _run(porerefiner.start_server(None))
+        mock.assert_called()
+        coro.start.assert_called()
+        coro.wait_closed.assert_called()
+
+    #@skip('no test')
+    @async_test
+    async def test_start_run_end_polling(self):
+        with patch('porerefiner.porerefiner.poll_active_run') as mock:
+            task = await porerefiner.start_run_end_polling(0)
+            await asyncio.sleep(5)
+            task.cancel()
+            mock.assert_called()
+
+    #@skip('no test')
+    @async_test
+    async def test_start_job_polling(self):
+        with patch('porerefiner.porerefiner.poll_jobs') as mock:
+            task = await porerefiner.start_job_polling(0)
+            await asyncio.sleep(5)
+            task.cancel()
+            mock.assert_called()

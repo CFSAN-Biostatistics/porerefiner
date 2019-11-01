@@ -67,7 +67,7 @@ def template(): #TODO
 @cli.command()
 @click.argument('samplesheet', type=click.File())
 @click.argument('run', type=VALID_RUN_ID)
-def load(samplesheet, run=None): #TODO
+def load(samplesheet, run=None):
     "Load a sample sheet to be attached to a run, or to the next run that is started."
     async def load_runner():
         rec = RunAttachRequest(file=samplesheet.read())

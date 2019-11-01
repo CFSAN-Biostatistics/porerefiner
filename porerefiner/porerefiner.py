@@ -168,7 +168,7 @@ async def poll_active_run():
 async def end_run(run): #TODO
     "Put run in closed status"
     run.ended = datetime.now()
-    async for notifier in NOTIFIERS:
+    for notifier in NOTIFIERS:
         await notifier.notify(run, None, "Run finished")
 
 
@@ -204,7 +204,7 @@ class PoreRefinerFSEventHandler(AIOEventHandler):
         if not event.is_directory: #we don't care about directory modifications
             fi = File.get_or_none(File.path == r(event.src_path))
             if fi:
-                fi.last_modified = datetime.datetime.now()
+                fi.last_modified = datetime.now()
                 fi.save()
 
     async def on_deleted(self, event): #TODO
@@ -256,24 +256,29 @@ async def start_fs_watchdog(path, *a, **k):
         path,
         event_handler=PoreRefinerFSEventHandler(path)
         )
-    log.info(f"Filesystem events being watched in {path}...")
     await watcher.start()
+    log.info(f"Filesystem events being watched in {path}...")
+    await watcher.wait_closed()
     log.info(f"Filesystem event watcher shutting down.")
 
 async def start_run_end_polling(run_polling_interval, *a, **k):
     "Coro to bring up the run termination polling"
     log.info(f"Starting run polling...")
-    while True:
+    async def run_end_polling():
         run_num = await poll_active_run()
         log.info(f"{run_num} runs polled.")
         await asyncio.sleep(run_polling_interval) #poll every ten minutes
+        return asyncio.ensure_future(run_end_polling())
+    return asyncio.ensure_future(run_end_polling())
 
 async def start_job_polling(job_polling_interval, *a, **k):
     log.info(f'Starting job polling...')
-    while True:
+    async def run_job_polling():
         po, su, co = await poll_jobs()
         log.info(f'{po} jobs polled, {su} submitted, {co} collected.')
         await asyncio.sleep(job_polling_interval) #poll every 30 minutes
+        return asyncio.ensure_future(run_job_polling())
+    return asyncio.ensure_future(run_job_polling())
 
 
 def main(db_path=None, db_pragmas=None, wdog_settings=None, server_settings=None, system_settings=None):
@@ -285,14 +290,14 @@ def main(db_path=None, db_pragmas=None, wdog_settings=None, server_settings=None
         wdog_settings=config['nanopore']
         server_settings=config['server']
         system_settings=config['porerefiner']
-    models._db.init(db_path, db_pragmas)
-    [cls.create_table(safe=True) for cls in models.REGISTRY]
+    models._db.init(db_path, db_pragmas) # pragma: no cover
+    [cls.create_table(safe=True) for cls in models.REGISTRY] # pragma: no cover
 
     asyncio.run(asyncio.gather(start_server(**server_settings),
                                start_fs_watchdog(**wdog_settings),
                                start_run_end_polling(**system_settings),
                                start_job_polling(**system_settings),
-                               return_exceptions=True))
+                               return_exceptions=True)) #pragma: no cover
 
 async def shutdown(signal, loop):
     for task in asyncio.all_tasks():
@@ -301,5 +306,5 @@ async def shutdown(signal, loop):
 
 
 if __name__ == '__main__':
-    with daemon.DaemonContext():
-        main()
+    with daemon.DaemonContext():  # pragma: no cover
+        main()                    # pragma: no cover
