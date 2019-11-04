@@ -93,7 +93,7 @@ class TestJob(TestCase):
     def test_job(self, **kwargs):
         assert models.Job.create(**kwargs)
 
-class TestSampleSheet(TestCase): #TODO
+class TestSampleSheet(TestCase):
 
     @given(pk=sql_ints(),
            path=paths(),
@@ -111,7 +111,7 @@ class TestSampleSheet(TestCase): #TODO
     def test_ss_from_excel(self):
         assert False
 
-class TestSample(TestCase): #TODO
+class TestSample(TestCase):
 
     @given(pk=sql_ints(),
            sample_id=strat.text(),
@@ -126,7 +126,7 @@ class TestSample(TestCase): #TODO
         ss = models.SampleSheet.create(path=k['sample_id'])
         assert models.Sample.create(samplesheet=ss, **k)
 
-class TestFile(TestCase): #TODO
+class TestFile(TestCase):
 
     @given(pk=sql_ints(),
            path=paths(),
