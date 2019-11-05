@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from contextlib import contextmanager
 from grpclib.client import Channel, GRPCError
+from tabulate import tabulate
 from xml.etree import ElementTree as xml
 
 from porerefiner.protocols.porerefiner.rpc.porerefiner_grpc import PoreRefinerStub
@@ -67,24 +68,42 @@ def server():
 #formatters for run output
 
 @contextmanager
-def hr_formatter():
-    print("stuff")
-    def print_run(run, extend=False):
-        print(run)
+def hr_formatter(extend=False):
+    rec = []
+    def print_run(run):
+        rec.append(dict(id=run.id,
+                        name=run.name,
+                        nickname=run.nickname,
+                        status=run.status,
+                        samples=len(run.samples),
+                        files=sum([len(sam.files) for sam in run.samples]),
+                        tags=",".join(run.tags)))
+        if extend:
+            for sample in run.samples:
+                rec.append(dict(id=sample.id,
+                                name=sample.name,
+                                nickname=sample.accession,
+                                barcode_id=sample.barcode_id,
+                                organism=sample.organism,
+                                comment=sample.comment,
+                                user=sample.user,
+                                files=len(sample.files),
+                                tags=",".join(sample.tags)))
     yield print_run
+    print(tabulate(rec, headers="keys"))
 
 @contextmanager
-def json_formatter():
+def json_formatter(extend=False):
     rec = []
-    def print_run(run, extend=False):
+    def print_run(run):
         rec.append(run)
     yield print_run
     print(json.dumps(rec))
 
 @contextmanager
-def xml_formatter():
+def xml_formatter(extend=False):
     rec = []
-    def print_run(run, extend=False):
+    def print_run(run):
         rec.append(run)
     yield print_run
     print(xml.toString())

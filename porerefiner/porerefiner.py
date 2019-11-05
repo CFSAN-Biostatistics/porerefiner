@@ -4,16 +4,18 @@
 
 import asyncio
 import aiohttp
+import click
 import daemon
 import datetime
-
 import logging
+import sys
 import watchdog
 
+from asyncio import run, gather, wait
 from datetime import datetime, timedelta
 from grpclib.server import Server
 from grpclib.utils import graceful_exit
-from hachiko.hachiko import AIOEventHandler
+from hachiko.hachiko import AIOEventHandler, AIOWatchdog
 from peewee import JOIN
 from porerefiner import models
 from porerefiner.models import Flowcell, Run, Qa, File, Job, SampleSheet, Sample, Tag, TagJunction
@@ -24,7 +26,7 @@ from os import remove
 from pathlib import Path
 
 from porerefiner.protocols.minknow.rpc.manager_grpc import ManagerServiceStub
-from porerefiner.protocols.porerefiner.rpc.porerefiner_pb2 import Run as RunMessage, RunList, RunResponse, Error, RunAttachResponse, RunRsyncResponse
+from porerefiner.protocols.porerefiner.rpc.porerefiner_pb2 import Run as RunMessage, RunList, RunResponse, Error, RunAttachResponse, RunRsyncResponse, RunListResponse
 from porerefiner.protocols.porerefiner.rpc.porerefiner_grpc import PoreRefinerBase
 from porerefiner.notifiers import NOTIFIERS
 
@@ -69,30 +71,27 @@ def make_run_msg(run):
                       tags=[tag.name for tag in run.tags]
                       )
 
-async def register_new_flowcell(path): #TODO
-    pass
+async def register_new_flowcell(path, nanopore_api=None): #TODO
+    flow = Flowcell.create(path=path, consumable_id=path.name)
 
-async def register_new_run(path): #TODO
+    if nanopore_api:
+        #try to get some MinKnow stuff
+        pass
 
-    run = Run(path=path, status='RUNNING')
+async def register_new_run(path, nanopore_api=None): #TODO
 
-    #async with glibrpc.utils.insecure_channel(config['minknow_api']) as channel:
-    #    client = ManagerStub(channel)
-        # reply = await client.DoSomething(path)
+    flow = Flowcell.get(Flowcell.path==path.parent)
 
-    #somehow need to link to the correct run - is it just the current run in progress?
+    run = Run.create(path=path, status='RUNNING', flowcell=flow, name=path.name)
 
-    run.library_id = reply.LibraryID #probably doesn't work
-    run.flowcell_type = reply.FlowcellType
-    run.flowcell_id = reply.FlowcellID
-    run.basecalling_model = reply.BasecallingModel
-
-    run.save()
+    if nanopore_api:
+        #get minknow stuff if we can
+        pass
 
     query = SampleSheet.select().where(SampleSheet.run == None)
     if query.count() == 1:
         #if there's an unattached sheet, attach it to this run
-        sheet = query.next()
+        sheet = next(query)
         sheet.run = run
         sheet.save()
 
@@ -165,10 +164,12 @@ async def poll_active_run():
     return len(runs)
 
 
-async def end_run(run): #TODO
+async def end_run(run):
     "Put run in closed status"
     run.ended = datetime.now()
+    log.info(f"Run {run.alt_name} ended, no file modifications in the past hour")
     for notifier in NOTIFIERS:
+        log.info(f"Firing notifier {notifier.name}")
         await notifier.notify(run, None, "Run finished")
 
 
@@ -186,18 +187,22 @@ class PoreRefinerFSEventHandler(AIOEventHandler):
 
     async def on_created(self, event):
         "New flowcell folder, new run folder, or new file in run"
+        log.info(f"Filesystem event: {event.src_path} created")
         if event.is_directory:
             path = Path(event.src_path)
             parent = path.parent
             if parent == Path(self.path):
                 if not Flowcell.get_or_none(Flowcell.path == r(path)):
+                    log.info("Registering new flowcell...")
                     await register_new_flowcell(r(path))
             else:
                 if not Run.get_or_none(Run.path == r(path)):
+                    log.info("Registering new run...")
                     await register_new_run(r(path))
         else:
             containing_folder, filename = split(event.src_path)
             run = Run.get(Run.path == r(containing_folder))
+            log.info(f"New file found for run {run.alt_name}...")
             fi = File.get_or_create(run=run, path=r(event.src_path))
 
     async def on_modified(self, event):
@@ -207,59 +212,66 @@ class PoreRefinerFSEventHandler(AIOEventHandler):
                 fi.last_modified = datetime.now()
                 fi.save()
 
-    async def on_deleted(self, event): #TODO
-        "Update database if files are deleted."
-        if event.is_dictionary:
-            Run.delete().where(Run.path == r(event.src_path)).execute()
-        else:
-            File.delete().where(File.path == r(event.src_path)).execute()
+    # async def on_deleted(self, event): #TODO
+    #     "Update database if files are deleted."
+    #     if event.is_directory:
+    #         Run.delete().where(Run.path == r(event.src_path)).execute()
+    #     else:
+    #         File.delete().where(File.path == r(event.src_path)).execute()
 
 class PoreRefinerDispatchServer(PoreRefinerBase):
     "Eventhandler for RPC events coming from command line or Flask app"
 
     async def GetRuns(self, stream: 'grpclib.server.Stream[porerefiner_pb2.RunListRequest, porerefiner_pb2.RunList]') -> None:
+        log.info("API call: Get Runs")
         request = await stream.recv_message()
-        await stream.send_message(RunList(runs = await list_runs(request.all, request.tags)))
+        log.debug(f"all:{request.all}, tags:{request.tags}")
+        await stream.send_message(RunListResponse(runs=RunList(runs = await list_runs(request.all, request.tags))))
+        log.info("Response sent")
 
     async def GetRunInfo(self, stream: 'grpclib.server.Stream[porerefiner_pb2.RunRequest, porerefiner_pb2.RunResponse]') -> None:
         request = await stream.recv_message()
+        log.info(f"API call: get run info for run {request.id or request.name}")
         try:
             run_msg = await get_run_info(request.id or request.name)
             reply_msg = RunResponse(run=run_msg)
         except ValueError as e:
             err_msg = Error(type='ValueError', err_message=e.message)
             reply_msg = RunResponse(error=err_msg)
-        return await stream.send_message(reply_msg)
+        await stream.send_message(reply_msg)
+        log.info("Response sent")
 
     async def AttachSheetToRun(self, stream: 'grpclib.server.Stream[porerefiner_pb2.RunAttachRequest, porerefiner_pb2.RunAttachResponse]') -> None:
         request = await stream.recv_message()
-
+        log.info("API call: Attach sample sheet")
         await stream.send_message(RunAttachResponse())
+        log.info("Response sent")
 
     async def RsyncRunTo(self, stream: 'grpclib.server.Stream[porerefiner_pb2.RunRsyncRequest, porerefiner_pb2.RunRsyncResponse]') -> None:
         request = await stream.recv_message()
-
+        log.info(f"API call: send run via rsync to {request.dest}")
         await stream.send_message(RunRsyncResponse())
+        log.info("Response sent")
 
 async def start_server(socket, *a, **k):
     "Coroutine to bring up the rpc server"
     server = Server([PoreRefinerDispatchServer()])
     with graceful_exit([server]):
-        await server.start(socket)
+        await server.start(path=str(socket))
         log.info(f"RPC server listening on {socket}...")
         await server.wait_closed()
         log.info(f"RPC server shutting down.")
 
 async def start_fs_watchdog(path, *a, **k):
     "Coroutine to bring up the filesystem watchdog"
-    watcher = hachiko.hachiko.AIOWatchdog(
+    watcher = AIOWatchdog(
         path,
         event_handler=PoreRefinerFSEventHandler(path)
         )
-    await watcher.start()
+    watcher.start()
     log.info(f"Filesystem events being watched in {path}...")
-    await watcher.wait_closed()
-    log.info(f"Filesystem event watcher shutting down.")
+    # watcher.wait_closed()
+    # log.info(f"Filesystem event watcher shutting down.")
 
 async def start_run_end_polling(run_polling_interval, *a, **k):
     "Coro to bring up the run termination polling"
@@ -281,9 +293,9 @@ async def start_job_polling(job_polling_interval, *a, **k):
     return asyncio.ensure_future(run_job_polling())
 
 
-def main(db_path=None, db_pragmas=None, wdog_settings=None, server_settings=None, system_settings=None):
-    "Main event loop and async"
-    if not all(db_path, db_pragmas, wdog_settings, server_settings, system_settings): #need to defer loading config for testing purposes
+async def serve(db_path=None, db_pragmas=None, wdog_settings=None, server_settings=None, system_settings=None):
+    "Initialize and gather coroutines"
+    if not all([db_path, db_pragmas, wdog_settings, server_settings, system_settings]): #need to defer loading config for testing purposes
         from porerefiner.config import config
         db_path=config['database']['path']
         db_pragmas=config['database']['pragmas']
@@ -292,19 +304,37 @@ def main(db_path=None, db_pragmas=None, wdog_settings=None, server_settings=None
         system_settings=config['porerefiner']
     models._db.init(db_path, db_pragmas) # pragma: no cover
     [cls.create_table(safe=True) for cls in models.REGISTRY] # pragma: no cover
-
-    asyncio.run(asyncio.gather(start_server(**server_settings),
-                               start_fs_watchdog(**wdog_settings),
-                               start_run_end_polling(**system_settings),
-                               start_job_polling(**system_settings),
-                               return_exceptions=True)) #pragma: no cover
+    try:
+        results = await gather(start_server(**server_settings),
+                    start_fs_watchdog(**wdog_settings),
+                    start_run_end_polling(**system_settings),
+                    start_job_polling(**system_settings))
+    finally:
+        log.info("Shutting down...")
 
 async def shutdown(signal, loop):
     for task in asyncio.all_tasks():
         if task is not asyncio.current_task():
             task.cancel()
 
+@click.command()
+@click.option('-d', '--daemonize', 'demonize', default=False)
+@click.option('-v', '--verbose', is_flag=True)
+def main(verbose=False, demonize=False):
+    "Start the main event loop"
+    log = logging.getLogger('porerefiner')
+    logging.basicConfig(stream=sys.stdout, level=(logging.INFO, logging.DEBUG)[verbose])
+
+    if demonize:
+        log.info("Starting daemon...")
+        with daemon.DaemonContext():
+            run(serve())
+    else:
+        log.info("Starting server...")
+        run(serve())
+    return 0
+
+
 
 if __name__ == '__main__':
-    with daemon.DaemonContext():  # pragma: no cover
-        main()                    # pragma: no cover
+    sys.exit(main())                   # pragma: no cover

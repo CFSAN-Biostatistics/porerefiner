@@ -21,14 +21,15 @@ def cli():
 @click.option('-j', '--json', 'output_format', flag_value=json_formatter, help='Output in JSON.')
 @click.option('-x', '--xml', 'output_format', flag_value=xml_formatter, help='Output in schemaless XML.')
 @click.option('-t', '--tag', 'tags', multiple=True)
-def ps(output_format, all=False, tags=[]):
+@click.option('-e', '--extended', 'extend', default=False, is_flag=True, help="Extended output format.")
+def ps(output_format, extend, all=False, tags=[]):
     "Show runs in progress, or every tracked run (--all), or with a particular tag (--tag)."
     async def ps_runner(formatter):
         with server() as serv:
             resp = await serv.GetRuns(RunListRequest(all=all, tags=tags))
             for run in resp.runs.runs:
                 formatter(run)
-    with output_format() as formatter:
+    with output_format(extend) as formatter:
         run(ps_runner(formatter=formatter))
 
 
@@ -55,8 +56,8 @@ def info(output_format, run):
             else:
                 req.id = run
             resp = await serv.GetRunInfo(req)
-            formatter(resp.run, extend=True)
-    with output_format() as formatter:
+            formatter(resp.run)
+    with output_format(extend=True) as formatter:
         run(info_runner(formatter))
 
 @cli.command()

@@ -1,6 +1,6 @@
 import asyncio
 
-from porerefiner.notifiers import states, Notifier
+from porerefiner.notifiers import Notifier
 from logging import log
 
 class SqsNotifier(Notifier): #TODO

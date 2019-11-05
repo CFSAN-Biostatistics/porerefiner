@@ -62,7 +62,7 @@ class Flowcell(PorerefinerModel):
     pk = AutoField()
 
     consumable_id = CharField(null=False)
-    consumable_type = CharField(null=False)
+    consumable_type = CharField(null=True)
     path = PathField(index=True)
 
 class Run(PorerefinerModel):
@@ -76,7 +76,7 @@ class Run(PorerefinerModel):
     _sample_sheet = DeferredForeignKey('SampleSheet', null=True, backref='runs')
 
     name = CharField()
-    library_id = CharField()
+    library_id = CharField(null=True)
     alt_name = CharField(default = create_readable_name)
     run_id = CharField(null=True)
     started = DateTimeField(default = datetime.datetime.now)

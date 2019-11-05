@@ -5,7 +5,7 @@ import logging
 
 from porerefiner.notifiers import REGISTRY, NOTIFIERS
 
-config_file = Path(environ.get('POREREFINER_CONFIG', '/etc/porerefiner/config/config.yml'))
+config_file = Path(environ.get('POREREFINER_CONFIG', '/Users/justin.payne/.porerefiner/config.yml'))
 
 
 #Logging
@@ -13,7 +13,7 @@ log = logging.getLogger('porerefiner.config')
 
 try:
     with open(config_file, 'r') as conf:
-        config = yaml.load(conf)
+        config = yaml.safe_load(conf)
     log.info(f"Config file loaded from {config_file}")
 
 except OSError:
@@ -21,22 +21,30 @@ except OSError:
     from collections import defaultdict
     tree = lambda: defaultdict(tree) #this is a trick for defining a recursive defaultdict
     defaults = tree()
-    defaults['database']['path'] = '/etc/porerefiner/database.db'
+    defaults['porerefiner']['log_level'] = logging.INFO
+    defaults['porerefiner']['run_polling_interval'] = 600
+    defaults['porerefiner']['job_polling_interval'] = 1800
+    defaults['database']['path'] = '/Users/justin.payne/.porerefiner/database.db'
     defaults['database']['pragmas']['foreign_keys'] = 1
     defaults['database']['pragmas']['journal_mode'] = 'wal'
     defaults['database']['pragmas']['cache_size'] = 1000
     defaults['database']['pragmas']['ignore_check_constraints'] = 0
     defaults['database']['pragmas']['synchronous'] = 0
-    defaults['server']['socket'] = '/var/run/porerefiner'
+    defaults['server']['socket'] = '/Users/justin.payne/.porerefiner/socket'
     defaults['server']['use_ssl'] = False
-    defaults['nanopore']['path'] = '///gridion/stuff'
+    defaults['nanopore']['path'] = '/Users/justin.payne/nanop'
     defaults['nanopore']['api'] = "localhost:9501"
-    defaults['porerefiner']['log_level'] = logging.INFO
-    defaults['porerefiner']['run_polling_interval'] = 600
-    defaults['porerefiner']['job_polling_interval'] = 1800
 
     defaults['notifiers'] = [{'class':'ToastNotifier', 'config':dict(name='Default notifier', max=3)}]
 
+    def c(d):
+        "Recursively convert this defaultdict to a dict"
+        if isinstance(d, defaultdict):
+            return {k:c(v) for k,v in d.items()}
+        else:
+            return d
+
+    defaults = c(defaults)
 
     # defaults['']['']
     with open(config_file, 'w') as conf:
@@ -51,8 +59,8 @@ except yaml.YAMLError as e:
 
 
 #Socket
-config['socket'] = Path(environ.get('POREREFINER_SOCK', config['socket']))
-log.info(f"PoreRefiner socket at {config['socket']}")
+config['server']['socket'] = Path(environ.get('POREREFINER_SOCK', config['server']['socket']))
+log.info(f"PoreRefiner socket at {config['server']['socket']}")
 
 #Notifiers
 log.info("Loading notifiers...")

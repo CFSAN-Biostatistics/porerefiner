@@ -22,7 +22,8 @@ requirements = ['Click>=7.0',
                 'namesgenerator>=0.3',
                 'python-daemon>=2.2.3',
                 'protobuf>=3.10.0',
-                'grpclib>=0.3.0'
+                'grpclib>=0.3.0',
+                'tabulate>=0.8.5'
                 ]
 
 setup_requirements = [ ]

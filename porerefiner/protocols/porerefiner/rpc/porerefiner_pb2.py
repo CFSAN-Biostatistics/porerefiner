@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='porerefiner.rpc',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n7porerefiner/protocols/porerefiner/rpc/porerefiner.proto\x12\x0fporerefiner.rpc\"\xcc\x04\n\x03Run\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x15\n\rmnemonic_name\x18\x03 \x01(\t\x12\x12\n\nlibrary_id\x18\x04 \x01(\t\x12\x0e\n\x06status\x18\x05 \x01(\t\x12\x0c\n\x04path\x18\x06 \x01(\t\x12\x15\n\rflowcell_type\x18\x07 \x01(\t\x12\x13\n\x0b\x66lowcell_id\x18\x08 \x01(\t\x12\x19\n\x11\x62\x61secalling_model\x18\t \x01(\t\x12\x16\n\x0esequencing_kit\x18\n \x01(\t\x12,\n\x07samples\x18\x14 \x03(\x0b\x32\x1b.porerefiner.rpc.Run.Sample\x12\x0c\n\x04tags\x18\x1e \x03(\t\x1a\xc6\x02\n\x06Sample\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x11\n\taccession\x18\x03 \x01(\t\x12\x12\n\nbarcode_id\x18\x04 \x01(\t\x12\x13\n\x0b\x62\x61rcode_seq\x18\x05 \x01(\t\x12\x10\n\x08organism\x18\x06 \x01(\t\x12\x16\n\x0e\x65xtraction_kit\x18\x07 \x01(\t\x12\x0f\n\x07\x63omment\x18\x08 \x01(\t\x12\x0c\n\x04user\x18\t \x01(\t\x12/\n\x05\x66iles\x18\x14 \x03(\x0b\x32 .porerefiner.rpc.Run.Sample.File\x12\x0c\n\x04tags\x18\x1e \x03(\t\x1a^\n\x04\x46ile\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04path\x18\x02 \x01(\t\x12\x0f\n\x07spot_id\x18\x05 \x01(\t\x12\x0c\n\x04size\x18\x08 \x01(\x04\x12\r\n\x05ready\x18\n \x01(\x08\x12\x0c\n\x04tags\x18\x1e \x03(\t\"E\n\x05\x45rror\x12\x0e\n\x04\x63ode\x18\x01 \x01(\x05H\x00\x12\x0e\n\x04type\x18\x02 \x01(\tH\x00\x12\x13\n\x0b\x65rr_message\x18\x03 \x01(\tB\x07\n\x05\x65rror\"d\n\x0bRunResponse\x12#\n\x03run\x18\x01 \x01(\x0b\x32\x14.porerefiner.rpc.RunH\x00\x12\'\n\x05\x65rror\x18\x02 \x01(\x0b\x32\x16.porerefiner.rpc.ErrorH\x00\x42\x07\n\x05reply\"\x10\n\x0eRunListRequest\"-\n\x07RunList\x12\"\n\x04runs\x18\x01 \x03(\x0b\x32\x14.porerefiner.rpc.Run\"m\n\x0fRunListResponse\x12(\n\x04runs\x18\x01 \x01(\x0b\x32\x18.porerefiner.rpc.RunListH\x00\x12\'\n\x05\x65rror\x18\x02 \x01(\x0b\x32\x16.porerefiner.rpc.ErrorH\x00\x42\x07\n\x05reply\"2\n\nRunRequest\x12\x0c\n\x02id\x18\x01 \x01(\rH\x00\x12\x0e\n\x04name\x18\x02 \x01(\tH\x00\x42\x06\n\x04term\"E\n\x0fRunRsyncRequest\x12\x0c\n\x02id\x18\x01 \x01(\rH\x00\x12\x0e\n\x04name\x18\x02 \x01(\tH\x00\x12\x0c\n\x04\x64\x65st\x18\x03 \x01(\tB\x06\n\x04term\"9\n\x10RunRsyncResponse\x12%\n\x05\x65rror\x18\x01 \x01(\x0b\x32\x16.porerefiner.rpc.Error\"a\n\x10RunAttachRequest\x12\x0c\n\x02id\x18\x01 \x01(\rH\x00\x12\x0e\n\x04name\x18\x02 \x01(\tH\x00\x12\x0e\n\x04path\x18\x03 \x01(\tH\x01\x12\x0e\n\x04\x66ile\x18\x04 \x01(\x0cH\x01\x42\x06\n\x04termB\x07\n\x05sheet\":\n\x11RunAttachResponse\x12%\n\x05\x65rror\x18\x01 \x01(\x0b\x32\x16.porerefiner.rpc.Error2\xd2\x02\n\x0bPoreRefiner\x12L\n\x07GetRuns\x12\x1f.porerefiner.rpc.RunListRequest\x1a .porerefiner.rpc.RunListResponse\x12G\n\nGetRunInfo\x12\x1b.porerefiner.rpc.RunRequest\x1a\x1c.porerefiner.rpc.RunResponse\x12Y\n\x10\x41ttachSheetToRun\x12!.porerefiner.rpc.RunAttachRequest\x1a\".porerefiner.rpc.RunAttachResponse\x12Q\n\nRsyncRunTo\x12 .porerefiner.rpc.RunRsyncRequest\x1a!.porerefiner.rpc.RunRsyncResponseb\x06proto3')
+  serialized_pb=_b('\n7porerefiner/protocols/porerefiner/rpc/porerefiner.proto\x12\x0fporerefiner.rpc\"\xcc\x04\n\x03Run\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x15\n\rmnemonic_name\x18\x03 \x01(\t\x12\x12\n\nlibrary_id\x18\x04 \x01(\t\x12\x0e\n\x06status\x18\x05 \x01(\t\x12\x0c\n\x04path\x18\x06 \x01(\t\x12\x15\n\rflowcell_type\x18\x07 \x01(\t\x12\x13\n\x0b\x66lowcell_id\x18\x08 \x01(\t\x12\x19\n\x11\x62\x61secalling_model\x18\t \x01(\t\x12\x16\n\x0esequencing_kit\x18\n \x01(\t\x12,\n\x07samples\x18\x14 \x03(\x0b\x32\x1b.porerefiner.rpc.Run.Sample\x12\x0c\n\x04tags\x18\x1e \x03(\t\x1a\xc6\x02\n\x06Sample\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x11\n\taccession\x18\x03 \x01(\t\x12\x12\n\nbarcode_id\x18\x04 \x01(\t\x12\x13\n\x0b\x62\x61rcode_seq\x18\x05 \x01(\t\x12\x10\n\x08organism\x18\x06 \x01(\t\x12\x16\n\x0e\x65xtraction_kit\x18\x07 \x01(\t\x12\x0f\n\x07\x63omment\x18\x08 \x01(\t\x12\x0c\n\x04user\x18\t \x01(\t\x12/\n\x05\x66iles\x18\x14 \x03(\x0b\x32 .porerefiner.rpc.Run.Sample.File\x12\x0c\n\x04tags\x18\x1e \x03(\t\x1a^\n\x04\x46ile\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04path\x18\x02 \x01(\t\x12\x0f\n\x07spot_id\x18\x05 \x01(\t\x12\x0c\n\x04size\x18\x08 \x01(\x04\x12\r\n\x05ready\x18\n \x01(\x08\x12\x0c\n\x04tags\x18\x1e \x03(\t\"E\n\x05\x45rror\x12\x0e\n\x04\x63ode\x18\x01 \x01(\x05H\x00\x12\x0e\n\x04type\x18\x02 \x01(\tH\x00\x12\x13\n\x0b\x65rr_message\x18\x03 \x01(\tB\x07\n\x05\x65rror\"d\n\x0bRunResponse\x12#\n\x03run\x18\x01 \x01(\x0b\x32\x14.porerefiner.rpc.RunH\x00\x12\'\n\x05\x65rror\x18\x02 \x01(\x0b\x32\x16.porerefiner.rpc.ErrorH\x00\x42\x07\n\x05reply\"+\n\x0eRunListRequest\x12\x0b\n\x03\x61ll\x18\x01 \x01(\x08\x12\x0c\n\x04tags\x18\x14 \x03(\t\"-\n\x07RunList\x12\"\n\x04runs\x18\x01 \x03(\x0b\x32\x14.porerefiner.rpc.Run\"m\n\x0fRunListResponse\x12(\n\x04runs\x18\x01 \x01(\x0b\x32\x18.porerefiner.rpc.RunListH\x00\x12\'\n\x05\x65rror\x18\x02 \x01(\x0b\x32\x16.porerefiner.rpc.ErrorH\x00\x42\x07\n\x05reply\"2\n\nRunRequest\x12\x0c\n\x02id\x18\x01 \x01(\rH\x00\x12\x0e\n\x04name\x18\x02 \x01(\tH\x00\x42\x06\n\x04term\"E\n\x0fRunRsyncRequest\x12\x0c\n\x02id\x18\x01 \x01(\rH\x00\x12\x0e\n\x04name\x18\x02 \x01(\tH\x00\x12\x0c\n\x04\x64\x65st\x18\x03 \x01(\tB\x06\n\x04term\"9\n\x10RunRsyncResponse\x12%\n\x05\x65rror\x18\x01 \x01(\x0b\x32\x16.porerefiner.rpc.Error\"a\n\x10RunAttachRequest\x12\x0c\n\x02id\x18\x01 \x01(\rH\x00\x12\x0e\n\x04name\x18\x02 \x01(\tH\x00\x12\x0e\n\x04path\x18\x03 \x01(\tH\x01\x12\x0e\n\x04\x66ile\x18\x04 \x01(\x0cH\x01\x42\x06\n\x04termB\x07\n\x05sheet\":\n\x11RunAttachResponse\x12%\n\x05\x65rror\x18\x01 \x01(\x0b\x32\x16.porerefiner.rpc.Error2\xd2\x02\n\x0bPoreRefiner\x12L\n\x07GetRuns\x12\x1f.porerefiner.rpc.RunListRequest\x1a .porerefiner.rpc.RunListResponse\x12G\n\nGetRunInfo\x12\x1b.porerefiner.rpc.RunRequest\x1a\x1c.porerefiner.rpc.RunResponse\x12Y\n\x10\x41ttachSheetToRun\x12!.porerefiner.rpc.RunAttachRequest\x1a\".porerefiner.rpc.RunAttachResponse\x12Q\n\nRsyncRunTo\x12 .porerefiner.rpc.RunRsyncRequest\x1a!.porerefiner.rpc.RunRsyncResponseb\x06proto3')
 )
 
 
@@ -395,6 +395,20 @@ _RUNLISTREQUEST = _descriptor.Descriptor(
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
+    _descriptor.FieldDescriptor(
+      name='all', full_name='porerefiner.rpc.RunListRequest.all', index=0,
+      number=1, type=8, cpp_type=7, label=1,
+      has_default_value=False, default_value=False,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='tags', full_name='porerefiner.rpc.RunListRequest.tags', index=1,
+      number=20, type=9, cpp_type=9, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -408,7 +422,7 @@ _RUNLISTREQUEST = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=840,
-  serialized_end=856,
+  serialized_end=883,
 )
 
 
@@ -438,8 +452,8 @@ _RUNLIST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=858,
-  serialized_end=903,
+  serialized_start=885,
+  serialized_end=930,
 )
 
 
@@ -479,8 +493,8 @@ _RUNLISTRESPONSE = _descriptor.Descriptor(
       name='reply', full_name='porerefiner.rpc.RunListResponse.reply',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=905,
-  serialized_end=1014,
+  serialized_start=932,
+  serialized_end=1041,
 )
 
 
@@ -520,8 +534,8 @@ _RUNREQUEST = _descriptor.Descriptor(
       name='term', full_name='porerefiner.rpc.RunRequest.term',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=1016,
-  serialized_end=1066,
+  serialized_start=1043,
+  serialized_end=1093,
 )
 
 
@@ -568,8 +582,8 @@ _RUNRSYNCREQUEST = _descriptor.Descriptor(
       name='term', full_name='porerefiner.rpc.RunRsyncRequest.term',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=1068,
-  serialized_end=1137,
+  serialized_start=1095,
+  serialized_end=1164,
 )
 
 
@@ -599,8 +613,8 @@ _RUNRSYNCRESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1139,
-  serialized_end=1196,
+  serialized_start=1166,
+  serialized_end=1223,
 )
 
 
@@ -657,8 +671,8 @@ _RUNATTACHREQUEST = _descriptor.Descriptor(
       name='sheet', full_name='porerefiner.rpc.RunAttachRequest.sheet',
       index=1, containing_type=None, fields=[]),
   ],
-  serialized_start=1198,
-  serialized_end=1295,
+  serialized_start=1225,
+  serialized_end=1322,
 )
 
 
@@ -688,8 +702,8 @@ _RUNATTACHRESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1297,
-  serialized_end=1355,
+  serialized_start=1324,
+  serialized_end=1382,
 )
 
 _RUN_SAMPLE_FILE.containing_type = _RUN_SAMPLE
@@ -859,8 +873,8 @@ _POREREFINER = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
-  serialized_start=1358,
-  serialized_end=1696,
+  serialized_start=1385,
+  serialized_end=1723,
   methods=[
   _descriptor.MethodDescriptor(
     name='GetRuns',

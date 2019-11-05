@@ -20,6 +20,10 @@ class _MetaRegistry(type):
 class Notifier(metaclass=_MetaRegistry):
     "Abstract base class for notifiers"
 
+    def __init__(self, name, *args, **kwargs):
+        super().__init__()
+        self.name = name
+
     async def notify(self, run, state, message):
         raise NotImplementedError('Notifier not implemented.')
 
@@ -31,4 +35,8 @@ class Notifier(metaclass=_MetaRegistry):
 
 NOTIFIERS = []
 
+from . import galaxy
+from . import http
+from . import sqs
+from . import toast
 
