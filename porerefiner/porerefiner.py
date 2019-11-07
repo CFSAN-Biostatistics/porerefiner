@@ -26,7 +26,7 @@ from os import remove
 from pathlib import Path
 
 from porerefiner.protocols.minknow.rpc.manager_grpc import ManagerServiceStub
-from porerefiner.protocols.porerefiner.rpc.porerefiner_pb2 import Run as RunMessage, RunList, RunResponse, Error, RunAttachResponse, RunRsyncResponse, RunListResponse
+from porerefiner.protocols.porerefiner.rpc.porerefiner_pb2 import Run as RunMessage, RunList, RunResponse, Error, GenericResponse, RunRsyncResponse, RunListResponse
 from porerefiner.protocols.porerefiner.rpc.porerefiner_grpc import PoreRefinerBase
 from porerefiner.notifiers import NOTIFIERS
 
@@ -50,7 +50,7 @@ def make_run_msg(run):
                       basecalling_model=run.basecalling_model,
                       sequencing_kit=run.sample_sheet.sequencing_kit,
                       samples=[
-                          Sample(id=sample.pk,
+                          RunMessage.Sample(id=sample.pk,
                                  name=sample.name,
                                  accession=sample.accession,
                                  barcode_id=sample.barcode_id,
@@ -60,14 +60,24 @@ def make_run_msg(run):
                                  comment=sample.comment,
                                  user=sample.user,
                                  files=[
-                                    File(name=file.name,
+                                    RunMessage.File(name=file.name,
                                          path=a(file.path),
                                          spot_id=None,
                                          size=0,
                                          ready=False,
+                                         hash=file.checksum,
                                          tags=[tag.name for tag in file.tags])
                                  for file in sample.files],
                                  tags=[tag.name for tag in sample.tags]) for sample in run.samples],
+                      files=[
+                          RunMessage.File(name=file.name,
+                               path=a(file.path),
+                               spot_id=None,
+                               size=0,
+                               ready=False,
+                               hash=file.checksum,
+                               tags=[tag.name for tag in file.tags])
+                      for file in run.files],
                       tags=[tag.name for tag in run.tags]
                       )
 
@@ -80,7 +90,7 @@ async def register_new_flowcell(path, nanopore_api=None): #TODO
 
 async def register_new_run(path, nanopore_api=None): #TODO
 
-    flow = Flowcell.get(Flowcell.path==path.parent)
+    flow, _ = Flowcell.get_or_create(path=path.parent, consumable_id=path.parent.name)
 
     run = Run.create(path=path, status='RUNNING', flowcell=flow, name=path.name)
 
@@ -88,12 +98,14 @@ async def register_new_run(path, nanopore_api=None): #TODO
         #get minknow stuff if we can
         pass
 
-    query = SampleSheet.select().where(SampleSheet.run == None)
+    query = SampleSheet.get_unused_sheets()
     if query.count() == 1:
         #if there's an unattached sheet, attach it to this run
         sheet = next(query)
-        sheet.run = run
-        sheet.save()
+        run.sample_sheet = sheet
+        run.save()
+
+    return run
 
 
 
@@ -135,13 +147,18 @@ async def attach_samplesheet_to_run(sheet, run_id=None):
         #     run = Run.get_or_none(Run.human_name == run_id)
         # if not run:
         #     raise ValueError(f"Run id or name '{run_id}' not found.")
-        sheet.run = get_run(run_id)
+        run = get_run(run_id)
+        run.sample_sheet = sheet
+        run.save()
     else:
         #find unassociated run
-        query = Run.query().join(SampleSheet, JOIN.OUTER_JOIN).where(SampleSheet.pk == None, Run.status == 'RUNNING')
+        query = Run.get_unannotated_runs()
         if query.count() == 1:
-            sheet.run = query.next()
-    sheet.save()
+            run = next(query)
+            run.sample_sheet = sheet
+            run.save()
+        else:
+            raise ValueError("Run not specified and there are multiple runs in progress. Please specify a run by id, name, or nickname.")
 
 
 
@@ -157,16 +174,21 @@ async def list_runs(all=False, tags=[]):
 
 async def poll_active_run():
     "Scan run(s) in progress, close out runs that have been stable for an hour"
-    runs = list(Run.select(Run.ended.is_null(False)))
-    for run in runs:
-        if all([datetime.now() - file.last_modified > timedelta(hours=1) for file in run.files]):
+    runs = Run.select().where(Run.status == 'RUNNING')
+    i = 0
+    for i, run in enumerate(runs, 1):
+        if len(run.files) and all([datetime.now() - file.last_modified > timedelta(hours=1) for file in run.files]):
             await end_run(run)
-    return len(runs)
+    return i
 
 
 async def end_run(run):
     "Put run in closed status"
     run.ended = datetime.now()
+    run.status = 'DONE'
+    run.save()
+    tag, _ = Tag.get_or_create(name='finished')
+    TagJunction.get_or_create(run=run, tag=tag)
     log.info(f"Run {run.alt_name} ended, no file modifications in the past hour")
     for notifier in NOTIFIERS:
         log.info(f"Firing notifier {notifier.name}")
@@ -236,7 +258,7 @@ class PoreRefinerDispatchServer(PoreRefinerBase):
             run_msg = await get_run_info(request.id or request.name)
             reply_msg = RunResponse(run=run_msg)
         except ValueError as e:
-            err_msg = Error(type='ValueError', err_message=e.message)
+            err_msg = Error(type='ValueError', err_message=str(e))
             reply_msg = RunResponse(error=err_msg)
         await stream.send_message(reply_msg)
         log.info("Response sent")

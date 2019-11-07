@@ -8,13 +8,16 @@
 
 from unittest import TestCase
 
-from hypothesis.strategies import text, composite, one_of, just, builds
+from hypothesis.strategies import text, composite, one_of, just, builds, integers
 from pathlib import Path
 import os
 
 from porerefiner import models
 
 from peewee import SqliteDatabase
+
+# SQLite can't accept a 32-bit integer
+sql_ints = lambda: integers(min_value=-2**16, max_value=2**16)
 
 @composite
 def paths(draw, under=""):

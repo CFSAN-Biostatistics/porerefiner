@@ -23,7 +23,7 @@ class PoreRefinerBase(abc.ABC):
         pass
 
     @abc.abstractmethod
-    async def AttachSheetToRun(self, stream: 'grpclib.server.Stream[porerefiner.protocols.porerefiner.rpc.porerefiner_pb2.RunAttachRequest, porerefiner.protocols.porerefiner.rpc.porerefiner_pb2.RunAttachResponse]') -> None:
+    async def AttachSheetToRun(self, stream: 'grpclib.server.Stream[porerefiner.protocols.porerefiner.rpc.porerefiner_pb2.RunAttachRequest, porerefiner.protocols.porerefiner.rpc.porerefiner_pb2.GenericResponse]') -> None:
         pass
 
     @abc.abstractmethod
@@ -48,7 +48,7 @@ class PoreRefinerBase(abc.ABC):
                 self.AttachSheetToRun,
                 grpclib.const.Cardinality.UNARY_UNARY,
                 porerefiner.protocols.porerefiner.rpc.porerefiner_pb2.RunAttachRequest,
-                porerefiner.protocols.porerefiner.rpc.porerefiner_pb2.RunAttachResponse,
+                porerefiner.protocols.porerefiner.rpc.porerefiner_pb2.GenericResponse,
             ),
             '/porerefiner.rpc.PoreRefiner/RsyncRunTo': grpclib.const.Handler(
                 self.RsyncRunTo,
@@ -78,7 +78,7 @@ class PoreRefinerStub:
             channel,
             '/porerefiner.rpc.PoreRefiner/AttachSheetToRun',
             porerefiner.protocols.porerefiner.rpc.porerefiner_pb2.RunAttachRequest,
-            porerefiner.protocols.porerefiner.rpc.porerefiner_pb2.RunAttachResponse,
+            porerefiner.protocols.porerefiner.rpc.porerefiner_pb2.GenericResponse,
         )
         self.RsyncRunTo = grpclib.client.UnaryUnaryMethod(
             channel,

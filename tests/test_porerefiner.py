@@ -35,12 +35,14 @@ import os, sys
 
 from datetime import datetime, timedelta
 
+from peewee import JOIN
+
 def _run(task):
     loop = asyncio.get_event_loop()
     return loop.run_until_complete(task)
 
 
-RUN_PK = 100
+RUN_PK = 101
 RUN_NAME = 'TEST_TEST'
 
 class TestCoreFunctions(DBSetupTestCase):
@@ -67,17 +69,33 @@ class TestCoreFunctions(DBSetupTestCase):
         with self.assertRaises(ValueError):
             run = porerefiner.get_run(runid)
 
-    @skip('not implemented')
-    @given(paths())
-    def test_register_new_run(self, path):
-        assert False
+    @skip('not working')
+    @given(run_path=paths(),
+           path=paths(),
+           date=strat.datetimes(),
+           sequencing_kit=strat.text())
+    def test_register_new_run(self, run_path, **sam): #TODO
+        ss = models.SampleSheet.create(**sam)
+        query = models.SampleSheet.get_unused_sheets()
+        self.assertEqual(query.count(), 1) #assert pre-state
+
+        run = _run(porerefiner.register_new_run(run_path))
+
+        self.assertEquals(run.sample_sheet, ss)
+
+        query = models.SampleSheet.get_unused_sheets()
+        self.assertEqual(query.count(), 0) #assert test
+
 
     def test_get_run_info(self):
         run1 = _run(porerefiner.get_run_info(RUN_PK))
         run2 = _run(porerefiner.get_run_info(RUN_NAME))
         self.assertEqual(run1, run2)
 
-    @given(strat.one_of(strat.text(max_size=30), strat.integers(min_value=-2**16, max_value=2**16)))
+    @given(strat.one_of(
+            strat.text(max_size=30).filter(lambda n: n != RUN_NAME),
+            strat.integers(min_value=-2**16, max_value=2**16).filter(lambda n: n != RUN_PK)
+            ))
     def test_fail_get_run_info(self, run_id):
         with self.assertRaises(ValueError):
             _run(porerefiner.get_run_info(run_id))
@@ -99,7 +117,13 @@ class TestCoreFunctions(DBSetupTestCase):
     #@skip('not implemented')
     @patch('porerefiner.porerefiner.end_run', new_callable=AsyncMock)
     def test_poll_active_run(self, mock):
+        #run = models.Run.get(models.Run.pk==RUN_PK)
+        self.assertGreater(len(models.Run.select().where(models.Run.status == 'RUNNING')), 0)
+        self.assertGreater(len(models.Run.get(models.Run.pk==RUN_PK).files), 0)
         self.assertEqual(_run(porerefiner.poll_active_run()), 1) #checked 1 file
+        #self.assertGreater(len(run.files), 0)
+        #self.assertGreater(len(list(models.Run.select(models.Run.ended.is_null(True)))), 0)
+        #self.assertTrue(len(run.files) and all([datetime.now() - file.last_modified > timedelta(hours=1) for file in run.files]))
         mock.assert_called() #ran end_run
 
 
@@ -110,6 +134,7 @@ class TestCoreFunctions(DBSetupTestCase):
             _run(porerefiner.end_run(self.run))
         self.assertAlmostEqual(datetime.now(), self.run.ended, delta=timedelta(seconds=1))
         mock.notify.assert_called()
+        self.assertIn('finished', [str(tag) for tag in self.run.tags])
 
     @skip('not implemented')
     def test_send_run(self):

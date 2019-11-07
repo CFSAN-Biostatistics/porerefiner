@@ -1,7 +1,7 @@
 
 from unittest import TestCase, skip
 
-from tests import paths, with_database, TestBase
+from tests import paths, with_database, TestBase, sql_ints
 
 from porerefiner import models
 
@@ -12,8 +12,7 @@ from datetime import datetime
 import pathlib
 import sys
 
-# SQLite can't accept a 32-bit integer
-sql_ints = lambda: strat.integers(min_value=-2**16, max_value=2**16)
+
 
 # safe_paths = lambda: fspaths().filter(lambda x: isinstance(x, str) or isinstance(x, _PathLike))
 
@@ -103,11 +102,19 @@ class TestSampleSheet(TestCase):
     def test_samplesheet(self, **kwargs):
         assert models.SampleSheet.create(**kwargs)
 
-    @skip('not implemented')
+    @with_database
+    def test_get_unused_sheets(self):
+        self.flow = flow = models.Flowcell.create(consumable_id="TEST|TEST|TEST", consumable_type="TEST|TEST|TEST", path="TEST/TEST/TEST")
+        self.run = models.Run.create(pk=100, library_id='x', name="TEST", flowcell=flow, path="TEST/TEST/TEST")
+        self.assertFalse(models.SampleSheet.get_unused_sheets().count())
+        models.SampleSheet.create(path="TEST")
+        self.assertEqual(models.SampleSheet.get_unused_sheets().count(), 1)
+
+    @skip('not yet implemented')
     def test_ss_from_csv(self):
         assert False
 
-    @skip('not implemented')
+    @skip('not yet implemented')
     def test_ss_from_excel(self):
         assert False
 

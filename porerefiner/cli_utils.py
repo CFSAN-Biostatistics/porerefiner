@@ -4,9 +4,11 @@ import click
 import json
 from pathlib import Path
 from contextlib import contextmanager
+from functools import wraps, partial
 from grpclib.client import Channel, GRPCError
 from tabulate import tabulate
 from xml.etree import ElementTree as xml
+from sys import stderr
 
 from porerefiner.protocols.porerefiner.rpc.porerefiner_grpc import PoreRefinerStub
 
@@ -32,9 +34,9 @@ class RunID:
 
     def __init__(self, the_value):
         if isinstance(the_value, str):
-            self.val_type = RUN_NAME
+            self.val_type = self.RUN_NAME
         elif isinstance(the_value, int):
-            self.val_type = RUN_ID
+            self.val_type = self.RUN_ID
         else:
             raise ValueError("value must be str or int")
 
@@ -44,11 +46,22 @@ class ValidRunID(click.ParamType):
 
     def convert(self, value, param, ctx):
         try:
-            return RunID(int(value))
+            return int(value)
         except ValueError:
-            return RunID(value)
+            return str(value)
 
 VALID_RUN_ID = ValidRunID()
+
+
+def handle_connection_errors(func):
+    @wraps(func)
+    def wrapper(*a, **k):
+        try:
+            return func(*a, **k)
+        except ConnectionRefusedError:
+            print("ERROR: Connection to porerefiner service refused. Is the service running?", file=stderr)
+            quit(61)
+    return wrapper
 
 
 # Channel context manager for CLI utils
@@ -73,12 +86,14 @@ def hr_formatter(extend=False):
     def print_run(run):
         rec.append(dict(id=run.id,
                         name=run.name,
-                        nickname=run.nickname,
+                        nickname=run.mnemonic_name,
                         status=run.status,
                         samples=len(run.samples),
-                        files=sum([len(sam.files) for sam in run.samples]),
+                        files=sum([len(sam.files) for sam in run.samples]) + len(run.files),
                         tags=",".join(run.tags)))
         if extend:
+            rec[-1]['path'] = run.path
+            rec[-1]['flowcell'] = run.flowcell_id
             for sample in run.samples:
                 rec.append(dict(id=sample.id,
                                 name=sample.name,

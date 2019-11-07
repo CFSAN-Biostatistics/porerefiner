@@ -6,16 +6,18 @@ import click
 
 from asyncio import run
 
-from porerefiner.cli_utils import VALID_RUN_ID, server, hr_formatter, json_formatter, xml_formatter
+from porerefiner.cli_utils import VALID_RUN_ID, server, hr_formatter, json_formatter, xml_formatter, handle_connection_errors
 from porerefiner.protocols.porerefiner.rpc.porerefiner_pb2 import RunRequest, RunListRequest, RunAttachRequest, RunRsyncRequest
 
 
 @click.group()
 def cli():
-    """Command line interface for PoreRefiner, a Nanopore integration toolkit."""
-    pass #doesn't actually need to do anything
+    """Command line interface for PoreRefiner, a Nanopore run manager."""
+    pass #pragma: no cover
+
 
 @cli.command()
+@handle_connection_errors
 @click.option('-a', '--all', is_flag=True, default=False, help="Show finished and ongoing runs.")
 @click.option('-h', '--human-readable', 'output_format', flag_value=hr_formatter, help='Output in a human-readable table.', default=hr_formatter)
 @click.option('-j', '--json', 'output_format', flag_value=json_formatter, help='Output in JSON.')
@@ -42,21 +44,26 @@ def ps(output_format, extend, all=False, tags=[]):
 #     pass
 
 @cli.command()
+@handle_connection_errors
 @click.option('-h', '--human-readable', 'output_format', flag_value=hr_formatter, help='Output in a human-readable table.', default=hr_formatter)
 @click.option('-j', '--json', 'output_format', flag_value=json_formatter, help='Output in JSON.')
 @click.option('-x', '--xml', 'output_format', flag_value=xml_formatter, help='Output in schemaless XML.')
-@click.argument('run', type=VALID_RUN_ID)
-def info(output_format, run):
+@click.argument('run_id', type=VALID_RUN_ID)
+def info(output_format, run_id):
     "Return information about a run, historical or in progress."
     async def info_runner(formatter):
         with server() as serv:
             req = RunRequest()
-            if isinstance(run, str):
-                req.name = run
+            if isinstance(run_id, str):
+                req.name = run_id
             else:
-                req.id = run
+                req.id = run_id
             resp = await serv.GetRunInfo(req)
-            formatter(resp.run)
+            if resp.HasField('error'):
+                click.echo(f"ERROR: {resp.error.err_message}", err=True)
+                quit(1)
+            else:
+                formatter(resp.run)
     with output_format(extend=True) as formatter:
         run(info_runner(formatter))
 
@@ -66,6 +73,15 @@ def template(): #TODO
     pass
 
 @cli.command()
+@handle_connection_errors
+@click.argument('run_id', type=VALID_RUN_ID)
+@click.argument('tag', type=click.STRING, nargs=-1)
+def tag(run_id, tag=[]):
+    "Add one or more tags to a run."
+    pass
+
+@cli.command()
+@handle_connection_errors
 @click.argument('samplesheet', type=click.File())
 @click.argument('run', type=VALID_RUN_ID)
 def load(samplesheet, run=None):

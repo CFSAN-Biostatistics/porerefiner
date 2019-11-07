@@ -17,6 +17,17 @@ message Run {
     string basecalling_model = 9;
     string sequencing_kit = 10;
 
+    message File {
+        string name = 1;
+        string path = 2;
+        string spot_id = 5;
+        uint64 size = 8;
+        bool ready = 10;
+        string hash = 12;
+
+        repeated string tags = 30;
+}
+
     message Sample {
 
         int32 id = 1;
@@ -29,21 +40,11 @@ message Run {
         string comment = 8;
         string user = 9;
 
-        message File {
-            string name = 1;
-            string path = 2;
-            string spot_id = 5;
-            uint64 size = 8;
-            bool ready = 10;
-
-            repeated string tags = 30;
-        }
-
         repeated File files = 20;
         repeated string tags = 30;
     }
 
-
+    repeated File files = 15;
     repeated Sample samples = 20;
     repeated string tags = 30;
 
@@ -110,8 +111,13 @@ message RunAttachRequest {
     }
 }
 
-message RunAttachResponse {
+message GenericResponse {
     Error error = 1;
+}
+
+message TagRequest {
+    uint32 id = 1;
+    repeated string tags = 2;
 }
 
 service PoreRefiner {
@@ -120,8 +126,10 @@ service PoreRefiner {
 
     rpc GetRunInfo (RunRequest) returns (RunResponse);
 
-    rpc AttachSheetToRun (RunAttachRequest) returns (RunAttachResponse);
+    rpc AttachSheetToRun (RunAttachRequest) returns (GenericResponse);
 
     rpc RsyncRunTo (RunRsyncRequest) returns (RunRsyncResponse);
+
+    //rpc Tag (TagRequest) returns (GenericResponse)
 
 }

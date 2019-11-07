@@ -30,11 +30,19 @@ class PorerefinerModel(BaseModel):
         # query = Tag.select().join(TagJunction).join(Tag)
         return [tag_j.tag for tag_j in self.tag_junctions]
 
+    def tag(self, *tags):
+        for tag in tags:
+            Tag.get_or_create(name=tag)
+
+
 
 class Tag(BaseModel):
     "A tag is an informal annotation"
 
     name = CharField(null=False, constraints=[Check("name != '' ")])
+
+    def __str__(self):
+        return self.name
 
 class PathField(Field):
 
@@ -96,9 +104,17 @@ class Run(PorerefinerModel):
     def sample_sheet(self):
         return self._sample_sheet or SampleSheet()
 
+    @sample_sheet.setter
+    def set_sample_sheet(self, ss):
+        self._sample_sheet = ss
+
     @property
     def samples(self):
         return self.sample_sheet.samples
+
+    @classmethod
+    def get_unannotated_runs(cls):
+        return cls.select().where(cls._sample_sheet.is_null(), cls.status=='RUNNING')
 
 
 class Qa(PorerefinerModel):
@@ -120,11 +136,11 @@ class SampleSheet(PorerefinerModel):
     pk = AutoField()
     path = PathField(index=True)
     # run = ForeignKeyField(Run, backref='_sample_sheet', unique=True, null=True)
-    date = DateField(null=True)
+    date = DateField(null=True, default=datetime.datetime.now())
     sequencing_kit = CharField(null=True)
 
     @classmethod
-    async def from_csv(cls, path_to_file, delimiter=','):
+    async def from_csv(cls, fh, delimiter=','):
         "import a sample sheet in csv/tsv format"
         pass
 
@@ -132,6 +148,13 @@ class SampleSheet(PorerefinerModel):
     async def from_excel(cls, path_to_file):
         "import a sample sheet in xlsx format"
         pass
+
+    @classmethod
+    def get_unused_sheets(cls):
+        return (cls.select()
+                   .join(Run, JOIN.LEFT_OUTER)
+                   .switch()
+                   .where(Run.pk.is_null()))
 
 class Sample(PorerefinerModel):
     "A sample is an entry originally from a sample sheet"
@@ -169,9 +192,13 @@ class File(PorerefinerModel):
     last_modified = DateTimeField(default=datetime.datetime.now)
     exported = IntegerField(default=0)
 
+    @property
+    def name(self):
+        return self.path.name
+
 
 class TagJunction(BaseModel):
-    tag = ForeignKeyField(Tag)
+    tag = ForeignKeyField(Tag, backref='junctions')
     flowcell = ForeignKeyField(Flowcell, null=True, backref='tag_junctions')
     run = ForeignKeyField(Run, null=True, backref='tag_junctions')
     qa = ForeignKeyField(Qa, null=True, backref='tag_junctions')
@@ -179,6 +206,13 @@ class TagJunction(BaseModel):
     samplesheet = ForeignKeyField(SampleSheet, null=True, backref='tag_junctions')
     sample = ForeignKeyField(Sample, null=True, backref='tag_junctions')
     file = ForeignKeyField(File, null=True, backref='tag_junctions')
+
+    # @classmethod
+    # def relate(cls, target, tag):
+    #     targ_cls = type(target)
+    #     for field, ref_cls, _ in cls._meta.model_graph(backrefs=False, depth_first=False):
+    #         if ref_cls is targ_cls:
+    #             return cls.create
 
 
 REGISTRY = [Tag, Flowcell, Run, Qa, Job, SampleSheet, Sample, File, TagJunction]
