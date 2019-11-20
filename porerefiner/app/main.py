@@ -1,10 +1,11 @@
 from asyncio import run
-from flask import Flask
+from flask import Flask, request
+from google.protobuf.json_format import MessageToJson
 
 import json
 
 
-from porerefiner.cli_utils import server
+from porerefiner.cli_utils import server, load_from_csv
 from porerefiner.protocols.porerefiner.rpc.porerefiner_pb2 import RunRequest, RunListRequest, RunAttachRequest, RunRsyncRequest
 
 app = Flask(__name__)
@@ -15,31 +16,40 @@ app = Flask(__name__)
 @app.route('/api/runs/<int:run_id>/attach', methods=['POST,'])
 def attach_to_run(run_id):
     file = next(request.files.values())
-    async def attach_runner(run_id, file):
+    message = load_from_csv(file)
+    async def attach_runner(run_id, message):
         with server() as serv:
-            return await serv.AttachSheetToRun(RunAttachRequest(file=file.read(), id=run_id))
+            return await serv.AttachSheetToRun(RunAttachRequest())
     resp = run(attach_runner(run_id, file))
     return json.dumps({'success':True}), 200, {'ContentType':'application/json'}
 
-@app.route('/api/runs/<int:run_id>/send', methods=['POST'])
-def send_run(run_id, dest): #TODO
-    "Schedule a run to be sent via Rsync to the dest"
-    pass
+# @app.route('/api/runs/<int:run_id>/send', methods=['POST'])
+# def send_run(run_id, dest): #TODO
+#     "Schedule a run to be sent via Rsync to the dest"
+#     pass
 
 # @app.route('/api/runs/<int:run_id>', methods=['GET', 'POST', 'DELETE'])
 # def run_control(run_id): #TODO
 #     pass
 
-@app.route('/api/runs/')
+@app.route('/api/runs/<int:run_id>')
+def get_run(run_id):
+    "Get a single run"
+    async def run_getter(run_id):
+        with server() as serv:
+            return await serv.GetRunInfo(RunRequest(id = run_id))
+    resp = run(run_getter(run_id))
+    return MessageToJson(resp), 200, {'ContentType':'application/json'}
+
+@app.route('/api/runs')
 def list_runs():
-    all = request.args.get('all', False)
-    tags = [str(t) for t in request.args.get_list('tags')]
+    #all = request.args.get('all', False)
+    tags = [str(t) for t in request.args.getlist('tags')]
     async def list_run_runner(all, tags):
         with server() as serv:
-            return await serv.GetRuns(RunListRequest(all=all, tags=tags))
+            return await serv.GetRuns(RunListRequest(all=True, tags=tags))
 
     resp = run(list_run_runner(all, tags))
-    return json.dumps(list(resp.runs.runs)), 200, {'ContentType':'application/json'}
-
+    return MessageToJson(resp), 200, {'ContentType':'application/json'}
 
 

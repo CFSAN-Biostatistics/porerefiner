@@ -1,4 +1,5 @@
 import asyncio
+import pkgutil
 # from ..models import PorerefinerModel
 
 # states = PorerefinerModel.statuses
@@ -16,6 +17,12 @@ class _MetaRegistry(type):
         if name not in REGISTRY:
             _register_class(cls)
         return cls
+
+    def __call__(cls, *args, **kwargs):
+        the_instance = super().__call__(*args, **kwargs)
+        NOTIFIERS.append(the_instance)
+        return the_instance
+
 
 class Notifier(metaclass=_MetaRegistry):
     "Abstract base class for notifiers"
@@ -35,8 +42,12 @@ class Notifier(metaclass=_MetaRegistry):
 
 NOTIFIERS = []
 
-from . import galaxy
-from . import http
-from . import sqs
-from . import toast
+# from . import galaxy
+# from . import http
+# from . import sqs
+# from . import toast
+
+for loader, module_name, is_pkg in  pkgutil.walk_packages(__path__):
+    _module = loader.find_module(module_name).load_module(module_name)
+    globals()[module_name] = _module
 

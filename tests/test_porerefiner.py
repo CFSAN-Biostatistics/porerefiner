@@ -15,7 +15,8 @@ from porerefiner import porerefiner
 from porerefiner import cli
 from porerefiner import models
 from porerefiner.cli_utils import absolutize_path as ap, relativize_path as rp
-from tests import paths, with_database, TestBase as DBSetupTestCase
+from porerefiner.protocols.porerefiner.rpc import porerefiner_pb2 as messages
+from tests import paths, with_database, TestBase as DBSetupTestCase, samplesheets, samples
 
 from shutil import rmtree
 
@@ -68,23 +69,6 @@ class TestCoreFunctions(DBSetupTestCase):
     def test_fail_get_run(self, runid):
         with self.assertRaises(ValueError):
             run = porerefiner.get_run(runid)
-
-    @skip('not working')
-    @given(run_path=paths(),
-           path=paths(),
-           date=strat.datetimes(),
-           sequencing_kit=strat.text())
-    def test_register_new_run(self, run_path, **sam): #TODO
-        ss = models.SampleSheet.create(**sam)
-        query = models.SampleSheet.get_unused_sheets()
-        self.assertEqual(query.count(), 1) #assert pre-state
-
-        run = _run(porerefiner.register_new_run(run_path))
-
-        self.assertEquals(run.sample_sheet, ss)
-
-        query = models.SampleSheet.get_unused_sheets()
-        self.assertEqual(query.count(), 0) #assert test
 
 
     def test_get_run_info(self):
@@ -140,6 +124,26 @@ class TestCoreFunctions(DBSetupTestCase):
     def test_send_run(self):
         assert False
 
+class TestNewRunRegistration(TestCase):
+
+        # @skip('not working')
+    @given(run_path=paths(),
+           path=paths(),
+           date=strat.datetimes(),
+           sequencing_kit=strat.text())
+    @with_database
+    def test_register_new_run(self, run_path, **sam):
+        ss = models.SampleSheet.create(**sam)
+        query = models.SampleSheet.get_unused_sheets()
+        self.assertEqual(query.count(), 1) #assert pre-state
+
+        run = _run(porerefiner.register_new_run(pathlib.Path(run_path)))
+
+        self.assertEqual(run.sample_sheet, ss)
+
+        query = models.SampleSheet.get_unused_sheets()
+        self.assertEqual(query.count(), 0) #assert test
+
 
 
 class TestPoreFSEventHander(TestCase):
@@ -164,19 +168,44 @@ class TestPoreFSEventHander(TestCase):
             _run(ut.on_created(event))
         mock.assert_called_once()
 
-    # @skip('not implemented')
-    # @given(flowcell_path=paths(under='/A/B/C'))
+    # # @skip('not implemented')
+    # # @given(flowcell_path=paths(under='/A/B/C'))
+    # @with_database
+    # def test_on_created_run(self, flowcell_path='/A/B/C/D'):
+    #     path = pathlib.Path(flowcell_path)
+    #     ut = porerefiner.PoreRefinerFSEventHandler(path.parent.parent)
+    #     models.Flowcell.get_or_create(pk=RUN_PK+1, consumable_id="TEST|TEST|TEST", consumable_type="TEST|TEST|TEST", path=path)
+    #     event = self.FakeEvent(path / 'TEST')
+    #     self.assertIsNone(models.Run.get_or_none(models.Run.path == rp(event.src_path)))
+    #     with patch('porerefiner.porerefiner.register_new_run', new_callable=AsyncMock) as mock:
+    #         _run(ut.on_created(event))
+    #     mock.assert_called_once()
+
     @with_database
-    def test_on_created_run(self, flowcell_path='/A/B/C/D'):
-        path = pathlib.Path(flowcell_path)
+    @patch('porerefiner.porerefiner.register_new_run', new_callable=AsyncMock)
+    def test_on_created_run_simple(self, mock, path=pathlib.Path('/A/B/C/D/E')):
         ut = porerefiner.PoreRefinerFSEventHandler(path.parent.parent)
-        models.Flowcell.get_or_create(pk=RUN_PK+1, consumable_id="TEST|TEST|TEST", consumable_type="TEST|TEST|TEST", path=path)
-        event = self.FakeEvent(path / 'TEST')
-        self.assertIsNone(models.Run.get_or_none(models.Run.path == rp(event.src_path)))
-        with patch('porerefiner.porerefiner.register_new_run', new_callable=AsyncMock) as mock:
-            _run(ut.on_created(event))
+        event = self.FakeEvent(path)
+        _run(ut.on_created(event))
         mock.assert_called_once()
 
+    @with_database
+    @patch('porerefiner.porerefiner.register_new_run', new_callable=AsyncMock)
+    def test_on_created_run_deep(self, mock, path=pathlib.Path('/A/B/C/D/E')):
+        ut = porerefiner.PoreRefinerFSEventHandler(path.parent.parent.parent)
+        event = self.FakeEvent(path)
+        _run(ut.on_created(event))
+        mock.assert_not_called()
+
+    @with_database
+    @patch('porerefiner.porerefiner.register_new_run', new_callable=AsyncMock)
+    @patch('porerefiner.porerefiner.File')
+    def test_on_created_file_simple(self, mock_f, mock, path=pathlib.Path('/A/B/C/D/E')):
+        ut = porerefiner.PoreRefinerFSEventHandler(path.parent.parent.parent)
+        event = self.FakeEvent(path, is_dir=False)
+        _run(ut.on_created(event))
+        mock.assert_called_once()
+        mock_f.get_or_create.assert_called_once()
     # @skip('not implemented')
     #@given(path=paths(under='TEST/TEST'))
     @with_database
@@ -193,6 +222,19 @@ class TestPoreFSEventHander(TestCase):
         self.assertEqual(len(run.files), 1)
         self.assertEqual(len(list(models.File.select().where(models.File.path == path))), 1)
 
+    @with_database
+    def test_on_created_file_deep(self, path=pathlib.Path('/A/B/C/D/E')):
+        ut = porerefiner.PoreRefinerFSEventHandler(path.parent.parent.parent) #A/B
+        event = self.FakeEvent(path / 'test', is_dir=False) #E/test
+        flow = models.Flowcell.create(pk=RUN_PK+1,
+                                consumable_id='TEST',
+                                consumable_type='TEST',
+                                path=rp(path.parent.parent)) #A/B/C
+        run = models.Run.create(pk=RUN_PK, library_id='x', name=RUN_NAME, flowcell=flow, path=rp(path.parent)) #A/B/C/D
+        _run(ut.on_created(event))
+        self.assertEqual(len(run.files), 1)
+        self.assertEqual(len(list(models.File.select().where(models.File.path == event.src_path))), 1)
+
     # @skip('not implemented')
     @patch('porerefiner.porerefiner.File')
     def test_on_modified(self, mock):
@@ -206,15 +248,15 @@ class TestPoreFSEventHander(TestCase):
     def test_on_deleted(self, path):
         assert False
 
-class TestPoreDispatchServer(DBSetupTestCase):
+class TestPoreDispatchServer(TestCase):
 
-    def setUp(self):
-        super().setUp()
-        self.flow = flow = models.Flowcell.create(consumable_id="TEST|TEST|TEST", consumable_type="TEST|TEST|TEST", path="TEST/TEST/TEST")
-        self.run = models.Run.create(pk=RUN_PK, library_id='x', name=RUN_NAME, flowcell=flow, path="TEST/TEST/TEST")
-        self.file = models.File.create(run=self.run, path='TEST/TEST/TEST/TEST', last_modified=datetime.now() - timedelta(hours=2))
-        self.tag = models.Tag.create(name='TEST')
-        models.TagJunction.create(tag=tag, run=self.run)
+    # def setUp(self):
+    #     super().setUp()
+    #     self.flow = flow = models.Flowcell.create(consumable_id="TEST|TEST|TEST", consumable_type="TEST|TEST|TEST", path="TEST/TEST/TEST")
+    #     self.run = models.Run.create(pk=RUN_PK, library_id='x', name=RUN_NAME, flowcell=flow, path="TEST/TEST/TEST")
+    #     self.file = models.File.create(run=self.run, path='TEST/TEST/TEST/TEST', last_modified=datetime.now() - timedelta(hours=2))
+    #     self.tag = models.Tag.create(name='TEST')
+    #     models.TagJunction.create(tag=tag, run=self.run)
 
     @skip('no test')
     def test_get_runs_default(self):
@@ -232,9 +274,27 @@ class TestPoreDispatchServer(DBSetupTestCase):
     def test_get_run_info(self):
         assert False
 
-    @skip('no test')
-    def test_attach_sheet_run(self):
-        assert False
+    # @skip('no test')
+    @given(ss=samplesheets())
+    @with_database
+    def test_attach_sheet_run_no_run(self, ss):
+        ut = porerefiner.PoreRefinerDispatchServer()
+        strm = AsyncMock()
+        strm.recv_message.return_value = messages.RunAttachRequest(sheet=ss)
+        _run(ut.AttachSheetToRun(strm))
+        strm.send_message.assert_called_once()
+
+    @given(ss=samplesheets())
+    @with_database
+    def test_attach_sheet_to_run(self, ss):
+        self.flow = flow = models.Flowcell.create(consumable_id="TEST|TEST|TEST", consumable_type="TEST|TEST|TEST", path="TEST/TEST/TEST")
+        self.run = models.Run.create(pk=RUN_PK, library_id='x', name=RUN_NAME, flowcell=flow, path="TEST/TEST/TEST")
+        self.file = models.File.create(run=self.run, path='TEST/TEST/TEST/TEST', last_modified=datetime.now() - timedelta(hours=2))
+        ut = porerefiner.PoreRefinerDispatchServer()
+        strm = AsyncMock()
+        strm.recv_message.return_value = messages.RunAttachRequest(sheet=ss, id=RUN_PK)
+        _run(ut.AttachSheetToRun(strm))
+        strm.send_message.assert_called_once()
 
     @skip('not implemented')
     def test_rsync_run_to(self):

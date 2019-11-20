@@ -41,10 +41,10 @@ Using this software
 -------------------
 ::
 
-    $ prfr
+    $ prfr --help
     Usage: prfr [OPTIONS] COMMAND [ARGS]...
 
-    Command line interface for PoreRefiner, a Nanopore integration toolkit.
+      Command line interface for PoreRefiner, a Nanopore run manager.
 
     Options:
     --help  Show this message and exit.
@@ -52,11 +52,10 @@ Using this software
     Commands:
     info      Return information about a run, historical or in progress.
     load      Load a sample sheet to be attached to a run, or to the next run...
-    proto     Append to the notifiers section of the config a default config...
-    ps        Show runs in progress, or every tracked run (--all).
-    rm        Remove a run and recover hard drive space.
+    ps        Show runs in progress, or every tracked run (--all), or with a...
+    tag       Add one or more tags to a run.
     template  Write a sample sheet template to STDOUT.
-
+    untag     Remove one or more tags from a run.
 
 Features
 --------
@@ -64,6 +63,8 @@ Features
 Automatic detection of runs in progress
 
 Sample sheet and sample tracking through the flowcell/run context, and beyond
+
+Schedule automatic analysis of runs and files in AWS or your HPC
 
 How it works
 ------------

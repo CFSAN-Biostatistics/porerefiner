@@ -16,12 +16,13 @@ from datetime import datetime, timedelta
 from grpclib.server import Server
 from grpclib.utils import graceful_exit
 from hachiko.hachiko import AIOEventHandler, AIOWatchdog
+from itertools import chain
 from peewee import JOIN
 from porerefiner import models
 from porerefiner.models import Flowcell, Run, Qa, File, Job, SampleSheet, Sample, Tag, TagJunction
 from porerefiner.cli_utils import relativize_path as r, absolutize_path as a
-from porerefiner.jobs import poll_jobs
-from os.path import split
+from porerefiner.jobs import poll_jobs, REGISTRY, create_jobs_for_file, create_jobs_for_run
+from os.path import split, getmtime
 from os import remove
 from pathlib import Path
 
@@ -40,46 +41,46 @@ def get_run(run_id):
 
 def make_run_msg(run):
     return RunMessage(id=run.pk,
-                      name=run.name,
-                      mnemonic_name=run.alt_name,
-                      library_id=run.library_id,
-                      status=run.status,
-                      path=a(run.path),
-                      flowcell_type=run.flowcell.consumable_type,
-                      flowcell_id=run.flowcell.consumable_id,
-                      basecalling_model=run.basecalling_model,
-                      sequencing_kit=run.sample_sheet.sequencing_kit,
-                      samples=[
-                          RunMessage.Sample(id=sample.pk,
-                                 name=sample.name,
-                                 accession=sample.accession,
-                                 barcode_id=sample.barcode_id,
-                                 barcode_seq=sample.barcode_seq,
-                                 organism=sample.organism,
-                                 extraction_kit=sample.extraction_kit,
-                                 comment=sample.comment,
-                                 user=sample.user,
-                                 files=[
-                                    RunMessage.File(name=file.name,
-                                         path=a(file.path),
-                                         spot_id=None,
-                                         size=0,
-                                         ready=False,
-                                         hash=file.checksum,
-                                         tags=[tag.name for tag in file.tags])
-                                 for file in sample.files],
-                                 tags=[tag.name for tag in sample.tags]) for sample in run.samples],
-                      files=[
-                          RunMessage.File(name=file.name,
-                               path=a(file.path),
-                               spot_id=None,
-                               size=0,
-                               ready=False,
-                               hash=file.checksum,
-                               tags=[tag.name for tag in file.tags])
-                      for file in run.files],
-                      tags=[tag.name for tag in run.tags]
-                      )
+        name=run.name,
+        mnemonic_name=run.alt_name,
+        library_id=run.library_id,
+        status=run.status,
+        path=a(run.path),
+        flowcell_type=run.flowcell.consumable_type,
+        flowcell_id=run.flowcell.consumable_id,
+        basecalling_model=run.basecalling_model,
+        sequencing_kit=run.sample_sheet.sequencing_kit,
+        samples=[
+            RunMessage.Sample(id=sample.pk,
+                    name=sample.sample_id,
+                    accession=sample.accession,
+                    barcode_id=sample.barcode_id,
+                    barcode_seq=sample.barcode_seq,
+                    organism=sample.organism,
+                    extraction_kit=sample.extraction_kit,
+                    comment=sample.comment,
+                    user=sample.user,
+                    files=[
+                    RunMessage.File(name=file.name,
+                            path=a(file.path),
+                            size=0,
+                            ready=False,
+                            hash=file.checksum,
+                            tags=[tag.name for tag in file.tags])
+                    for file in sample.files],
+                    tags=[tag.name for tag in sample.tags]
+                    ) for sample in run.samples
+        ],
+        files=[
+            RunMessage.File(name=file.name,
+                path=a(file.path),
+                size=0,
+                ready=False,
+                hash=file.checksum,
+                tags=[tag.name for tag in file.tags])
+        for file in run.files],
+        tags=[tag.name for tag in run.tags]
+        )
 
 async def register_new_flowcell(path, nanopore_api=None): #TODO
     flow = Flowcell.create(path=path, consumable_id=path.name)
@@ -98,10 +99,10 @@ async def register_new_run(path, nanopore_api=None): #TODO
         #get minknow stuff if we can
         pass
 
-    query = SampleSheet.get_unused_sheets()
-    if query.count() == 1:
+    query = list(SampleSheet.get_unused_sheets()) #pre-fetch all
+    if len(query) == 1:
         #if there's an unattached sheet, attach it to this run
-        sheet = next(query)
+        sheet = query[0]
         run.sample_sheet = sheet
         run.save()
 
@@ -171,13 +172,18 @@ async def list_runs(all=False, tags=[]):
     #only in-progress runs
     return [make_run_msg(run) for run in Run.select().where(Run.ended.is_null())]
 
+async def poll_file(file):
+    if datetime.now() - file.last_modified > timedelta(hours=1):
+        await create_jobs_for_file(file)
+        return True
+    return False
 
 async def poll_active_run():
     "Scan run(s) in progress, close out runs that have been stable for an hour"
     runs = Run.select().where(Run.status == 'RUNNING')
     i = 0
     for i, run in enumerate(runs, 1):
-        if len(run.files) and all([datetime.now() - file.last_modified > timedelta(hours=1) for file in run.files]):
+        if len(run.files) and all([await poll_file(file) for file in run.files]):
             await end_run(run)
     return i
 
@@ -187,12 +193,12 @@ async def end_run(run):
     run.ended = datetime.now()
     run.status = 'DONE'
     run.save()
-    tag, _ = Tag.get_or_create(name='finished')
-    TagJunction.get_or_create(run=run, tag=tag)
+    run.tag('finished')
     log.info(f"Run {run.alt_name} ended, no file modifications in the past hour")
     for notifier in NOTIFIERS:
         log.info(f"Firing notifier {notifier.name}")
         await notifier.notify(run, None, "Run finished")
+    await create_jobs_for_run(run)
 
 
 async def send_run(run, dest): #TODO
@@ -213,17 +219,24 @@ class PoreRefinerFSEventHandler(AIOEventHandler):
         if event.is_directory:
             path = Path(event.src_path)
             parent = path.parent
-            if parent == Path(self.path):
+            if parent == Path(self.path): #new folder is a flowcell
                 if not Flowcell.get_or_none(Flowcell.path == r(path)):
                     log.info("Registering new flowcell...")
                     await register_new_flowcell(r(path))
-            else:
+            elif parent.parent == Path(self.path): #only direct children directories of flowcells are runs
                 if not Run.get_or_none(Run.path == r(path)):
                     log.info("Registering new run...")
                     await register_new_run(r(path))
         else:
             containing_folder, filename = split(event.src_path)
-            run = Run.get(Run.path == r(containing_folder))
+            pathh = r(containing_folder)
+            run = Run.get_or_none(Run.path == pathh)
+            while run is None and pathh != pathh.parent:
+                pathh = pathh.parent
+                run = Run.get_or_none(Run.path == pathh)
+            if not run:
+                log.info("Registering new run...")
+                run = await register_new_run(r(containing_folder))
             log.info(f"New file found for run {run.alt_name}...")
             fi = File.get_or_create(run=run, path=r(event.src_path))
 
@@ -266,13 +279,34 @@ class PoreRefinerDispatchServer(PoreRefinerBase):
     async def AttachSheetToRun(self, stream: 'grpclib.server.Stream[porerefiner_pb2.RunAttachRequest, porerefiner_pb2.RunAttachResponse]') -> None:
         request = await stream.recv_message()
         log.info("API call: Attach sample sheet")
-        await stream.send_message(RunAttachResponse())
+        try:
+            run = get_run(request.id or request.name)
+        except ValueError: #no run
+            run = None
+        ss = SampleSheet.new_sheet_from_message(request.sheet, run)
+        await stream.send_message(GenericResponse())
         log.info("Response sent")
 
     async def RsyncRunTo(self, stream: 'grpclib.server.Stream[porerefiner_pb2.RunRsyncRequest, porerefiner_pb2.RunRsyncResponse]') -> None:
         request = await stream.recv_message()
         log.info(f"API call: send run via rsync to {request.dest}")
         await stream.send_message(RunRsyncResponse())
+        log.info("Response sent")
+
+    async def Tag(self, stream):
+        request = await stream.recv_message()
+        log.info(f"API call: tag run {request.id} with tags '{request.tags}'")
+        run = Run.get_or_none(pk=request.id)
+        resp = GenericResponse()
+        if run:
+            for tag in request.tags:
+                if request.untag:
+                    run.untag(tag)
+                else:
+                    run.tag(tag)
+        else:
+            resp.error = Error(type="NoSuchRun", err_message=f"run id {request.id} not found.")
+        await stream.send_message(resp)
         log.info("Response sent")
 
 async def start_server(socket, *a, **k):
@@ -295,13 +329,22 @@ async def start_fs_watchdog(path, *a, **k):
     # watcher.wait_closed()
     # log.info(f"Filesystem event watcher shutting down.")
 
+async def in_progress_run_update(*args, **kwargs):
+    "On server start, update all in-progress run files with last modified date."
+    for run in Run.select().where(Run.status == 'RUNNING'):
+        for file in run.all_files:
+            file.last_modified = datetime.fromtimestamp(getmtime(a(file.path)))
+            file.save()
+            await asyncio.sleep(0)
+
+
 async def start_run_end_polling(run_polling_interval, *a, **k):
     "Coro to bring up the run termination polling"
     log.info(f"Starting run polling...")
     async def run_end_polling():
+        await asyncio.sleep(run_polling_interval) #poll every ten minutes
         run_num = await poll_active_run()
         log.info(f"{run_num} runs polled.")
-        await asyncio.sleep(run_polling_interval) #poll every ten minutes
         return asyncio.ensure_future(run_end_polling())
     return asyncio.ensure_future(run_end_polling())
 
@@ -326,27 +369,28 @@ async def serve(db_path=None, db_pragmas=None, wdog_settings=None, server_settin
         system_settings=config['porerefiner']
     models._db.init(db_path, db_pragmas) # pragma: no cover
     [cls.create_table(safe=True) for cls in models.REGISTRY] # pragma: no cover
+    import porerefiner.jobs.submitters as submitters
+    submitters.SUBMITTER.test_noop()
     try:
         results = await gather(start_server(**server_settings),
                     start_fs_watchdog(**wdog_settings),
                     start_run_end_polling(**system_settings),
-                    start_job_polling(**system_settings))
+                    start_job_polling(**system_settings),
+                    in_progress_run_update())
     finally:
         log.info("Shutting down...")
 
-async def shutdown(signal, loop):
-    for task in asyncio.all_tasks():
-        if task is not asyncio.current_task():
-            task.cancel()
+@click.group()
+def cli():
+    pass
 
-@click.command()
-@click.option('-d', '--daemonize', 'demonize', default=False)
+@cli.command()
+@click.option('-d', '--daemonize', 'demonize', is_flag=True, default=False)
 @click.option('-v', '--verbose', is_flag=True)
-def main(verbose=False, demonize=False):
-    "Start the main event loop"
+def start(verbose=False, demonize=False):
+    "Start the PoreRefiner service"
     log = logging.getLogger('porerefiner')
     logging.basicConfig(stream=sys.stdout, level=(logging.INFO, logging.DEBUG)[verbose])
-
     if demonize:
         log.info("Starting daemon...")
         with daemon.DaemonContext():
@@ -356,7 +400,44 @@ def main(verbose=False, demonize=False):
         run(serve())
     return 0
 
+@cli.group()
+def reset():
+    "Utility function to reset various state."
+    from porerefiner.config import config
+    db_path=config['database']['path']
+    db_path=config['database']['path']
+    db_pragmas=config['database']['pragmas']
+
+@reset.command()
+@click.argument('status', default="QUEUED", type=click.Choice([v for v, _ in Job.statuses], case_sensitive=True))
+def jobs(status):
+    "Reset all jobs to a particular status."
+    if click.confirm(f"This will set all jobs to {status} status. Are you sure?"):
+        click.echo("reset jobs")
+
+@reset.command()
+def runs():
+    "Reset all runs to in-progress status."
+    if click.confirm(f"This will set all runs to in-progress status, triggering notifiers and jobs in the next hour. Are you sure?"):
+        click.echo("reset runs")
+
+@reset.command()
+def config():
+    "Reset config to defaults."
+    if click.confirm("This will reset your config to defaults. Are you sure?"):
+        import importlib
+        import porerefiner.config
+        porerefiner.config.config_file.unlink()
+        importlib.reload(porerefiner.config)
+
+@reset.command()
+def database():
+    "Reset database to empty state."
+    if click.confirm("This will delete the porerefiner database. Are you sure?"):
+        import porerefiner.config
+        Path(porerefiner.config.config['database']['path']).unlink()
+
 
 
 if __name__ == '__main__':
-    sys.exit(main())                   # pragma: no cover
+    sys.exit(cli())                   # pragma: no cover

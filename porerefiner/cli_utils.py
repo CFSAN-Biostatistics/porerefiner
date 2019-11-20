@@ -1,6 +1,8 @@
 "Custom argument handler types for Click"
 
 import click
+import csv
+import datetime
 import json
 from pathlib import Path
 from contextlib import contextmanager
@@ -11,6 +13,7 @@ from xml.etree import ElementTree as xml
 from sys import stderr
 
 from porerefiner.protocols.porerefiner.rpc.porerefiner_grpc import PoreRefinerStub
+from porerefiner.protocols.porerefiner.rpc.porerefiner_pb2 import SampleSheet
 
 #these two functions are hooks in case we decide to store only relative paths.
 #paths going into the database will be relativized; paths going out will be
@@ -107,13 +110,23 @@ def hr_formatter(extend=False):
     yield print_run
     print(tabulate(rec, headers="keys"))
 
+class MessageAwareEncoder(json.JSONEncoder):
+
+    def default(self, o):
+        from google.protobuf.json_format import MessageToDict
+        from google.protobuf.message import Message
+        if isinstance(o, Message):
+            return MessageToDict(o)
+        return json.JSONEncoder.default(self, o)
+
+
 @contextmanager
 def json_formatter(extend=False):
     rec = []
     def print_run(run):
         rec.append(run)
     yield print_run
-    print(json.dumps(rec))
+    print(json.dumps(rec, cls=MessageAwareEncoder, indent=2))
 
 @contextmanager
 def xml_formatter(extend=False):
@@ -122,3 +135,23 @@ def xml_formatter(extend=False):
         rec.append(run)
     yield print_run
     print(xml.toString())
+
+
+# We should do sample sheet parsing on the client side
+
+def load_from_csv(file, delimiter=',') -> SampleSheet:
+    ss = SampleSheet()
+    _, ss.porerefiner_ver, *_ = file.readline().split(delimiter)
+    if ss.porerefiner_ver == '1.0.0':
+        ss.date.GetCurrentTime()
+        _, ss.library_id, *_ = file.readline().split(delimiter)
+        _, ss.sequencing_kit, *_ = file.readline().split(delimiter)
+        [ss.samples.add(**row) for row in csv.DictReader(file, delimiter=delimiter, dialect='excel')] #this should handle commas in fields
+        return ss
+
+def load_from_excel(file) -> SampleSheet:
+    import openpyxl
+    ss = SampleSheet()
+
+    return ss
+

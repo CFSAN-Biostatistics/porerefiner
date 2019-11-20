@@ -13,15 +13,21 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 
+from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
+from google.protobuf import duration_pb2 as google_dot_protobuf_dot_duration__pb2
 
+from google.protobuf.timestamp_pb2 import *
+from google.protobuf.duration_pb2 import *
 
 DESCRIPTOR = _descriptor.FileDescriptor(
   name='porerefiner/protocols/porerefiner/rpc/porerefiner.proto',
   package='porerefiner.rpc',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n7porerefiner/protocols/porerefiner/rpc/porerefiner.proto\x12\x0fporerefiner.rpc\"\xfd\x04\n\x03Run\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x15\n\rmnemonic_name\x18\x03 \x01(\t\x12\x12\n\nlibrary_id\x18\x04 \x01(\t\x12\x0e\n\x06status\x18\x05 \x01(\t\x12\x0c\n\x04path\x18\x06 \x01(\t\x12\x15\n\rflowcell_type\x18\x07 \x01(\t\x12\x13\n\x0b\x66lowcell_id\x18\x08 \x01(\t\x12\x19\n\x11\x62\x61secalling_model\x18\t \x01(\t\x12\x16\n\x0esequencing_kit\x18\n \x01(\t\x12(\n\x05\x66iles\x18\x0f \x03(\x0b\x32\x19.porerefiner.rpc.Run.File\x12,\n\x07samples\x18\x14 \x03(\x0b\x32\x1b.porerefiner.rpc.Run.Sample\x12\x0c\n\x04tags\x18\x1e \x03(\t\x1al\n\x04\x46ile\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04path\x18\x02 \x01(\t\x12\x0f\n\x07spot_id\x18\x05 \x01(\t\x12\x0c\n\x04size\x18\x08 \x01(\x04\x12\r\n\x05ready\x18\n \x01(\x08\x12\x0c\n\x04hash\x18\x0c \x01(\t\x12\x0c\n\x04tags\x18\x1e \x03(\t\x1a\xdf\x01\n\x06Sample\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x11\n\taccession\x18\x03 \x01(\t\x12\x12\n\nbarcode_id\x18\x04 \x01(\t\x12\x13\n\x0b\x62\x61rcode_seq\x18\x05 \x01(\t\x12\x10\n\x08organism\x18\x06 \x01(\t\x12\x16\n\x0e\x65xtraction_kit\x18\x07 \x01(\t\x12\x0f\n\x07\x63omment\x18\x08 \x01(\t\x12\x0c\n\x04user\x18\t \x01(\t\x12(\n\x05\x66iles\x18\x14 \x03(\x0b\x32\x19.porerefiner.rpc.Run.File\x12\x0c\n\x04tags\x18\x1e \x03(\t\"E\n\x05\x45rror\x12\x0e\n\x04\x63ode\x18\x01 \x01(\x05H\x00\x12\x0e\n\x04type\x18\x02 \x01(\tH\x00\x12\x13\n\x0b\x65rr_message\x18\x03 \x01(\tB\x07\n\x05\x65rror\"d\n\x0bRunResponse\x12#\n\x03run\x18\x01 \x01(\x0b\x32\x14.porerefiner.rpc.RunH\x00\x12\'\n\x05\x65rror\x18\x02 \x01(\x0b\x32\x16.porerefiner.rpc.ErrorH\x00\x42\x07\n\x05reply\"+\n\x0eRunListRequest\x12\x0b\n\x03\x61ll\x18\x01 \x01(\x08\x12\x0c\n\x04tags\x18\x14 \x03(\t\"-\n\x07RunList\x12\"\n\x04runs\x18\x01 \x03(\x0b\x32\x14.porerefiner.rpc.Run\"m\n\x0fRunListResponse\x12(\n\x04runs\x18\x01 \x01(\x0b\x32\x18.porerefiner.rpc.RunListH\x00\x12\'\n\x05\x65rror\x18\x02 \x01(\x0b\x32\x16.porerefiner.rpc.ErrorH\x00\x42\x07\n\x05reply\"2\n\nRunRequest\x12\x0c\n\x02id\x18\x01 \x01(\rH\x00\x12\x0e\n\x04name\x18\x02 \x01(\tH\x00\x42\x06\n\x04term\"E\n\x0fRunRsyncRequest\x12\x0c\n\x02id\x18\x01 \x01(\rH\x00\x12\x0e\n\x04name\x18\x02 \x01(\tH\x00\x12\x0c\n\x04\x64\x65st\x18\x03 \x01(\tB\x06\n\x04term\"9\n\x10RunRsyncResponse\x12%\n\x05\x65rror\x18\x01 \x01(\x0b\x32\x16.porerefiner.rpc.Error\"a\n\x10RunAttachRequest\x12\x0c\n\x02id\x18\x01 \x01(\rH\x00\x12\x0e\n\x04name\x18\x02 \x01(\tH\x00\x12\x0e\n\x04path\x18\x03 \x01(\tH\x01\x12\x0e\n\x04\x66ile\x18\x04 \x01(\x0cH\x01\x42\x06\n\x04termB\x07\n\x05sheet\"8\n\x0fGenericResponse\x12%\n\x05\x65rror\x18\x01 \x01(\x0b\x32\x16.porerefiner.rpc.Error2\xd0\x02\n\x0bPoreRefiner\x12L\n\x07GetRuns\x12\x1f.porerefiner.rpc.RunListRequest\x1a .porerefiner.rpc.RunListResponse\x12G\n\nGetRunInfo\x12\x1b.porerefiner.rpc.RunRequest\x1a\x1c.porerefiner.rpc.RunResponse\x12W\n\x10\x41ttachSheetToRun\x12!.porerefiner.rpc.RunAttachRequest\x1a .porerefiner.rpc.GenericResponse\x12Q\n\nRsyncRunTo\x12 .porerefiner.rpc.RunRsyncRequest\x1a!.porerefiner.rpc.RunRsyncResponseb\x06proto3')
-)
+  serialized_pb=_b('\n7porerefiner/protocols/porerefiner/rpc/porerefiner.proto\x12\x0fporerefiner.rpc\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1egoogle/protobuf/duration.proto\"\xd6\x05\n\x03Run\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x15\n\rmnemonic_name\x18\x03 \x01(\t\x12\x12\n\nlibrary_id\x18\x04 \x01(\t\x12\x0e\n\x06status\x18\x05 \x01(\t\x12\x0c\n\x04path\x18\x06 \x01(\t\x12\x15\n\rflowcell_type\x18\x07 \x01(\t\x12\x13\n\x0b\x66lowcell_id\x18\x08 \x01(\t\x12\x19\n\x11\x62\x61secalling_model\x18\t \x01(\t\x12\x16\n\x0esequencing_kit\x18\n \x01(\t\x12+\n\x07started\x18\x0b \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12*\n\x07\x65lapsed\x18\x0c \x01(\x0b\x32\x19.google.protobuf.Duration\x12(\n\x05\x66iles\x18\x0f \x03(\x0b\x32\x19.porerefiner.rpc.Run.File\x12,\n\x07samples\x18\x14 \x03(\x0b\x32\x1b.porerefiner.rpc.Run.Sample\x12\x0c\n\x04tags\x18\x1e \x03(\t\x1al\n\x04\x46ile\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x0c\n\x04path\x18\x02 \x01(\t\x12\x0f\n\x07spot_id\x18\x05 \x01(\t\x12\x0c\n\x04size\x18\x08 \x01(\x04\x12\r\n\x05ready\x18\n \x01(\x08\x12\x0c\n\x04hash\x18\x0c \x01(\t\x12\x0c\n\x04tags\x18\x1e \x03(\t\x1a\xdf\x01\n\x06Sample\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x11\n\taccession\x18\x03 \x01(\t\x12\x12\n\nbarcode_id\x18\x04 \x01(\x05\x12\x13\n\x0b\x62\x61rcode_seq\x18\x05 \x01(\t\x12\x10\n\x08organism\x18\x06 \x01(\t\x12\x16\n\x0e\x65xtraction_kit\x18\x07 \x01(\t\x12\x0f\n\x07\x63omment\x18\x08 \x01(\t\x12\x0c\n\x04user\x18\t \x01(\t\x12(\n\x05\x66iles\x18\x14 \x03(\x0b\x32\x19.porerefiner.rpc.Run.File\x12\x0c\n\x04tags\x18\x1e \x03(\t\"E\n\x05\x45rror\x12\x0e\n\x04\x63ode\x18\x01 \x01(\x05H\x00\x12\x0e\n\x04type\x18\x02 \x01(\tH\x00\x12\x13\n\x0b\x65rr_message\x18\x03 \x01(\tB\x07\n\x05\x65rror\"d\n\x0bRunResponse\x12#\n\x03run\x18\x01 \x01(\x0b\x32\x14.porerefiner.rpc.RunH\x00\x12\'\n\x05\x65rror\x18\x02 \x01(\x0b\x32\x16.porerefiner.rpc.ErrorH\x00\x42\x07\n\x05reply\"+\n\x0eRunListRequest\x12\x0b\n\x03\x61ll\x18\x01 \x01(\x08\x12\x0c\n\x04tags\x18\x14 \x03(\t\"-\n\x07RunList\x12\"\n\x04runs\x18\x01 \x03(\x0b\x32\x14.porerefiner.rpc.Run\"m\n\x0fRunListResponse\x12(\n\x04runs\x18\x01 \x01(\x0b\x32\x18.porerefiner.rpc.RunListH\x00\x12\'\n\x05\x65rror\x18\x02 \x01(\x0b\x32\x16.porerefiner.rpc.ErrorH\x00\x42\x07\n\x05reply\"2\n\nRunRequest\x12\x0c\n\x02id\x18\x01 \x01(\rH\x00\x12\x0e\n\x04name\x18\x02 \x01(\tH\x00\x42\x06\n\x04term\"E\n\x0fRunRsyncRequest\x12\x0c\n\x02id\x18\x01 \x01(\rH\x00\x12\x0e\n\x04name\x18\x02 \x01(\tH\x00\x12\x0c\n\x04\x64\x65st\x18\x03 \x01(\tB\x06\n\x04term\"9\n\x10RunRsyncResponse\x12%\n\x05\x65rror\x18\x01 \x01(\x0b\x32\x16.porerefiner.rpc.Error\"8\n\x0fGenericResponse\x12%\n\x05\x65rror\x18\x01 \x01(\x0b\x32\x16.porerefiner.rpc.Error\"5\n\nTagRequest\x12\n\n\x02id\x18\x01 \x01(\r\x12\x0c\n\x04tags\x18\x02 \x03(\t\x12\r\n\x05untag\x18\x03 \x01(\x08\"\xc0\x02\n\x0bSampleSheet\x12\x17\n\x0fporerefiner_ver\x18\x01 \x01(\t\x12\x12\n\nlibrary_id\x18\x02 \x01(\t\x12\x16\n\x0esequencing_kit\x18\x03 \x01(\t\x12(\n\x04\x64\x61te\x18\x04 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x34\n\x07samples\x18\n \x03(\x0b\x32#.porerefiner.rpc.SampleSheet.Sample\x1a\x8b\x01\n\x06Sample\x12\x11\n\tsample_id\x18\x01 \x01(\t\x12\x11\n\taccession\x18\x02 \x01(\t\x12\x12\n\nbarcode_id\x18\x03 \x01(\t\x12\x10\n\x08organism\x18\x04 \x01(\t\x12\x16\n\x0e\x65xtraction_kit\x18\x05 \x01(\t\x12\x0f\n\x07\x63omment\x18\x06 \x01(\t\x12\x0c\n\x04user\x18\x07 \x01(\t\"e\n\x10RunAttachRequest\x12\x0c\n\x02id\x18\x01 \x01(\rH\x00\x12\x0e\n\x04name\x18\x02 \x01(\tH\x00\x12+\n\x05sheet\x18\x05 \x01(\x0b\x32\x1c.porerefiner.rpc.SampleSheetB\x06\n\x04term2\x96\x03\n\x0bPoreRefiner\x12L\n\x07GetRuns\x12\x1f.porerefiner.rpc.RunListRequest\x1a .porerefiner.rpc.RunListResponse\x12G\n\nGetRunInfo\x12\x1b.porerefiner.rpc.RunRequest\x1a\x1c.porerefiner.rpc.RunResponse\x12W\n\x10\x41ttachSheetToRun\x12!.porerefiner.rpc.RunAttachRequest\x1a .porerefiner.rpc.GenericResponse\x12Q\n\nRsyncRunTo\x12 .porerefiner.rpc.RunRsyncRequest\x1a!.porerefiner.rpc.RunRsyncResponse\x12\x44\n\x03Tag\x12\x1b.porerefiner.rpc.TagRequest\x1a .porerefiner.rpc.GenericResponseP\x00P\x01\x62\x06proto3')
+  ,
+  dependencies=[google_dot_protobuf_dot_timestamp__pb2.DESCRIPTOR,google_dot_protobuf_dot_duration__pb2.DESCRIPTOR,],
+  public_dependencies=[google_dot_protobuf_dot_timestamp__pb2.DESCRIPTOR,google_dot_protobuf_dot_duration__pb2.DESCRIPTOR,])
 
 
 
@@ -94,8 +100,8 @@ _RUN_FILE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=380,
-  serialized_end=488,
+  serialized_start=534,
+  serialized_end=642,
 )
 
 _RUN_SAMPLE = _descriptor.Descriptor(
@@ -128,8 +134,8 @@ _RUN_SAMPLE = _descriptor.Descriptor(
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
       name='barcode_id', full_name='porerefiner.rpc.Run.Sample.barcode_id', index=3,
-      number=4, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
+      number=4, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
@@ -194,8 +200,8 @@ _RUN_SAMPLE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=491,
-  serialized_end=714,
+  serialized_start=645,
+  serialized_end=868,
 )
 
 _RUN = _descriptor.Descriptor(
@@ -276,21 +282,35 @@ _RUN = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='files', full_name='porerefiner.rpc.Run.files', index=10,
+      name='started', full_name='porerefiner.rpc.Run.started', index=10,
+      number=11, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='elapsed', full_name='porerefiner.rpc.Run.elapsed', index=11,
+      number=12, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='files', full_name='porerefiner.rpc.Run.files', index=12,
       number=15, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='samples', full_name='porerefiner.rpc.Run.samples', index=11,
+      name='samples', full_name='porerefiner.rpc.Run.samples', index=13,
       number=20, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='tags', full_name='porerefiner.rpc.Run.tags', index=12,
+      name='tags', full_name='porerefiner.rpc.Run.tags', index=14,
       number=30, type=9, cpp_type=9, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
@@ -308,8 +328,8 @@ _RUN = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=77,
-  serialized_end=714,
+  serialized_start=142,
+  serialized_end=868,
 )
 
 
@@ -356,8 +376,8 @@ _ERROR = _descriptor.Descriptor(
       name='error', full_name='porerefiner.rpc.Error.error',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=716,
-  serialized_end=785,
+  serialized_start=870,
+  serialized_end=939,
 )
 
 
@@ -397,8 +417,8 @@ _RUNRESPONSE = _descriptor.Descriptor(
       name='reply', full_name='porerefiner.rpc.RunResponse.reply',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=787,
-  serialized_end=887,
+  serialized_start=941,
+  serialized_end=1041,
 )
 
 
@@ -435,8 +455,8 @@ _RUNLISTREQUEST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=889,
-  serialized_end=932,
+  serialized_start=1043,
+  serialized_end=1086,
 )
 
 
@@ -466,8 +486,8 @@ _RUNLIST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=934,
-  serialized_end=979,
+  serialized_start=1088,
+  serialized_end=1133,
 )
 
 
@@ -507,8 +527,8 @@ _RUNLISTRESPONSE = _descriptor.Descriptor(
       name='reply', full_name='porerefiner.rpc.RunListResponse.reply',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=981,
-  serialized_end=1090,
+  serialized_start=1135,
+  serialized_end=1244,
 )
 
 
@@ -548,8 +568,8 @@ _RUNREQUEST = _descriptor.Descriptor(
       name='term', full_name='porerefiner.rpc.RunRequest.term',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=1092,
-  serialized_end=1142,
+  serialized_start=1246,
+  serialized_end=1296,
 )
 
 
@@ -596,8 +616,8 @@ _RUNRSYNCREQUEST = _descriptor.Descriptor(
       name='term', full_name='porerefiner.rpc.RunRsyncRequest.term',
       index=0, containing_type=None, fields=[]),
   ],
-  serialized_start=1144,
-  serialized_end=1213,
+  serialized_start=1298,
+  serialized_end=1367,
 )
 
 
@@ -627,66 +647,8 @@ _RUNRSYNCRESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1215,
-  serialized_end=1272,
-)
-
-
-_RUNATTACHREQUEST = _descriptor.Descriptor(
-  name='RunAttachRequest',
-  full_name='porerefiner.rpc.RunAttachRequest',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='id', full_name='porerefiner.rpc.RunAttachRequest.id', index=0,
-      number=1, type=13, cpp_type=3, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='name', full_name='porerefiner.rpc.RunAttachRequest.name', index=1,
-      number=2, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='path', full_name='porerefiner.rpc.RunAttachRequest.path', index=2,
-      number=3, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='file', full_name='porerefiner.rpc.RunAttachRequest.file', index=3,
-      number=4, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b(""),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-    _descriptor.OneofDescriptor(
-      name='term', full_name='porerefiner.rpc.RunAttachRequest.term',
-      index=0, containing_type=None, fields=[]),
-    _descriptor.OneofDescriptor(
-      name='sheet', full_name='porerefiner.rpc.RunAttachRequest.sheet',
-      index=1, containing_type=None, fields=[]),
-  ],
-  serialized_start=1274,
-  serialized_end=1371,
+  serialized_start=1369,
+  serialized_end=1426,
 )
 
 
@@ -716,13 +678,239 @@ _GENERICRESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=1373,
-  serialized_end=1429,
+  serialized_start=1428,
+  serialized_end=1484,
+)
+
+
+_TAGREQUEST = _descriptor.Descriptor(
+  name='TagRequest',
+  full_name='porerefiner.rpc.TagRequest',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='id', full_name='porerefiner.rpc.TagRequest.id', index=0,
+      number=1, type=13, cpp_type=3, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='tags', full_name='porerefiner.rpc.TagRequest.tags', index=1,
+      number=2, type=9, cpp_type=9, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='untag', full_name='porerefiner.rpc.TagRequest.untag', index=2,
+      number=3, type=8, cpp_type=7, label=1,
+      has_default_value=False, default_value=False,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=1486,
+  serialized_end=1539,
+)
+
+
+_SAMPLESHEET_SAMPLE = _descriptor.Descriptor(
+  name='Sample',
+  full_name='porerefiner.rpc.SampleSheet.Sample',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='sample_id', full_name='porerefiner.rpc.SampleSheet.Sample.sample_id', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='accession', full_name='porerefiner.rpc.SampleSheet.Sample.accession', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='barcode_id', full_name='porerefiner.rpc.SampleSheet.Sample.barcode_id', index=2,
+      number=3, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='organism', full_name='porerefiner.rpc.SampleSheet.Sample.organism', index=3,
+      number=4, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='extraction_kit', full_name='porerefiner.rpc.SampleSheet.Sample.extraction_kit', index=4,
+      number=5, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='comment', full_name='porerefiner.rpc.SampleSheet.Sample.comment', index=5,
+      number=6, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='user', full_name='porerefiner.rpc.SampleSheet.Sample.user', index=6,
+      number=7, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=1723,
+  serialized_end=1862,
+)
+
+_SAMPLESHEET = _descriptor.Descriptor(
+  name='SampleSheet',
+  full_name='porerefiner.rpc.SampleSheet',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='porerefiner_ver', full_name='porerefiner.rpc.SampleSheet.porerefiner_ver', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='library_id', full_name='porerefiner.rpc.SampleSheet.library_id', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='sequencing_kit', full_name='porerefiner.rpc.SampleSheet.sequencing_kit', index=2,
+      number=3, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='date', full_name='porerefiner.rpc.SampleSheet.date', index=3,
+      number=4, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='samples', full_name='porerefiner.rpc.SampleSheet.samples', index=4,
+      number=10, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[_SAMPLESHEET_SAMPLE, ],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=1542,
+  serialized_end=1862,
+)
+
+
+_RUNATTACHREQUEST = _descriptor.Descriptor(
+  name='RunAttachRequest',
+  full_name='porerefiner.rpc.RunAttachRequest',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='id', full_name='porerefiner.rpc.RunAttachRequest.id', index=0,
+      number=1, type=13, cpp_type=3, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='name', full_name='porerefiner.rpc.RunAttachRequest.name', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='sheet', full_name='porerefiner.rpc.RunAttachRequest.sheet', index=2,
+      number=5, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+    _descriptor.OneofDescriptor(
+      name='term', full_name='porerefiner.rpc.RunAttachRequest.term',
+      index=0, containing_type=None, fields=[]),
+  ],
+  serialized_start=1864,
+  serialized_end=1965,
 )
 
 _RUN_FILE.containing_type = _RUN
 _RUN_SAMPLE.fields_by_name['files'].message_type = _RUN_FILE
 _RUN_SAMPLE.containing_type = _RUN
+_RUN.fields_by_name['started'].message_type = google_dot_protobuf_dot_timestamp__pb2._TIMESTAMP
+_RUN.fields_by_name['elapsed'].message_type = google_dot_protobuf_dot_duration__pb2._DURATION
 _RUN.fields_by_name['files'].message_type = _RUN_FILE
 _RUN.fields_by_name['samples'].message_type = _RUN_SAMPLE
 _ERROR.oneofs_by_name['error'].fields.append(
@@ -761,19 +949,17 @@ _RUNRSYNCREQUEST.oneofs_by_name['term'].fields.append(
   _RUNRSYNCREQUEST.fields_by_name['name'])
 _RUNRSYNCREQUEST.fields_by_name['name'].containing_oneof = _RUNRSYNCREQUEST.oneofs_by_name['term']
 _RUNRSYNCRESPONSE.fields_by_name['error'].message_type = _ERROR
+_GENERICRESPONSE.fields_by_name['error'].message_type = _ERROR
+_SAMPLESHEET_SAMPLE.containing_type = _SAMPLESHEET
+_SAMPLESHEET.fields_by_name['date'].message_type = google_dot_protobuf_dot_timestamp__pb2._TIMESTAMP
+_SAMPLESHEET.fields_by_name['samples'].message_type = _SAMPLESHEET_SAMPLE
+_RUNATTACHREQUEST.fields_by_name['sheet'].message_type = _SAMPLESHEET
 _RUNATTACHREQUEST.oneofs_by_name['term'].fields.append(
   _RUNATTACHREQUEST.fields_by_name['id'])
 _RUNATTACHREQUEST.fields_by_name['id'].containing_oneof = _RUNATTACHREQUEST.oneofs_by_name['term']
 _RUNATTACHREQUEST.oneofs_by_name['term'].fields.append(
   _RUNATTACHREQUEST.fields_by_name['name'])
 _RUNATTACHREQUEST.fields_by_name['name'].containing_oneof = _RUNATTACHREQUEST.oneofs_by_name['term']
-_RUNATTACHREQUEST.oneofs_by_name['sheet'].fields.append(
-  _RUNATTACHREQUEST.fields_by_name['path'])
-_RUNATTACHREQUEST.fields_by_name['path'].containing_oneof = _RUNATTACHREQUEST.oneofs_by_name['sheet']
-_RUNATTACHREQUEST.oneofs_by_name['sheet'].fields.append(
-  _RUNATTACHREQUEST.fields_by_name['file'])
-_RUNATTACHREQUEST.fields_by_name['file'].containing_oneof = _RUNATTACHREQUEST.oneofs_by_name['sheet']
-_GENERICRESPONSE.fields_by_name['error'].message_type = _ERROR
 DESCRIPTOR.message_types_by_name['Run'] = _RUN
 DESCRIPTOR.message_types_by_name['Error'] = _ERROR
 DESCRIPTOR.message_types_by_name['RunResponse'] = _RUNRESPONSE
@@ -783,8 +969,10 @@ DESCRIPTOR.message_types_by_name['RunListResponse'] = _RUNLISTRESPONSE
 DESCRIPTOR.message_types_by_name['RunRequest'] = _RUNREQUEST
 DESCRIPTOR.message_types_by_name['RunRsyncRequest'] = _RUNRSYNCREQUEST
 DESCRIPTOR.message_types_by_name['RunRsyncResponse'] = _RUNRSYNCRESPONSE
-DESCRIPTOR.message_types_by_name['RunAttachRequest'] = _RUNATTACHREQUEST
 DESCRIPTOR.message_types_by_name['GenericResponse'] = _GENERICRESPONSE
+DESCRIPTOR.message_types_by_name['TagRequest'] = _TAGREQUEST
+DESCRIPTOR.message_types_by_name['SampleSheet'] = _SAMPLESHEET
+DESCRIPTOR.message_types_by_name['RunAttachRequest'] = _RUNATTACHREQUEST
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 Run = _reflection.GeneratedProtocolMessageType('Run', (_message.Message,), {
@@ -866,19 +1054,41 @@ RunRsyncResponse = _reflection.GeneratedProtocolMessageType('RunRsyncResponse', 
   })
 _sym_db.RegisterMessage(RunRsyncResponse)
 
-RunAttachRequest = _reflection.GeneratedProtocolMessageType('RunAttachRequest', (_message.Message,), {
-  'DESCRIPTOR' : _RUNATTACHREQUEST,
-  '__module__' : 'porerefiner.protocols.porerefiner.rpc.porerefiner_pb2'
-  # @@protoc_insertion_point(class_scope:porerefiner.rpc.RunAttachRequest)
-  })
-_sym_db.RegisterMessage(RunAttachRequest)
-
 GenericResponse = _reflection.GeneratedProtocolMessageType('GenericResponse', (_message.Message,), {
   'DESCRIPTOR' : _GENERICRESPONSE,
   '__module__' : 'porerefiner.protocols.porerefiner.rpc.porerefiner_pb2'
   # @@protoc_insertion_point(class_scope:porerefiner.rpc.GenericResponse)
   })
 _sym_db.RegisterMessage(GenericResponse)
+
+TagRequest = _reflection.GeneratedProtocolMessageType('TagRequest', (_message.Message,), {
+  'DESCRIPTOR' : _TAGREQUEST,
+  '__module__' : 'porerefiner.protocols.porerefiner.rpc.porerefiner_pb2'
+  # @@protoc_insertion_point(class_scope:porerefiner.rpc.TagRequest)
+  })
+_sym_db.RegisterMessage(TagRequest)
+
+SampleSheet = _reflection.GeneratedProtocolMessageType('SampleSheet', (_message.Message,), {
+
+  'Sample' : _reflection.GeneratedProtocolMessageType('Sample', (_message.Message,), {
+    'DESCRIPTOR' : _SAMPLESHEET_SAMPLE,
+    '__module__' : 'porerefiner.protocols.porerefiner.rpc.porerefiner_pb2'
+    # @@protoc_insertion_point(class_scope:porerefiner.rpc.SampleSheet.Sample)
+    })
+  ,
+  'DESCRIPTOR' : _SAMPLESHEET,
+  '__module__' : 'porerefiner.protocols.porerefiner.rpc.porerefiner_pb2'
+  # @@protoc_insertion_point(class_scope:porerefiner.rpc.SampleSheet)
+  })
+_sym_db.RegisterMessage(SampleSheet)
+_sym_db.RegisterMessage(SampleSheet.Sample)
+
+RunAttachRequest = _reflection.GeneratedProtocolMessageType('RunAttachRequest', (_message.Message,), {
+  'DESCRIPTOR' : _RUNATTACHREQUEST,
+  '__module__' : 'porerefiner.protocols.porerefiner.rpc.porerefiner_pb2'
+  # @@protoc_insertion_point(class_scope:porerefiner.rpc.RunAttachRequest)
+  })
+_sym_db.RegisterMessage(RunAttachRequest)
 
 
 
@@ -888,8 +1098,8 @@ _POREREFINER = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
-  serialized_start=1432,
-  serialized_end=1768,
+  serialized_start=1968,
+  serialized_end=2374,
   methods=[
   _descriptor.MethodDescriptor(
     name='GetRuns',
@@ -925,6 +1135,15 @@ _POREREFINER = _descriptor.ServiceDescriptor(
     containing_service=None,
     input_type=_RUNRSYNCREQUEST,
     output_type=_RUNRSYNCRESPONSE,
+    serialized_options=None,
+  ),
+  _descriptor.MethodDescriptor(
+    name='Tag',
+    full_name='porerefiner.rpc.PoreRefiner.Tag',
+    index=4,
+    containing_service=None,
+    input_type=_TAGREQUEST,
+    output_type=_GENERICRESPONSE,
     serialized_options=None,
   ),
 ])

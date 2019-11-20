@@ -8,13 +8,15 @@
 
 from unittest import TestCase
 
-from hypothesis.strategies import text, composite, one_of, just, builds, integers
+from hypothesis.strategies import text, characters, composite, one_of, just, builds, integers, datetimes, emails, text, lists
 from pathlib import Path
 import os
 
 from porerefiner import models
 
 from peewee import SqliteDatabase
+
+from porerefiner.protocols.porerefiner.rpc import porerefiner_pb2 as messages
 
 # SQLite can't accept a 32-bit integer
 sql_ints = lambda: integers(min_value=-2**16, max_value=2**16)
@@ -26,6 +28,40 @@ def paths(draw, under=""):
     n = text(min_size=1)
     p = builds(Path, r, m, n)
     return draw(one_of(p, p.map(str)))
+
+@composite
+def samples(draw):
+    sid = text(min_size=7, max_size=10)
+    acc = text(min_size=5, max_size=10)
+    bar = text(min_size=10, max_size=10)
+    org = text(min_size=12, max_size=12)
+    ext = text(min_size=10, max_size=10)
+    com = text()
+    use = emails()
+    return draw(builds(messages.SampleSheet.Sample,
+                       sample_id=sid,
+                       accession=acc,
+                       barcode_id=bar,
+                       organism=org,
+                       extraction_kit=ext,
+                       comment=com,
+                       user=use))
+
+@composite
+def samplesheets(draw):
+    ver = just('1.0.0')
+    dat = datetimes()
+    lib = text(min_size=12, max_size=12)
+    seq = text(min_size=12, max_size=12)
+    sam = lists(samples(), min_size=1, unique_by=(lambda s: s.sample_id, lambda s: s.accession), max_size=12)
+    ss = draw(builds(messages.SampleSheet,
+                     porerefiner_ver=ver,
+                     library_id=lib,
+                     sequencing_kit=seq,
+                     samples=sam))
+    ss.date.FromDatetime(draw(dat))
+    return ss
+
 
 
 class TestBase(TestCase):
@@ -56,3 +92,6 @@ def with_database(func):
             db.drop_tables(models.REGISTRY)
             db.close()
     return wrapped_test_function
+
+if __name__ == '__main__':
+    print(samplesheets().example())

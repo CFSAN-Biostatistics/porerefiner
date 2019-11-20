@@ -2,7 +2,8 @@ syntax = "proto3";
 
 package porerefiner.rpc;
 
-
+import public "google/protobuf/timestamp.proto";
+import public "google/protobuf/duration.proto";
 
 
 message Run {
@@ -16,6 +17,8 @@ message Run {
     string flowcell_id = 8;
     string basecalling_model = 9;
     string sequencing_kit = 10;
+    google.protobuf.Timestamp started = 11;
+    google.protobuf.Duration elapsed = 12;
 
     message File {
         string name = 1;
@@ -33,7 +36,7 @@ message Run {
         int32 id = 1;
         string name = 2;
         string accession = 3;
-        string barcode_id = 4;
+        int32 barcode_id = 4;
         string barcode_seq = 5;
         string organism = 6;
         string extraction_kit = 7;
@@ -44,9 +47,16 @@ message Run {
         repeated string tags = 30;
     }
 
+    message Job {
+        int32 id = 1;
+        string name = 2;
+        string status = 3;
+    }
+
     repeated File files = 15;
     repeated Sample samples = 20;
     repeated string tags = 30;
+    repeated Job jobs = 40;
 
 }
 
@@ -100,16 +110,7 @@ message RunRsyncResponse {
     Error error = 1;
 }
 
-message RunAttachRequest {
-    oneof term {
-        uint32 id = 1;
-        string name = 2;
-    }
-    oneof sheet {
-        string path = 3;
-        bytes file = 4;
-    }
-}
+
 
 message GenericResponse {
     Error error = 1;
@@ -118,7 +119,42 @@ message GenericResponse {
 message TagRequest {
     uint32 id = 1;
     repeated string tags = 2;
+    bool untag = 3;
 }
+
+message SampleSheet {
+
+    string porerefiner_ver = 1;
+    string library_id = 2;
+    string sequencing_kit = 3;
+    google.protobuf.Timestamp date = 4;
+
+    message Sample {
+        string sample_id = 1;
+        string accession = 2;
+        string barcode_id = 3;
+        string organism = 4;
+        string extraction_kit = 5;
+        string comment = 6;
+        string user = 7;
+    }
+
+    repeated Sample samples = 10;
+
+
+}
+
+message RunAttachRequest {
+    oneof term {
+        uint32 id = 1;
+        string name = 2;
+    }
+
+    SampleSheet sheet = 5;
+
+}
+
+
 
 service PoreRefiner {
 
@@ -130,6 +166,6 @@ service PoreRefiner {
 
     rpc RsyncRunTo (RunRsyncRequest) returns (RunRsyncResponse);
 
-    //rpc Tag (TagRequest) returns (GenericResponse)
+    rpc Tag (TagRequest) returns (GenericResponse);
 
 }

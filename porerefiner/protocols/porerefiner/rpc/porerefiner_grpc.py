@@ -9,6 +9,8 @@ import grpclib.client
 if typing.TYPE_CHECKING:
     import grpclib.server
 
+import google.protobuf.timestamp_pb2
+import google.protobuf.duration_pb2
 import porerefiner.protocols.porerefiner.rpc.porerefiner_pb2
 
 
@@ -28,6 +30,10 @@ class PoreRefinerBase(abc.ABC):
 
     @abc.abstractmethod
     async def RsyncRunTo(self, stream: 'grpclib.server.Stream[porerefiner.protocols.porerefiner.rpc.porerefiner_pb2.RunRsyncRequest, porerefiner.protocols.porerefiner.rpc.porerefiner_pb2.RunRsyncResponse]') -> None:
+        pass
+
+    @abc.abstractmethod
+    async def Tag(self, stream: 'grpclib.server.Stream[porerefiner.protocols.porerefiner.rpc.porerefiner_pb2.TagRequest, porerefiner.protocols.porerefiner.rpc.porerefiner_pb2.GenericResponse]') -> None:
         pass
 
     def __mapping__(self) -> typing.Dict[str, grpclib.const.Handler]:
@@ -55,6 +61,12 @@ class PoreRefinerBase(abc.ABC):
                 grpclib.const.Cardinality.UNARY_UNARY,
                 porerefiner.protocols.porerefiner.rpc.porerefiner_pb2.RunRsyncRequest,
                 porerefiner.protocols.porerefiner.rpc.porerefiner_pb2.RunRsyncResponse,
+            ),
+            '/porerefiner.rpc.PoreRefiner/Tag': grpclib.const.Handler(
+                self.Tag,
+                grpclib.const.Cardinality.UNARY_UNARY,
+                porerefiner.protocols.porerefiner.rpc.porerefiner_pb2.TagRequest,
+                porerefiner.protocols.porerefiner.rpc.porerefiner_pb2.GenericResponse,
             ),
         }
 
@@ -85,4 +97,10 @@ class PoreRefinerStub:
             '/porerefiner.rpc.PoreRefiner/RsyncRunTo',
             porerefiner.protocols.porerefiner.rpc.porerefiner_pb2.RunRsyncRequest,
             porerefiner.protocols.porerefiner.rpc.porerefiner_pb2.RunRsyncResponse,
+        )
+        self.Tag = grpclib.client.UnaryUnaryMethod(
+            channel,
+            '/porerefiner.rpc.PoreRefiner/Tag',
+            porerefiner.protocols.porerefiner.rpc.porerefiner_pb2.TagRequest,
+            porerefiner.protocols.porerefiner.rpc.porerefiner_pb2.GenericResponse,
         )

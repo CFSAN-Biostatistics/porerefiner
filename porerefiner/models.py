@@ -3,10 +3,16 @@ from peewee import *
 
 import asyncio
 import datetime
+import logging
 import pathlib
 import pickle
 import namesgenerator
 import sys
+import tempfile
+
+from copy import copy
+from itertools import chain
+
 
 _db = SqliteDatabase(None)
 
@@ -28,11 +34,15 @@ class PorerefinerModel(BaseModel):
     @property
     def tags(self):
         # query = Tag.select().join(TagJunction).join(Tag)
-        return [tag_j.tag for tag_j in self.tag_junctions]
+        # return [tag_j.tag for tag_j in self.tag_junctions]
+        return (Tag.select()
+                   .join(TagJunction)
+                   .join(type(self))
+                   .where(type(self).pk == self.pk))
 
-    def tag(self, *tags):
-        for tag in tags:
-            Tag.get_or_create(name=tag)
+    # def tag(self, *tags):
+    #     for tag in tags:
+    #         Tag.get_or_create(name=tag)
 
 
 
@@ -58,6 +68,19 @@ class PathField(Field):
     def python_value(self, value):
         return pathlib.Path(value)
 
+
+class JobField(Field):
+
+    field_type = 'varchar'
+
+    def db_value(self, value):
+        from porerefiner.jobs import AbstractJob
+        if not isinstance(value, AbstractJob):
+            raise ValueError(f"value of type {type(value)} can't be stored in this field.")
+        return pickle.dumps(value)
+
+    def python_value(self, value):
+        return pickle.loads(value)
 
 
 def create_readable_name():
@@ -96,6 +119,14 @@ class Run(PorerefinerModel):
     basecalling_model = CharField(choices=basecallers, null=True)
 
     @property
+    def all_files(self):
+        return chain(self.files, chain(*(sample.files for sample in self.samples)))
+
+    @property
+    def jobs(self):
+        return chain(*(file.jobs for file in self.all_files))
+
+    @property
     def run_duration(self):
         if self.ended:
             return self.ended - self.started
@@ -105,7 +136,7 @@ class Run(PorerefinerModel):
         return self._sample_sheet or SampleSheet()
 
     @sample_sheet.setter
-    def set_sample_sheet(self, ss):
+    def sample_sheet(self, ss):
         self._sample_sheet = ss
 
     @property
@@ -115,6 +146,34 @@ class Run(PorerefinerModel):
     @classmethod
     def get_unannotated_runs(cls):
         return cls.select().where(cls._sample_sheet.is_null(), cls.status=='RUNNING')
+
+    def tag(self, tag):
+        ta, _ = Tag.get_or_create(name=tag)
+        tj, _ = TagJunction.get_or_create(tag=ta, run=self)
+        return ta
+
+    def untag(self, tag):
+        ta = Tag.get_or_none(name=tag)
+        if ta:
+            TagJunction.delete().where(TagJunction.run==self, TagJunction.tag==ta).execute()
+
+    @property
+    def tags(self):
+        return (Tag.select()
+                   .join(TagJunction)
+                   .where(TagJunction.run == self))
+
+    def spawn(self, job):
+        job = Job.create(job_state=copy(job), status='READY', datadir=pathlib.Path(tempfile.mkdtemp()))
+        JobRunJunction.create(job=job, run=self)
+        for file in self.files:
+            JobFileJunction.create(job=job, file=file)
+        return job
+
+class JobRunJunction(BaseModel):
+    pk = AutoField()
+    job = DeferredForeignKey('Job', backref='jobs')
+    run = ForeignKeyField(Run, backref='runs')
 
 
 class Qa(PorerefinerModel):
@@ -128,26 +187,57 @@ class Qa(PorerefinerModel):
 class Job(PorerefinerModel):
     "A job is a scheduled HPC job, pre or post submission"
     pk = AutoField()
-    job_id = IntegerField()
+    job_id = TextField(null=True)
+    job_state = JobField(null=True)
     status = CharField(choices=PorerefinerModel.statuses)
+    datadir = PathField()
+    outputdir = PathField(null=True)
+
+    @property
+    def files(self):
+        return (File.select()
+                    .join(JobFileJunction)
+                    .join(Job)
+                    .where(Job.pk == self.pk))
+
+
+
+
+
+class JobFileJunction(BaseModel):
+    pk = AutoField()
+    job = ForeignKeyField(Job, backref='jobs')
+    file = DeferredForeignKey('File', backref='files')
 
 class SampleSheet(PorerefinerModel):
     "A samplesheet is a particular file, eventually attached to a run"
+
+    BARCODES = [('EXP-NBD103',''),
+                ('EXP-NBD104','Native Barcoding Expansion 1-12'),
+                ('EXP-NBD114',''),
+                ('EXP-PBC001',''),
+                ('EXP-PBC096',''),
+                ('SQK-16S024','16S Barcoding Kit 1-24'),
+                ('SQK-LWB001',''),
+                ('SQK-PBK004',''),
+                ('SQK-PCB109',''),
+                ('SQK-RAB201',''),
+                ('SQK-RAB204',''),
+                ('SQK-RBK001',''),
+                ('SQK-RBK004','Rapid Barcoding Kit'),
+                ('SQK-RLB001',''),
+                ('SQK-RPB004','Rapid PCR Barcoding Kit'),
+                ('VSK-VMK001',''),
+                ('VSK-VMK002','')]
+
+
     pk = AutoField()
-    path = PathField(index=True)
+    # path = PathField(index=True)
     # run = ForeignKeyField(Run, backref='_sample_sheet', unique=True, null=True)
     date = DateField(null=True, default=datetime.datetime.now())
     sequencing_kit = CharField(null=True)
-
-    @classmethod
-    async def from_csv(cls, fh, delimiter=','):
-        "import a sample sheet in csv/tsv format"
-        pass
-
-    @classmethod
-    async def from_excel(cls, path_to_file):
-        "import a sample sheet in xlsx format"
-        pass
+    barcoding_kit = CharField(null=True, choices=BARCODES)
+    library_id = CharField(null=True)
 
     @classmethod
     def get_unused_sheets(cls):
@@ -156,10 +246,29 @@ class SampleSheet(PorerefinerModel):
                    .switch()
                    .where(Run.pk.is_null()))
 
+    @classmethod
+    def new_sheet_from_message(cls, sheet, run=None, log=logging.getLogger('porerefiner.models')):
+        ss = cls.create(date=sheet.date.ToDatetime(),
+                        sequencing_kit=sheet.sequencing_kit,
+                        library_id=sheet.library_id)
+        for sample in sheet.samples:
+            Sample.create(sample_id=sample.sample_id,
+                          accession=sample.accession,
+                          barcode_id=sample.barcode_id,
+                          organism=sample.organism,
+                          extraction_kit=sample.extraction_kit,
+                          comment=sample.comment,
+                          user=sample.user,
+                          samplesheet=ss)
+        if run:
+            run.sample_sheet = ss
+            run.save()
+        return ss
+
 class Sample(PorerefinerModel):
     "A sample is an entry originally from a sample sheet"
 
-    BARCODES = {}
+
 
     pk = AutoField()
     sample_id = CharField(null=False)
@@ -176,9 +285,15 @@ class Sample(PorerefinerModel):
 
     samplesheet = ForeignKeyField(SampleSheet, backref='samples')
 
+    # @property
+    # def barcode_seq(self):
+    #     return self.BARCODES.get(self.barcode_id, "")
+
     @property
-    def barcode_seq(self):
-        return self.BARCODES.get(self.barcode_id, "")
+    def tags(self):
+        return (Tag.select()
+                   .join(TagJunction)
+                   .where(TagJunction.sample == self))
 
 
 
@@ -195,6 +310,13 @@ class File(PorerefinerModel):
     @property
     def name(self):
         return self.path.name
+
+    @property
+    def jobs(self):
+        return (Job.select()
+                   .join(JobFileJunction)
+                   .join(File)
+                   .where(File.pk == self.pk))
 
 
 class TagJunction(BaseModel):

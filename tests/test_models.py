@@ -1,11 +1,11 @@
 
 from unittest import TestCase, skip
 
-from tests import paths, with_database, TestBase, sql_ints
+from tests import paths, with_database, TestBase, sql_ints, samplesheets
 
-from porerefiner import models
+from porerefiner import models, jobs
 
-from hypothesis import given, strategies as strat, example
+from hypothesis import given, strategies as strat, example, seed
 #from hypothesis_fspaths import fspaths, _PathLike
 
 from datetime import datetime
@@ -29,6 +29,10 @@ class TestModels(TestCase):
             pa = pathlib.Path(str(path, encoding=sys.getfilesystemencoding()))
         fld = models.PathField()
         self.assertEqual(fld.python_value(fld.db_value(path)), pa)
+
+    @skip('not yet implemented')
+    def test_job_field(self):
+        assert False
 
     def test_models_registered(self):
         self.assertEqual(len(models.REGISTRY), 9)
@@ -83,14 +87,23 @@ class TestQa(TestCase):
     def test_qa(self, **kwargs):
         assert models.Qa.create(**kwargs)
 
+class TestJobDefinition(jobs.AbstractJob):
+    pass
+
 class TestJob(TestCase):
 
     @given(pk=sql_ints(),
-           job_id=sql_ints(),
-           status=strat.one_of(*[strat.just(val) for val, _ in models.Job.statuses]))
+           job_id=strat.text(),
+           job_state=strat.just(TestJobDefinition()),
+           status=strat.one_of(*[strat.just(val) for val, _ in models.Job.statuses]),
+           datadir=paths())
     @with_database
     def test_job(self, **kwargs):
         assert models.Job.create(**kwargs)
+
+    @skip('no test yet')
+    def test_job_files(self):
+        assert False
 
 class TestSampleSheet(TestCase):
 
@@ -110,13 +123,14 @@ class TestSampleSheet(TestCase):
         models.SampleSheet.create(path="TEST")
         self.assertEqual(models.SampleSheet.get_unused_sheets().count(), 1)
 
-    @skip('not yet implemented')
-    def test_ss_from_csv(self):
-        assert False
-
-    @skip('not yet implemented')
-    def test_ss_from_excel(self):
-        assert False
+    @seed(5249283748837843916514315999694345497)
+    @given(ss=samplesheets())
+    @with_database
+    def test_new_sheet_from_message(self, ss):
+        flow = models.Flowcell.create(consumable_id="TEST|TEST|TEST", consumable_type="TEST|TEST|TEST", path="TEST/TEST/TEST")
+        run = models.Run.create(pk=100, library_id='x', name="TEST", flowcell=flow, path="TEST/TEST/TEST")
+        s = models.SampleSheet.new_sheet_from_message(ss, run)
+        self.assertEqual(run.sample_sheet, s)
 
 class TestSample(TestCase):
 
