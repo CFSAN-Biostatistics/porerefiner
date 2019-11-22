@@ -14,7 +14,6 @@ with open('HISTORY.rst') as history_file:
 requirements = ['Click>=7.0',
                 'flask>=1.1.1',
                 'peewee>=3.11.2',
-                'fabric>=2.5.0',
                 'gunicorn>=19.9.0',
                 'watchdog>=0.9.0',
                 'hachiko>=0.2.0',
@@ -23,7 +22,8 @@ requirements = ['Click>=7.0',
                 'python-daemon>=2.2.3',
                 'protobuf>=3.10.0',
                 'grpclib>=0.3.0',
-                'tabulate>=0.8.5'
+                'tabulate>=0.8.5',
+                'asyncssh>=2.0.1
                 ]
 
 setup_requirements = [ ]

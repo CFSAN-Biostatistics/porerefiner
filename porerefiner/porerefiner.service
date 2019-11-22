@@ -1,0 +1,15 @@
+[Unit]
+Description=PoreRefiner nanopore management service
+After=network.target
+
+[Service]
+Type=simple
+# Another Type: forking
+User=porerefiner
+Group=porerefiner
+WorkingDirectory=/home/porerefiner
+ExecStart=python3 -m porerefiner.porerefiner start
+Restart=on-failure
+
+[Install]
+WantedBy=user.target

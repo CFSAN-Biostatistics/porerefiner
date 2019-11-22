@@ -10,7 +10,7 @@ import logging
 
 
 REGISTRY = {}
-SUBMITTER = None
+SUBMITTERS = []
 
 log = logging.getLogger('porerefiner.jobs')
 
@@ -23,10 +23,8 @@ class _MetaRegistry(ABCMeta):
         return cls
 
     def __call__(cls, *args, **kwargs):
-        global SUBMITTER
-        if SUBMITTER:
-            raise ValueError("Only one job submitter can be configured.")
-        the_instance = SUBMITTER = super().__call__(*args, **kwargs)
+        the_instance = super().__call__(*args, **kwargs)
+        SUBMITTERS.append(the_instance)
         return the_instance
 
 class Submitter(metaclass=_MetaRegistry):
@@ -37,7 +35,7 @@ class Submitter(metaclass=_MetaRegistry):
         pass
 
     @abstractmethod
-    def reflect_path(self, path) -> Path:
+    def reroot_path(self, path) -> Path:
         "Submitters should translate paths to execution environment"
         pass
 

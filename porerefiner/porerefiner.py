@@ -21,7 +21,7 @@ from peewee import JOIN
 from porerefiner import models
 from porerefiner.models import Flowcell, Run, Qa, File, Job, SampleSheet, Sample, Tag, TagJunction
 from porerefiner.cli_utils import relativize_path as r, absolutize_path as a
-from porerefiner.jobs import poll_jobs, REGISTRY, create_jobs_for_file, create_jobs_for_run
+from porerefiner.jobs import poll_jobs, REGISTRY, JOBS, create_jobs_for_file, create_jobs_for_run
 from os.path import split, getmtime
 from os import remove
 from pathlib import Path
@@ -82,32 +82,24 @@ def make_run_msg(run):
         tags=[tag.name for tag in run.tags]
         )
 
-async def register_new_flowcell(path, nanopore_api=None): #TODO
-    flow = Flowcell.create(path=path, consumable_id=path.name)
-
+async def register_new_flowcell(flow, nanopore_api=None):
+    "Hook for new flowcells"
+    log.info(f"Registering flowcell {flow.consumable_id}")
     if nanopore_api:
-        #try to get some MinKnow stuff
         pass
 
-async def register_new_run(path, nanopore_api=None): #TODO
-
-    flow, _ = Flowcell.get_or_create(path=path.parent, consumable_id=path.parent.name)
-
-    run = Run.create(path=path, status='RUNNING', flowcell=flow, name=path.name)
-
+async def register_new_run(run, nanopore_api=None):
+    "Hook for new runs"
+    log.info(f"Registering run {run.name}")
     if nanopore_api:
-        #get minknow stuff if we can
         pass
 
     query = list(SampleSheet.get_unused_sheets()) #pre-fetch all
     if len(query) == 1:
-        #if there's an unattached sheet, attach it to this run
+        #if there's one unattached sheet, attach it to this run
         sheet = query[0]
         run.sample_sheet = sheet
         run.save()
-
-    return run
-
 
 
 #Have to decide whether to keep this - we could just track FS events and clean up runs that way.
@@ -174,7 +166,7 @@ async def list_runs(all=False, tags=[]):
 
 async def poll_file(file):
     if datetime.now() - file.last_modified > timedelta(hours=1):
-        await create_jobs_for_file(file)
+        await end_file(file)
         return True
     return False
 
@@ -198,12 +190,19 @@ async def end_run(run):
     for notifier in NOTIFIERS:
         log.info(f"Firing notifier {notifier.name}")
         await notifier.notify(run, None, "Run finished")
+    for job in JOBS.RUNS:
+        log.info(f"Scheduling job {type(job).__name__}")
+        #TODO
     await create_jobs_for_run(run)
 
+async def end_file(file): #TODO
+    "Put file in closed state"
+    log.info(f"No recent modifications to {file.path}, scheduling analysis.")
 
-async def send_run(run, dest): #TODO
-    "Use RSYNC to send a run to a destination"
-    pass
+
+# async def send_run(run, dest):
+#     "Use RSYNC to send a run to a destination"
+#     pass
 
 
 class PoreRefinerFSEventHandler(AIOEventHandler):
@@ -213,32 +212,44 @@ class PoreRefinerFSEventHandler(AIOEventHandler):
         super().__init__()
         self.path = path
 
+
     async def on_created(self, event):
-        "New flowcell folder, new run folder, or new file in run"
+        """
+        The all-important flowcell, run, and file detection hook.
+
+        RULES: we're watching the nanopore output directory configured by config.
+
+        A folder created under the output directory is a FLOWCELL.
+
+        A folder created under a flowcell is a RUN.
+
+        A FILE created anywhere beneath a RUN directory is a file that is part of that run,
+        as long as '_porerefiner' isn't part of the path.
+
+
+        """
         log.info(f"Filesystem event: {event.src_path} created")
-        if event.is_directory:
+        if '_porerefiner' not in str(event.src_path): #may need to exclude analysis results we create ourselves
             path = Path(event.src_path)
-            parent = path.parent
-            if parent == Path(self.path): #new folder is a flowcell
-                if not Flowcell.get_or_none(Flowcell.path == r(path)):
-                    log.info("Registering new flowcell...")
-                    await register_new_flowcell(r(path))
-            elif parent.parent == Path(self.path): #only direct children directories of flowcells are runs
-                if not Run.get_or_none(Run.path == r(path)):
-                    log.info("Registering new run...")
-                    await register_new_run(r(path))
-        else:
-            containing_folder, filename = split(event.src_path)
-            pathh = r(containing_folder)
-            run = Run.get_or_none(Run.path == pathh)
-            while run is None and pathh != pathh.parent:
-                pathh = pathh.parent
-                run = Run.get_or_none(Run.path == pathh)
-            if not run:
-                log.info("Registering new run...")
-                run = await register_new_run(r(containing_folder))
-            log.info(f"New file found for run {run.alt_name}...")
-            fi = File.get_or_create(run=run, path=r(event.src_path))
+            rel = path.relative_to(self.path)
+            if len(rel.parts) >= 1:
+                rel_flow_path, *_ = rel.parts
+                flow_path = self.path / Path(rel_flow_path)
+                flow, new = Flowcell.get_or_create(path=r(flow_path), consumable_id=rel_flow_path)
+                if new:
+                    await register_new_flowcell(flow)
+            if len(rel.parts) >= 2:
+                _, rel_run_path, *_ = rel.parts
+                run_path = self.path / Path(rel_flow_path) / Path(rel_run_path)
+                run, new = Run.get_or_create(flowcell=flow, path=r(run_path), name=rel_run_path)
+                if new:
+                    await register_new_run(run)
+            if len(rel.parts) >=3 and not event.is_directory: #there's a file
+                log.info(f"Registering new file {path} in {run.name}")
+                File.create(run=run, path=path)
+
+
+
 
     async def on_modified(self, event):
         if not event.is_directory: #we don't care about directory modifications
@@ -367,10 +378,12 @@ async def serve(db_path=None, db_pragmas=None, wdog_settings=None, server_settin
         wdog_settings=config['nanopore']
         server_settings=config['server']
         system_settings=config['porerefiner']
-    models._db.init(db_path, db_pragmas) # pragma: no cover
-    [cls.create_table(safe=True) for cls in models.REGISTRY] # pragma: no cover
+    models._db.init(db_path, db_pragmas)
+    [cls.create_table(safe=True) for cls in models.REGISTRY]
     import porerefiner.jobs.submitters as submitters
-    submitters.SUBMITTER.test_noop()
+    for submitter in submitters.SUBMITTERS:
+        log.info(f'Running {type(submitter).__name__} integration no-op test')
+        submitter.test_noop()
     try:
         results = await gather(start_server(**server_settings),
                     start_fs_watchdog(**wdog_settings),
@@ -403,10 +416,7 @@ def start(verbose=False, demonize=False):
 @cli.group()
 def reset():
     "Utility function to reset various state."
-    from porerefiner.config import config
-    db_path=config['database']['path']
-    db_path=config['database']['path']
-    db_pragmas=config['database']['pragmas']
+    pass
 
 @reset.command()
 @click.argument('status', default="QUEUED", type=click.Choice([v for v, _ in Job.statuses], case_sensitive=True))
@@ -425,10 +435,16 @@ def runs():
 def config():
     "Reset config to defaults."
     if click.confirm("This will reset your config to defaults. Are you sure?"):
-        import importlib
-        import porerefiner.config
-        porerefiner.config.config_file.unlink()
-        importlib.reload(porerefiner.config)
+        try:
+            import importlib
+            import porerefiner.config
+            porerefiner.config.config_file.unlink()
+            importlib.reload(porerefiner.config)
+        except Exception:
+            from os import environ
+            config_file = Path(environ.get('POREREFINER_CONFIG', '/Users/justin.payne/.porerefiner/config.yml'))
+            config_file.unlink()
+            import porerefiner.config
 
 @reset.command()
 def database():
@@ -436,6 +452,11 @@ def database():
     if click.confirm("This will delete the porerefiner database. Are you sure?"):
         import porerefiner.config
         Path(porerefiner.config.config['database']['path']).unlink()
+
+@reset.command()
+def samplesheets():
+    "Clear samplesheets that aren't attached to any run."
+    click.echo("clear sheets")
 
 
 

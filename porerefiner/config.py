@@ -40,9 +40,19 @@ except OSError:
 
     defaults['notifiers'] = [{'class':'ToastNotifier', 'config':dict(name='Default notifier', max=3)}]
 
-    defaults['submitters'] = [{'class':'HpcSubmitter', 'config':dict()}]
+    defaults['submitters'] = [{'class':'HpcSubmitter', 'config':dict(login_host="login1-raven2.fda.gov",
+                                                                     username="nanopore",
+                                                                     private_key_path=".ssh/id_rsa",
+                                                                     known_hosts_path=".ssh/known_hosts",
+                                                                     scheduler="uge",
+                                                                     queue="service.q"),
+                                'jobs':[{'class':'GuppyJob', 'config':dict(num_cores=16)}]
+                                },
+                              {'class':'Epi2meSubmitter', 'config':dict(api_key=''),
+                               'jobs':[{'class':'EpiJob', 'config':dict()}]
+                               }
+                              ]
 
-    defaults['jobs'] = [{'class':'GuppyJob', 'config':dict(num_cores=16)}]
 
     def c(d):
         "Recursively convert this defaultdict to a dict"
@@ -81,13 +91,18 @@ submitters.SUBMITTER = None
 log.info("Loading job submitters...")
 for submitter_config in config.get('submitters', []):
     log.info(f"Found submitter {submitter_config['class']}")
-    submitters.REGISTRY[submitter_config['class']](**submitter_config['config'])
+    submitter = submitters.REGISTRY[submitter_config['class']](**submitter_config['config'])
+    #jobs
+    log.info("Loading jobs...")
+    for job_config in submitter_config.get('jobs'):
+        job = jobs.REGISTRY[job_config['class']](**job_config['config'])
+        job.submitter = submitter
 
 #Jobs
-log.info("Loading jobs...")
-for job_config in config.get('jobs', []):
-    log.info(f"Found job {job_config['class']}")
-    jobs.REGISTRY[job_config['class']](**job_config['config'])
+# log.info("Loading jobs...")
+# for job_config in config.get('jobs', []):
+#     log.info(f"Found job {job_config['class']}")
+#     jobs.REGISTRY[job_config['class']](**job_config['config'])
 
 def add_notifier_stub(notifier_cls):
     cp = config.copy() #we don't want the stub to actually take effect until reload

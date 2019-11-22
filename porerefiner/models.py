@@ -99,7 +99,7 @@ class Flowcell(PorerefinerModel):
 class Run(PorerefinerModel):
     "A run is an annotated collection of files being produced"
 
-    basecallers = [('BC', 'Basecallers')]
+    basecallers = [('BC', 'Basecaller')]
 
     pk = AutoField()
 
