@@ -30,7 +30,7 @@ class _MetaRegistry(ABCMeta):
 class Submitter(metaclass=_MetaRegistry):
 
     @abstractmethod
-    def test_noop(self) -> None:
+    async def test_noop(self) -> None:
         "No-op method submitters should implement to make sure the submitter can access an external resource."
         pass
 

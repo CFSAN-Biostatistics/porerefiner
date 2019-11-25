@@ -7,7 +7,7 @@ class Epi2meSubmitter(Submitter):
 
     api_key: str
 
-    def test_noop(self):
+    async def test_noop(self):
         return False
 
     def reroot_path(self, path):

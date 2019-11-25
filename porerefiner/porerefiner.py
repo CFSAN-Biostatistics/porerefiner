@@ -383,7 +383,7 @@ async def serve(db_path=None, db_pragmas=None, wdog_settings=None, server_settin
     import porerefiner.jobs.submitters as submitters
     for submitter in submitters.SUBMITTERS:
         log.info(f'Running {type(submitter).__name__} integration no-op test')
-        submitter.test_noop()
+        await submitter.test_noop()
     try:
         results = await gather(start_server(**server_settings),
                     start_fs_watchdog(**wdog_settings),

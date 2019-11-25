@@ -22,12 +22,12 @@ class HpcSubmitter(Submitter):
         async with connect(self.login_host,
                         username=self.username,
                         client_keys=[self.private_key_path],
-                        known_hosts=known_hosts_path) as conn:
+                        known_hosts=self.known_hosts_path) as conn:
             return await conn.run(cmd)
 
-    def test_noop(self):
+    async def test_noop(self):
         subprocess.run(['rsync', '--version']).check_returncode()
-        return asyncio.get_event_loop().run_until_complete(self.send('ls ~'))
+        return await self.send('ls ~')
 
 
     def reroot_path(self, path):
