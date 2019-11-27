@@ -1,0 +1,7 @@
+﻿porerefiner_ver,1.0.0,,,,,
+library_id,TEST_TEST,,,,,
+sequencing_kit,TEST_KIT,,,,,
+sample_id,accession,barcode_id,organism,extraction_kit,comment,user
+TEST01,ACC_TEST_01,1,Salmonella coli,TEST_KIT_KIT,"a comment, with a comma in it",justin.payne@fda.hhs.gov
+TEST02,ACC_TEST_02,2,Escherichia enteriditis,TEST_KIT_KIT,,justin.payne@fda.hhs.gov
+TEST03,ACC_TEST_03,3,Campy stampy,TEST_KIT_KIT,,justin.payne@fda.hhs.gov
