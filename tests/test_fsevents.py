@@ -33,7 +33,7 @@ class TestPoreRefinerFSEventsHandler(TestCase):
     @patch('porerefiner.porerefiner.Flowcell')
     @patch('porerefiner.porerefiner.Run')
     @patch('porerefiner.porerefiner.File')
-    @given(event=fsevents().filter(lambda e: not e.is_dictionary))
+    @given(event=fsevents().filter(lambda e: not e.is_directory))
     def test_on_created_file(self, event, file, run, flow):
         flow.get_or_create.return_value = run.get_or_create.return_value = (flow, False)
-        _run(Handler(event.src_path.parent.parent.parent))
+        _run(Handler(event.src_path.parent.parent.parent).on_created(event))

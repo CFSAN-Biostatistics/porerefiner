@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Load a sample sheet</title>
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body>
+        <h1>PoreRefiner on {{ hostname }}</h1>
+        <h2>Load a sample sheet</h2>
+        <a href="/template">or download a template.</a>
+        <form action="/api/form/attach/submit">
+            Sample Sheet (in csv format)<input type="file" name="sample_sheet">
+            <select name="run_id">
+                {% for run in runs %}
+                <option value="{{ run.mnemonic }}">{{ run.id }}: {{ run.name }}</option>
+                {% end for %}
+            </select>
+            <input type="submit" value="Upload">
+        </form>
+    </body>
+</html>

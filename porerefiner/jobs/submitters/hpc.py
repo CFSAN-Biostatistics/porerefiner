@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from asyncssh import connect
+from pathlib import Path
 from typing import Union
 
 
@@ -27,14 +28,15 @@ class HpcSubmitter(Submitter):
 
     async def test_noop(self):
         subprocess.run(['rsync', '--version']).check_returncode()
-        return await self.send('ls ~')
+        self.remote_root = Path((await self.send('python -c "import tempfile; print(tempfile.gettempdir())"')).strip())
 
 
     def reroot_path(self, path):
-        return path
+        return Path(self.remote_root, path)
 
     async def begin_job(self, command, datadir, remotedir, environment_hints={}):
-        return "0000"
+        hints = " ".join([f"{name}={value}" for name, value in environment_hints.items()])
+        return await self.send(f'''echo "{hints} {command}" | qsub -q {self.queue}''')
 
     async def poll_job(self, job):
         result = await self.send(f"qacct")

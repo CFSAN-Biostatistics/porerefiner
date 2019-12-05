@@ -8,13 +8,15 @@ import json
 from porerefiner.cli_utils import server, load_from_csv
 from porerefiner.protocols.porerefiner.rpc.porerefiner_pb2 import RunRequest, RunListRequest, RunAttachRequest, RunRsyncRequest
 
-app = Flask(__name__)
+from porerefiner.app import app
 
 
 
-
+@app.route('/api/form/attach/submit', methods=['POST', ])
 @app.route('/api/runs/<int:run_id>/attach', methods=['POST,'])
-def attach_to_run(run_id):
+def attach_to_run(run_id=None):
+    if not run_id:
+        run_id = request.form.get('run_id', None)
     file = next(request.files.values())
     message = load_from_csv(file)
     async def attach_runner(run_id, message):

@@ -1,6 +1,6 @@
 from porerefiner.jobs import RunJob
 
-class EpiJob(RunJob):
+class EpiJob(RunJob): #TODO
 
     def setup(self, run, datadir, remotedir):
         pass
