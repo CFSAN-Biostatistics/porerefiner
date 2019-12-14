@@ -12,11 +12,12 @@ from unittest import TestCase
 
 from collections import namedtuple
 from datetime import datetime
-from hypothesis.strategies import text, characters, composite, one_of, just, builds, integers, datetimes, emails, text, lists, booleans
+from hypothesis.strategies import *
 from pathlib import Path
 import os
+import namesgenerator
 
-from porerefiner import models
+from porerefiner import models, jobs
 
 from peewee import SqliteDatabase
 
@@ -94,8 +95,9 @@ def runs(draw, sheet=True):
         ss = samplesheets()
     else:
         ss = just(None)
-    path = draw(paths())
+    path = draw(paths(pathlib_only=True))
     return draw(builds(models.Run,
+                       pk=sql_ints(),
                        flowcell=flowcells(path=path.parent),
                        _sample_sheets=ss,
                        name=text(),
@@ -103,9 +105,9 @@ def runs(draw, sheet=True):
                        run_id=text(),
                        started=datetimes(max_value=datetime.now()),
                        ended=datetimes(min_value=datetime.now()),
-                       status=one_of(*[just(status) for status in models.Run.statuses]),
-                       path=path,
-                       basecalling_model=one_of(*[just(model[0]) for model in models.Run.basecallers])))
+                       status=sampled_from([status[0] for status in models.Run.statuses]),
+                       path=just(path),
+                       basecalling_model=sampled_from([model[0] for model in models.Run.basecallers])))
 
 Event = namedtuple('Event', ('src_path', 'is_directory'))
 
@@ -114,6 +116,19 @@ def fsevents(draw, min_deep=3):
     return draw(builds(Event,
                        src_path=paths(min_deep=min_deep, pathlib_only=True),
                        is_directory=booleans()))
+
+def random_name_subclass(of=object, **classdef):
+    new_typename = namesgenerator.get_random_name(sep=' ').title().replace(' ', '') + of.__name__
+    return type(new_typename, (of,), classdef)
+
+@composite
+def submitters(draw, subclass_of=jobs.submitters.Submitter):
+    return draw(builds(random_name_subclass(of=subclass_of)))
+
+@composite
+def jobs(draw, subclass_of=jobs.RunJob):
+    return draw(builds(random_name_subclass(of=subclass_of),
+                       submitter=submitters()))
 
 class TestBase(TestCase):
 
@@ -145,6 +160,10 @@ def with_database(func):
     return wrapped_test_function
 
 if __name__ == '__main__':
+    symbol = None
     for symbol in locals().values():
-        if hasattr(symbol, 'example'):
-            print(symbol.example())
+        if hasattr(symbol, 'is_hypothesis_strategy_function'):
+            try:
+                print(symbol, symbol().example())
+            except:
+                pass

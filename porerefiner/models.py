@@ -10,7 +10,7 @@ import namesgenerator
 import sys
 import tempfile
 
-from copy import copy
+from copy import deepcopy
 from itertools import chain
 
 
@@ -82,6 +82,9 @@ class JobField(Field):
     def python_value(self, value):
         return pickle.loads(value)
 
+def StatusField(*args, default=PorerefinerModel.statuses[0][0], **kwargs):
+    return CharField(*args, choices=PorerefinerModel.statuses, default=default, **kwargs)
+
 
 def create_readable_name():
     "Docker-style random name from namesgenerator"
@@ -99,7 +102,8 @@ class Flowcell(PorerefinerModel):
 class Run(PorerefinerModel):
     "A run is an annotated collection of files being produced"
 
-    basecallers = [('BC', 'Basecaller')]
+    basecallers = [('DNA', 'DNA Basecaller'),
+                   ('RNA', 'RNA Basecaller')]
 
     pk = AutoField()
 
@@ -112,11 +116,14 @@ class Run(PorerefinerModel):
     run_id = CharField(null=True)
     started = DateTimeField(default = datetime.datetime.now)
     ended = DateTimeField(null=True, default=None)
-    status = CharField(choices=PorerefinerModel.statuses, default='RUNNING')
+    status = StatusField(default='RUNNING')
     path = PathField(index=True)
     # flowcell_type = CharField()
     # flowcell_id = CharField()
-    basecalling_model = CharField(choices=basecallers, null=True)
+    basecalling_model = CharField(default='DNA', choices=basecallers, null=True)
+
+    def __str__(self):
+        return f"{self.pk} {self.alt_name} ({self.path}) ({dict(self.statuses)[self.status]})"
 
     @property
     def all_files(self):
@@ -164,16 +171,16 @@ class Run(PorerefinerModel):
                    .where(TagJunction.run == self))
 
     def spawn(self, job):
-        job = Job.create(job_state=copy(job), status='READY', datadir=pathlib.Path(tempfile.mkdtemp()))
-        JobRunJunction.create(job=job, run=self)
+        job = Job.create(job_state=deepcopy(job), status='READY', datadir=pathlib.Path(tempfile.mkdtemp()), run=self)
+        # JobRunJunction.create(job=job, run=self)
         for file in self.files:
             JobFileJunction.create(job=job, file=file)
         return job
 
-class JobRunJunction(BaseModel):
-    pk = AutoField()
-    job = DeferredForeignKey('Job', backref='jobs')
-    run = ForeignKeyField(Run, backref='runs')
+# class JobRunJunction(BaseModel):
+#     pk = AutoField()
+#     job = DeferredForeignKey('Job', backref='jobs')
+#     run = ForeignKeyField(Run, backref='runs')
 
 
 class Qa(PorerefinerModel):
@@ -189,9 +196,15 @@ class Job(PorerefinerModel):
     pk = AutoField()
     job_id = TextField(null=True)
     job_state = JobField(null=True)
-    status = CharField(choices=PorerefinerModel.statuses)
+    status = StatusField(default='QUEUED')
     datadir = PathField()
     outputdir = PathField(null=True)
+    run = ForeignKeyField(Run, null=True, backref='jobs')
+    file = DeferredForeignKey('File', null=True, backref='jobs')
+
+
+    def __str__(self):
+        return f"{self.pk} ({self.job_state.__class__.__name__}) ({dict(self.statuses)[self.status]})"
 
     @property
     def files(self):
@@ -199,10 +212,6 @@ class Job(PorerefinerModel):
                     .join(JobFileJunction)
                     .join(Job)
                     .where(Job.pk == self.pk))
-
-
-
-
 
 class JobFileJunction(BaseModel):
     pk = AutoField()
@@ -212,23 +221,23 @@ class JobFileJunction(BaseModel):
 class SampleSheet(PorerefinerModel):
     "A samplesheet is a particular file, eventually attached to a run"
 
-    BARCODES = [('EXP-NBD103',''),
+    BARCODES = [('SQK-16S024','16S Barcoding Kit 1-24'),
                 ('EXP-NBD104','Native Barcoding Expansion 1-12'),
-                ('EXP-NBD114',''),
-                ('EXP-PBC001',''),
-                ('EXP-PBC096',''),
-                ('SQK-16S024','16S Barcoding Kit 1-24'),
-                ('SQK-LWB001',''),
-                ('SQK-PBK004',''),
-                ('SQK-PCB109',''),
-                ('SQK-RAB201',''),
-                ('SQK-RAB204',''),
-                ('SQK-RBK001',''),
+                # ('EXP-NBD103',''),
+                # ('EXP-NBD114',''),
+                # ('EXP-PBC001',''),
+                # ('EXP-PBC096',''),
+                # ('SQK-LWB001',''),
+                # ('SQK-PBK004',''),
+                # ('SQK-PCB109',''),
+                # ('SQK-RAB201',''),
+                # ('SQK-RAB204',''),
+                # ('SQK-RBK001',''),
+                # ('VSK-VMK001',''),
+                # ('VSK-VMK002',''),
+                # ('SQK-RLB001',''),
                 ('SQK-RBK004','Rapid Barcoding Kit'),
-                ('SQK-RLB001',''),
-                ('SQK-RPB004','Rapid PCR Barcoding Kit'),
-                ('VSK-VMK001',''),
-                ('VSK-VMK002','')]
+                ('SQK-RPB004','Rapid PCR Barcoding Kit')]
 
 
     pk = AutoField()
@@ -317,6 +326,11 @@ class File(PorerefinerModel):
                    .join(JobFileJunction)
                    .join(File)
                    .where(File.pk == self.pk))
+
+    def spawn(self, job):
+        job = Job.create(job_state=deepcopy(job), status='READY', datadir=pathlib.Path(tempfile.mkdtemp()), file=self)
+        JobFileJunction.create(job=job, file=self)
+        return job
 
 
 class TagJunction(BaseModel):

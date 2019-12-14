@@ -1,6 +1,8 @@
 from abc import ABCMeta, abstractmethod, ABC
 from collections import namedtuple
+from dataclasses import dataclass
 
+from .submitters import Submitter
 from porerefiner.models import Job, File, Run
 from pathlib import Path
 from typing import Union, Tuple
@@ -8,19 +10,16 @@ from typing import Union, Tuple
 import logging
 import pkgutil
 
-async def create_jobs_for_file(file):
-    pass
-
-async def create_jobs_for_run(run):
-    pass
-
 async def poll_active_job(job):
-    pass
+    await job.job_state.submitter._poll(job)
+    return 1
 
 async def submit_job(job):
+    job.job_state.submitter._submit(job)
     return 1
 
 async def complete_job(job):
+    job.job_state.submitter._close(job)
     return 1
 
 async def poll_jobs():
@@ -35,16 +34,16 @@ async def poll_jobs():
         jobs_polled += 1
     return jobs_polled, jobs_submitted, jobs_collected
 
-JOBS = namedtuple('JOBS', ('FILES', 'RUNS'), defaults=([], []))()
+JOBS = namedtuple('JOBS', ('FILES', 'RUNS'), defaults=([], []))() #configured (reified) job instances
 
-REGISTRY = {}
+REGISTRY = {} # available job classes
 
 class _MetaRegistry(ABCMeta):
 
     def __new__(meta, name, bases, class_dict):
         cls = type.__new__(meta, name, bases, class_dict)
         if cls not in REGISTRY:
-            REGISTRY[name] = (cls)
+            REGISTRY[name] = cls
         return cls
 
     def __call__(cls, *args, **kwargs):
@@ -59,8 +58,11 @@ class _MetaRegistry(ABCMeta):
         the_instance.attempts = 0
         return the_instance
 
+
+
+@dataclass
 class AbstractJob(ABC):
-    pass
+    submitter: Submitter
 
 
 class FileJob(AbstractJob, metaclass=_MetaRegistry):
@@ -84,6 +86,7 @@ class RunJob(AbstractJob, metaclass=_MetaRegistry):
         pass
 
 
+
 for loader, module_name, is_pkg in  pkgutil.walk_packages(__path__):
     _module = loader.find_module(module_name).load_module(module_name)
-    globals()[module_name] = _module
+    # globals()[module_name] = _module

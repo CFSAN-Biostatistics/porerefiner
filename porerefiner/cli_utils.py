@@ -129,7 +129,7 @@ def json_formatter(extend=False):
     def print_run(run):
         rec.append(run)
     yield print_run
-    print(json.dumps(rec, cls=MessageAwareEncoder, indent=2))
+    click.echo(json.dumps(rec, cls=MessageAwareEncoder, indent=2))
 
 @contextmanager
 def xml_formatter(extend=False):
@@ -137,7 +137,7 @@ def xml_formatter(extend=False):
     def print_run(run):
         rec.append(run)
     yield print_run
-    print(xml.toString())
+    click.echo(xml.toString())
 
 
 # We should do sample sheet parsing on the client side
@@ -150,11 +150,26 @@ def load_from_csv(file, delimiter=',') -> SampleSheet:
         _, ss.library_id, *_ = file.readline().split(delimiter)
         _, ss.sequencing_kit, *_ = file.readline().split(delimiter)
         [ss.samples.add(**row) for row in csv.DictReader(file, delimiter=delimiter, dialect='excel')] #this should handle commas in fields
-        return ss
+    else:
+        raise ValueError(f"Sample sheet of version {ss.porerefiner_ver} not supported.")
+    return ss
 
 def load_from_excel(file) -> SampleSheet:
     import openpyxl
     ss = SampleSheet()
+    book = openpyxl.load_workbook(file)
+    rows = iter(book.rows)
+    _, ss.porerefiner_ver, *_ = next(rows)
+    if ss.porerefiner_ver == '1.0.0':
+        ss.date.GetCurrentTime()
+        _, ss.library_id, *_ = next(rows)
+        _, ss.sequencing_kit, *_ = next(rows)
+        next(rows)
+        for sample_id, accession, barcode_id, organism, extraction_kit, comment, user in rows:
+            ss.samples.add(sample_id, accession, barcode_id, organism, extraction_kit, comment, user)
+
+    else:
+        raise ValueError(f"Sample sheet of version {ss.porerefiner_ver} not supported.")
 
     return ss
 

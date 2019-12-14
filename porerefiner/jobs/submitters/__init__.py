@@ -4,22 +4,23 @@ from typing import Union
 from tempfile import mkdtemp
 from pathlib import Path
 
-from porerefiner.jobs import FileJob, RunJob
-
 import logging
+import pkgutil
 
 
-REGISTRY = {}
-SUBMITTERS = []
 
-log = logging.getLogger('porerefiner.jobs')
+SUBMITTERS = [] # configured (reified) submitters
+
+REGISTRY = {} # available submitter classes
+
+log = logging.getLogger('porerefiner.submitters')
 
 class _MetaRegistry(ABCMeta):
 
     def __new__(meta, name, bases, class_dict):
         cls = type.__new__(meta, name, bases, class_dict)
         if cls not in REGISTRY:
-            REGISTRY[name] = (cls)
+            REGISTRY[name] = cls
         return cls
 
     def __call__(cls, *args, **kwargs):
@@ -28,6 +29,9 @@ class _MetaRegistry(ABCMeta):
         return the_instance
 
 class Submitter(metaclass=_MetaRegistry):
+
+    def __repr__(self):
+        return type(self).__name__
 
     @abstractmethod
     async def test_noop(self) -> None:
@@ -39,16 +43,20 @@ class Submitter(metaclass=_MetaRegistry):
         "Submitters should translate paths to execution environment"
         pass
 
-    def _submit(self, run_or_file, job, run=None):
+    def _submit(self, job):
         "Create datadir, delegate job setup, then call subclass method to submit job"
+        from porerefiner.jobs import FileJob, RunJob
+        run = job.run
+        file = job.file
         logg = log.getChild(type(self).__name__)
         hints = {}
         datadir = job.datadir = Path(mkdtemp())
+        remotedir = job.remotedir = self.reroot_path(datadir)
         job.save()
         if isinstance(job.job_state, RunJob):
-            cmd = job.job_state.setup(run_or_file, datadir)
+            cmd = job.job_state.setup(run, datadir)
         elif isinstance(job, FileJob):
-            cmd = job.job_state.setup(run_or_file, run, datadir)
+            cmd = job.job_state.setup(file, file.run, datadir)
         if isinstance(cmd, tuple): #some jobs return a string plus execution hints
             cmd, hints = cmd
         cmd = " ".join(cmd.split()) # turn tabs and returns into spaces
@@ -89,6 +97,11 @@ class Submitter(metaclass=_MetaRegistry):
     async def poll_job(self, job) -> str:
         pass
 
+    def _close(self, job):
+        logg = log.getChild(type(self).__name__)
+        self.closeout_job
+
     @abstractmethod
     def closeout_job(self, job, datadir, remotedir) -> None:
         pass
+

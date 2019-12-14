@@ -1,7 +1,8 @@
 
 from unittest import TestCase, skip
+from unittest.mock import Mock, patch
 
-from tests import paths, with_database, TestBase, sql_ints, samplesheets
+from tests import paths, with_database, TestBase, sql_ints, samples, samplesheets, runs, jobs as _jobs
 
 from porerefiner import models, jobs
 
@@ -15,7 +16,8 @@ import sys
 
 
 # safe_paths = lambda: fspaths().filter(lambda x: isinstance(x, str) or isinstance(x, _PathLike))
-
+class TestJobDefinition(jobs.AbstractJob):
+    pass
 
 
 class TestModels(TestCase):
@@ -78,6 +80,16 @@ class TestRun(TestCase):
                                            path='TEST/TEST')
         assert models.Run.create(flowcell=self.flow, **kwargs).run_duration
 
+    @given(run=runs(),
+           job=_jobs())
+    @with_database
+    def test_job_spawn(self, run, job):
+        run.save()
+        jobb = run.spawn(job)
+        #test that a deepcopy of the job state object was made
+        self.assertIsNot(job, jobb.job_state)
+        self.assertIsNot(job.submitter, jobb.job_state.submitter)
+
 class TestQa(TestCase):
 
     @given(pk=sql_ints(),
@@ -87,14 +99,13 @@ class TestQa(TestCase):
     def test_qa(self, **kwargs):
         assert models.Qa.create(**kwargs)
 
-class TestJobDefinition(jobs.AbstractJob):
-    pass
+
 
 class TestJob(TestCase):
 
     @given(pk=sql_ints(),
            job_id=strat.text(),
-           job_state=strat.just(TestJobDefinition()),
+           job_state=strat.just(TestJobDefinition(submitter=None)),
            status=strat.one_of(*[strat.just(val) for val, _ in models.Job.statuses]),
            datadir=paths())
     @with_database

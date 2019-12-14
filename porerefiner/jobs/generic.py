@@ -1,5 +1,6 @@
 
 from dataclasses import dataclass, field
+from os import environ
 
 from porerefiner.jobs import FileJob, RunJob
 
@@ -10,6 +11,7 @@ class GenericFileJob(FileJob):
     hints: dict = field(default_factory=dict)
 
     def setup(self, run, file, datadir, remotedir):
+        locals().update(environ)
         return self.command.format(**locals())
 
     def collect(*args, **kwargs):
@@ -22,6 +24,7 @@ class GenericRunJob(RunJob):
     hints: dict = field(default_factory=dict)
 
     def setup(self, run, datadir, remotedir):
+        locals().update(environ)
         return self.command.format(**locals())
 
     def collect(*args, **kwargs):
