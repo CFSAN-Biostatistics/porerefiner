@@ -11,7 +11,7 @@ from aiounittest import async_test
 
 from click.testing import CliRunner
 
-from porerefiner import porerefiner
+from porerefiner import porerefiner, fsevents as pr_fsevents, rpc
 from porerefiner import cli
 from porerefiner import models
 from porerefiner.cli_utils import absolutize_path as ap, relativize_path as rp
@@ -56,8 +56,8 @@ class TestCoreFunctions(DBSetupTestCase):
 
 
     def test_get_run(self):
-        run1 = porerefiner.get_run(RUN_PK)
-        run2 = porerefiner.get_run(RUN_NAME)
+        run1 = rpc.get_run(RUN_PK)
+        run2 = rpc.get_run(RUN_NAME)
         assert run1 == run2
 
     # @given(fspaths())
@@ -68,12 +68,12 @@ class TestCoreFunctions(DBSetupTestCase):
     @given(strat.one_of(strat.text(max_size=30), strat.integers(min_value=-2**16, max_value=2**16)))
     def test_fail_get_run(self, runid):
         with self.assertRaises(ValueError):
-            run = porerefiner.get_run(runid)
+            run = rpc.get_run(runid)
 
 
     def test_get_run_info(self):
-        run1 = _run(porerefiner.get_run_info(RUN_PK))
-        run2 = _run(porerefiner.get_run_info(RUN_NAME))
+        run1 = _run(rpc.get_run_info(RUN_PK))
+        run2 = _run(rpc.get_run_info(RUN_NAME))
         self.assertEqual(run1, run2)
 
     @given(strat.one_of(
@@ -82,29 +82,29 @@ class TestCoreFunctions(DBSetupTestCase):
             ))
     def test_fail_get_run_info(self, run_id):
         with self.assertRaises(ValueError):
-            _run(porerefiner.get_run_info(run_id))
+            _run(rpc.get_run_info(run_id))
 
     #@skip('not implemented')
     def test_list_runs(self):
-        self.assertEqual(len(_run(porerefiner.list_runs(all=True))), 1)
+        self.assertEqual(len(_run(rpc.list_runs(all=True))), 1)
 
     def test_list_runs_running(self):
         models.Run.create(library_id='x', name=RUN_NAME, flowcell=self.flow, path="TEST/TEST/TEST", ended=datetime.now())
-        self.assertEqual(len(_run(porerefiner.list_runs())), 1)
+        self.assertEqual(len(_run(rpc.list_runs())), 1)
 
     def test_list_runs_tags(self):
         tag = models.Tag.create(name='TEST')
         models.TagJunction.create(tag=tag, run=self.run)
-        self.assertEqual(len(_run(porerefiner.list_runs(tags=['TEST', 'other tag']))), 1)
+        self.assertEqual(len(_run(rpc.list_runs(tags=['TEST', 'other tag']))), 1)
 
 
     #@skip('not implemented')
-    @patch('porerefiner.porerefiner.end_run', new_callable=AsyncMock)
+    @patch('porerefiner.fsevents.end_run', new_callable=AsyncMock)
     def test_poll_active_run(self, mock):
         #run = models.Run.get(models.Run.pk==RUN_PK)
         self.assertGreater(len(models.Run.select().where(models.Run.status == 'RUNNING')), 0)
         self.assertGreater(len(models.Run.get(models.Run.pk==RUN_PK).files), 0)
-        self.assertEqual(_run(porerefiner.poll_active_run()), 1) #checked 1 file
+        self.assertEqual(_run(pr_fsevents.poll_active_run()), 1) #checked 1 file
         #self.assertGreater(len(run.files), 0)
         #self.assertGreater(len(list(models.Run.select(models.Run.ended.is_null(True)))), 0)
         #self.assertTrue(len(run.files) and all([datetime.now() - file.last_modified > timedelta(hours=1) for file in run.files]))
@@ -114,8 +114,8 @@ class TestCoreFunctions(DBSetupTestCase):
     #@skip('not implemented')
     def test_end_run(self):
         mock = AsyncMock()
-        with patch('porerefiner.porerefiner.NOTIFIERS', new_callable=lambda: [mock]) as _:
-            _run(porerefiner.end_run(self.run))
+        with patch('porerefiner.fsevents.NOTIFIERS', new_callable=lambda: [mock]) as _:
+            _run(pr_fsevents.end_run(self.run))
         self.assertAlmostEqual(datetime.now(), self.run.ended, delta=timedelta(seconds=1))
         mock.notify.assert_called()
         self.assertIn('finished', [str(tag) for tag in self.run.tags])
@@ -124,11 +124,11 @@ class TestCoreFunctions(DBSetupTestCase):
     # def test_send_run(self):
     #     assert False
 
-    @patch('porerefiner.porerefiner.SampleSheet')
+    @patch('porerefiner.fsevents.SampleSheet')
     def test_register_new_run(self, mock):
         mock_run = Mock()
         mock.get_unused_sheets.return_value = (None, ) #just need one value
-        _run(porerefiner.register_new_run(mock_run))
+        _run(pr_fsevents.register_new_run(mock_run))
         mock_run.save.assert_called()
 
 
@@ -221,7 +221,7 @@ class TestPoreDispatchServer(TestCase):
     @given(ss=samplesheets())
     @with_database
     def test_attach_sheet_run_no_run(self, ss):
-        ut = porerefiner.PoreRefinerDispatchServer()
+        ut = rpc.PoreRefinerDispatchServer()
         strm = AsyncMock()
         strm.recv_message.return_value = messages.RunAttachRequest(sheet=ss)
         _run(ut.AttachSheetToRun(strm))
@@ -233,7 +233,7 @@ class TestPoreDispatchServer(TestCase):
         self.flow = flow = models.Flowcell.create(consumable_id="TEST|TEST|TEST", consumable_type="TEST|TEST|TEST", path="TEST/TEST/TEST")
         self.run = models.Run.create(pk=RUN_PK, library_id='x', name=RUN_NAME, flowcell=flow, path="TEST/TEST/TEST")
         self.file = models.File.create(run=self.run, path='TEST/TEST/TEST/TEST', last_modified=datetime.now() - timedelta(hours=2))
-        ut = porerefiner.PoreRefinerDispatchServer()
+        ut = rpc.PoreRefinerDispatchServer()
         strm = AsyncMock()
         strm.recv_message.return_value = messages.RunAttachRequest(sheet=ss, id=RUN_PK)
         _run(ut.AttachSheetToRun(strm))
@@ -244,8 +244,8 @@ class TestPoreDispatchServer(TestCase):
 class TestServerStart(TestCase):
 
     #@skip('no test')
-    @patch('porerefiner.porerefiner.graceful_exit')
-    @patch('porerefiner.porerefiner.Server')
+    @patch('porerefiner.rpc.graceful_exit')
+    @patch('porerefiner.rpc.Server')
     def test_start_server(self, mock, _):
         mock.return_value = coro = AsyncMock()
         _run(porerefiner.start_server(None))
@@ -256,8 +256,8 @@ class TestServerStart(TestCase):
     #@skip('no test')
     @async_test
     async def test_start_run_end_polling(self):
-        with patch('porerefiner.porerefiner.poll_active_run') as mock:
-            task = await porerefiner.start_run_end_polling(0)
+        with patch('porerefiner.fsevents.poll_active_run') as mock:
+            task = await pr_fsevents.start_run_end_polling(0)
             await asyncio.sleep(5)
             task.cancel()
             mock.assert_called()
@@ -265,8 +265,8 @@ class TestServerStart(TestCase):
     #@skip('no test')
     @async_test
     async def test_start_job_polling(self):
-        with patch('porerefiner.porerefiner.poll_jobs') as mock:
-            task = await porerefiner.start_job_polling(0)
+        with patch('porerefiner.fsevents.poll_jobs') as mock:
+            task = await pr_fsevents.start_job_polling(0)
             await asyncio.sleep(5)
             task.cancel()
             mock.assert_called()

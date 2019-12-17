@@ -53,7 +53,7 @@ def cli():
 @click.option('-d', '--daemonize', 'demonize', is_flag=True, default=False)
 @click.option('-v', '--verbose', is_flag=True)
 def start(verbose=False, demonize=False):
-    "Start the PoreRefiner service"
+    "Start the PoreRefiner service."
     log = logging.getLogger('porerefiner')
     logging.basicConfig(stream=sys.stdout, level=(logging.INFO, logging.DEBUG)[verbose])
     if demonize:
@@ -112,7 +112,7 @@ def samplesheets():
 
 @cli.group(name="list")
 def _list():
-    "List job system stuff"
+    "List job system stuff."
     pass
 
 @_list.command(name='jobs')
@@ -152,6 +152,7 @@ def verify():
 
 @verify.command(name='submitters')
 def _submitters():
+    "Verify configuration of job submitters by running their tests."
     async def test_all():
         for submitter in submitters.SUBMITTERS:
             click.echo(f'Running {type(submitter).__name__} integration no-op test')
@@ -160,6 +161,7 @@ def _submitters():
 
 @verify.command()
 def notifiers():
+    "Verify notifiers by sending notifications."
     from porerefiner.notifiers import NOTIFIERS
     async def test_all():
         for notifier in NOTIFIERS:

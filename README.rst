@@ -57,6 +57,73 @@ Using this software
     template  Write a sample sheet template to STDOUT.
     untag     Remove one or more tags from a run.
 
+
+Administration
+--------------
+
+When the PoreRefiner service is stopped, it has a number of administrative functions:
+
+::
+
+    $ python -m porerefiner.porerefiner --help
+    Usage: porerefiner.py [OPTIONS] COMMAND [ARGS]...
+
+    Options:
+    --help  Show this message and exit.
+
+    Commands:
+    list    List job system stuff.
+    reset   Utility function to reset various state.
+    start   Start the PoreRefiner service.
+    verify  Run various checks.
+
+::
+
+    $ python -m porerefiner.porerefiner list --help
+    Usage: porerefiner.py list [OPTIONS] COMMAND [ARGS]...
+
+    List job system stuff.
+
+    Options:
+    --help  Show this message and exit.
+
+    Commands:
+    jobs        List the configurable and configured jobs.
+    notifiers   List the configurable and configured notifiers.
+    submitters  List the configureable and configured submitters.
+
+::
+
+    $ python -m porerefiner.porerefiner reset --help
+    Usage: porerefiner.py reset [OPTIONS] COMMAND [ARGS]...
+
+    Utility function to reset various state.
+
+    Options:
+    --help  Show this message and exit.
+
+    Commands:
+    config        Reset config to defaults.
+    database      Reset database to empty state.
+    jobs          Reset all jobs to a particular status.
+    runs          Reset all runs to in-progress status.
+    samplesheets  Clear samplesheets that aren't attached to any run.
+
+::
+
+    $ python -m porerefiner.porerefiner verify --help
+    Usage: porerefiner.py verify [OPTIONS] COMMAND [ARGS]...
+
+    Run various checks.
+
+    Options:
+    --help  Show this message and exit.
+
+    Commands:
+    notifiers   Verify notifiers by sending notifications.
+    submitters  Verify configuration of job submitters by running their tests.
+
+
 Features
 --------
 
