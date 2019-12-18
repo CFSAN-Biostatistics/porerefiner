@@ -95,7 +95,9 @@ for submitter_config in config.get('submitters', []):
     #jobs
     log.info("Loading jobs...")
     for job_config in submitter_config.get('jobs', []):
-        job = jobs.REGISTRY[job_config['class']](submitter=submitter, **job_config['config'])
+        clss = jobs.REGISTRY[job_config['class']]
+        log.info(f"Found job {clss.__name__}")
+        job = clss(submitter=submitter, **job_config['config'])
 
 #Jobs
 # log.info("Loading jobs...")

@@ -13,7 +13,7 @@ SUBMITTERS = [] # configured (reified) submitters
 
 REGISTRY = {} # available submitter classes
 
-log = logging.getLogger('porerefiner.submitters')
+log = logging.getLogger('porerefiner.submitter.registry')
 
 class _MetaRegistry(ABCMeta):
 
@@ -26,6 +26,7 @@ class _MetaRegistry(ABCMeta):
     def __call__(cls, *args, **kwargs):
         the_instance = super().__call__(*args, **kwargs)
         SUBMITTERS.append(the_instance)
+        log.debug(cls.__name__)
         return the_instance
 
 class Submitter(metaclass=_MetaRegistry):

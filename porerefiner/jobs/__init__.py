@@ -10,6 +10,8 @@ from typing import Union, Tuple
 import logging
 import pkgutil
 
+log = logging.getLogger('porerefiner.job.registry')
+
 async def poll_active_job(job):
     await job.job_state.submitter._poll(job)
     return 1
@@ -38,7 +40,7 @@ JOBS = namedtuple('JOBS', ('FILES', 'RUNS'), defaults=([], []))() #configured (r
 
 REGISTRY = {} # available job classes
 
-class _MetaRegistry(ABCMeta):
+class _MetaRegistry(type):
 
     def __new__(meta, name, bases, class_dict):
         cls = type.__new__(meta, name, bases, class_dict)
@@ -50,22 +52,24 @@ class _MetaRegistry(ABCMeta):
         try:
             the_instance = super().__call__(*args, **kwargs)
         except TypeError as e:
-            raise TypeError(f"{cls.__name__}: {e} ({args}, {kwargs})") from e
+            raise TypeError(f"Bad config: {cls.__name__}: {e} ({args}, {kwargs})") from e
         if isinstance(the_instance, FileJob):
             JOBS.FILES.append(the_instance)
+            log.getChild('files').debug(cls.__name__)
         if isinstance(the_instance, RunJob):
             JOBS.RUNS.append(the_instance)
-        the_instance.attempts = 0
+            log.getChild('runs').debug(cls.__name__)
         return the_instance
 
-
+class RegisteringABCMeta(ABCMeta, _MetaRegistry):
+    pass
 
 @dataclass
-class AbstractJob(ABC):
+class AbstractJob(metaclass=RegisteringABCMeta):
     submitter: Submitter
 
 
-class FileJob(AbstractJob, metaclass=_MetaRegistry):
+class FileJob(AbstractJob):
 
     @abstractmethod
     def setup(self, run: Run, file: File, datadir: Path, remotedir: Path) -> Union[str, Tuple[str, dict]]:
@@ -75,7 +79,7 @@ class FileJob(AbstractJob, metaclass=_MetaRegistry):
     def collect(self, run: Run, file: File, datadir: Path, pid: Union[str, int]) -> None:
         pass
 
-class RunJob(AbstractJob, metaclass=_MetaRegistry):
+class RunJob(AbstractJob):
 
     @abstractmethod
     def setup(self, run: Run, datadir: Path, remotedir: Path) -> Union[str, Tuple[str, dict]]:

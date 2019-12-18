@@ -199,7 +199,7 @@ async def start_fs_watchdog(path, *a, **k):
         event_handler=PoreRefinerFSEventHandler(path)
         )
     watcher.start()
-    log.info(f"Filesystem events being watched in {path}...")
+    log.critical(f"Filesystem events being watched in {path}...")
     # watcher.wait_closed()
     # log.info(f"Filesystem event watcher shutting down.")
 
@@ -214,7 +214,7 @@ async def in_progress_run_update(*args, **kwargs):
 
 async def start_run_end_polling(run_polling_interval, *a, **k):
     "Coro to bring up the run termination polling"
-    log.info(f"Starting run polling...")
+    log.critical(f"Starting run polling...")
     async def run_end_polling():
         await asyncio.sleep(run_polling_interval) #poll every ten minutes
         run_num = await poll_active_run()
@@ -223,10 +223,10 @@ async def start_run_end_polling(run_polling_interval, *a, **k):
     return asyncio.ensure_future(run_end_polling())
 
 async def start_job_polling(job_polling_interval, *a, **k):
-    log.info(f'Starting job polling...')
+    log.critical(f'Starting job polling...')
     async def run_job_polling():
         po, su, co = await poll_jobs()
-        log.info(f'{po} jobs polled, {su} submitted, {co} collected.')
+        log.critical(f'{po} jobs polled, {su} submitted, {co} collected.')
         await asyncio.sleep(job_polling_interval) #poll every 30 minutes
         return asyncio.ensure_future(run_job_polling())
     return asyncio.ensure_future(run_job_polling())

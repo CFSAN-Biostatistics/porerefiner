@@ -101,15 +101,15 @@ class PoreRefinerDispatchServer(PoreRefinerBase):
     "Eventhandler for RPC events coming from command line or Flask app"
 
     async def GetRuns(self, stream: 'grpclib.server.Stream[porerefiner_pb2.RunListRequest, porerefiner_pb2.RunList]') -> None:
-        log.info("API call: Get Runs")
+        log.debug("API call: Get Runs")
         request = await stream.recv_message()
         log.debug(f"all:{request.all}, tags:{request.tags}")
         await stream.send_message(RunListResponse(runs=RunList(runs = await list_runs(request.all, request.tags))))
-        log.info("Response sent")
+        log.debug("Response sent")
 
     async def GetRunInfo(self, stream: 'grpclib.server.Stream[porerefiner_pb2.RunRequest, porerefiner_pb2.RunResponse]') -> None:
         request = await stream.recv_message()
-        log.info(f"API call: get run info for run {request.id or request.name}")
+        log.debug(f"API call: get run info for run {request.id or request.name}")
         try:
             run_msg = await get_run_info(request.id or request.name)
             reply_msg = RunResponse(run=run_msg)
@@ -117,28 +117,28 @@ class PoreRefinerDispatchServer(PoreRefinerBase):
             err_msg = Error(type='ValueError', err_message=str(e))
             reply_msg = RunResponse(error=err_msg)
         await stream.send_message(reply_msg)
-        log.info("Response sent")
+        log.debug("Response sent")
 
     async def AttachSheetToRun(self, stream: 'grpclib.server.Stream[porerefiner_pb2.RunAttachRequest, porerefiner_pb2.RunAttachResponse]') -> None:
         request = await stream.recv_message()
-        log.info("API call: Attach sample sheet")
+        log.debug("API call: Attach sample sheet")
         try:
             run = get_run(request.id or request.name)
         except ValueError: #no run
             run = None
         ss = SampleSheet.new_sheet_from_message(request.sheet, run)
         await stream.send_message(GenericResponse())
-        log.info("Response sent")
+        log.debug("Response sent")
 
     async def RsyncRunTo(self, stream: 'grpclib.server.Stream[porerefiner_pb2.RunRsyncRequest, porerefiner_pb2.RunRsyncResponse]') -> None:
         request = await stream.recv_message()
-        log.info(f"API call: send run via rsync to {request.dest}")
+        log.debug(f"API call: send run via rsync to {request.dest}")
         await stream.send_message(RunRsyncResponse())
-        log.info("Response sent")
+        log.debug("Response sent")
 
     async def Tag(self, stream):
         request = await stream.recv_message()
-        log.info(f"API call: tag run {request.id} with tags '{request.tags}'")
+        log.debug(f"API call: tag run {request.id} with tags '{request.tags}'")
         run = Run.get_or_none(pk=request.id)
         resp = GenericResponse()
         if run:
@@ -157,8 +157,8 @@ async def start_server(socket, *a, **k):
     server = Server([PoreRefinerDispatchServer()])
     with graceful_exit([server]):
         await server.start(path=str(socket))
-        log.info(f"RPC server listening on {socket}...")
+        log.critical(f"RPC server listening on {socket}...")
         await server.wait_closed()
-        log.info(f"RPC server shutting down.")
+        log.critical(f"RPC server shutting down.")
 
 

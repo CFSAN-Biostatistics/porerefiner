@@ -6,6 +6,8 @@ from asyncio import run
 from flask import render_template
 import subprocess
 
+from os import environ
+
 @app.route('/')
 def index(): #TODO - make a webpage
     "Home view"
@@ -14,13 +16,13 @@ def index(): #TODO - make a webpage
 @app.route('/attach')
 @app.route('/api/form/attach')
 def form(): #TODO
-    host = subprocess.run(['hostname'], stdout=subprocess.PIPE).stdout.split()
+    host = environ['HOSTNAME']
     async def list_run_runner():
         with server() as serv:
             return await serv.GetRuns(RunListRequest(all=True))
 
     resp = run(list_run_runner())
-    return render_template('submit.html', runs=resp.runs, hostname=host)
+    return render_template('submit.html', runs=resp.runs.runs, hostname=host)
 
 @app.route('/template')
 def template():
@@ -28,4 +30,4 @@ def template():
 library_id,
 sequencing_kit,
 sample_id,accession,barcode_id,organism,extraction_kit,comment,user
-""", 200, {'ContentType':'application/csv'}
+""", 200, {'Content-Type':'text/csv'}

@@ -10,11 +10,11 @@
         <h2>Load a sample sheet</h2>
         <a href="/template">or download a template.</a>
         <form action="/api/form/attach/submit">
-            Sample Sheet (in csv format)<input type="file" name="sample_sheet">
+            <p>Sample Sheet (in csv format)<input type="file" name="sample_sheet"></p>
             <select name="run_id">
                 {% for run in runs %}
                 <option value="{{ run.mnemonic }}">{{ run.id }}: {{ run.name }}</option>
-                {% end for %}
+                {% endfor %}
             </select>
             <input type="submit" value="Upload">
         </form>

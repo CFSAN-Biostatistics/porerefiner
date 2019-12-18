@@ -43,19 +43,18 @@ async def serve(db_path=None, db_pragmas=None, wdog_settings=None, server_settin
                     start_job_polling(**system_settings),
                     in_progress_run_update())
     finally:
-        log.info("Shutting down...")
+        log.critical("Shutting down...")
 
 @click.group()
-def cli():
-    pass
+@click.option('-v', '--verbose', is_flag=True)
+def cli(verbose):
+    logging.basicConfig(stream=sys.stdout, level=(logging.CRITICAL, logging.DEBUG)[verbose])
 
 @cli.command()
 @click.option('-d', '--daemonize', 'demonize', is_flag=True, default=False)
-@click.option('-v', '--verbose', is_flag=True)
-def start(verbose=False, demonize=False):
+def start(demonize=False):
     "Start the PoreRefiner service."
     log = logging.getLogger('porerefiner')
-    logging.basicConfig(stream=sys.stdout, level=(logging.INFO, logging.DEBUG)[verbose])
     if demonize:
         log.info("Starting daemon...")
         with daemon.DaemonContext():
@@ -72,13 +71,13 @@ def reset():
 
 @reset.command()
 @click.argument('status', default="QUEUED", type=click.Choice([v for v, _ in Job.statuses], case_sensitive=True))
-def jobs(status):
+def jobs(status): #TODO
     "Reset all jobs to a particular status."
     if click.confirm(f"This will set all jobs to {status} status. Are you sure?"):
         click.echo("reset jobs")
 
 @reset.command()
-def runs():
+def runs(): #TODO
     "Reset all runs to in-progress status."
     if click.confirm(f"This will set all runs to in-progress status, triggering notifiers and jobs in the next hour. Are you sure?"):
         click.echo("reset runs")
@@ -106,7 +105,7 @@ def database():
         Path(porerefiner.config.config['database']['path']).unlink()
 
 @reset.command()
-def samplesheets():
+def samplesheets(): #TODO
     "Clear samplesheets that aren't attached to any run."
     click.echo("clear sheets")
 
