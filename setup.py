@@ -69,3 +69,15 @@ setup(
     version='0.8.0',
     zip_safe=False,
 )
+
+from pathlib import Path
+from shutil import copyfile
+from os.path import expanduser
+
+installdir = Path(__file__).parent
+
+copyfile(installdir / 'porerefiner' / 'porerefiner.service',
+         Path.home() / '.config' / 'systemd' / 'user.control' / 'porerefiner.service')
+
+copyfile(installdir / 'porerefiner' / 'porerefiner.app.service',
+         Path.home() / '.config' / 'systemd' / 'user.control' / 'porerefiner.app.service')
