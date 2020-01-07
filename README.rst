@@ -72,10 +72,23 @@ When the PoreRefiner service is stopped, it has a number of administrative funct
     --help  Show this message and exit.
 
     Commands:
+    init    Find the Nanopore output directory and create the config file.
     list    List job system stuff.
     reset   Utility function to reset various state.
     start   Start the PoreRefiner service.
     verify  Run various checks.
+
+::
+
+    $ python -m porerefiner.porerefiner init --help
+    Usage: porerefiner.py init [OPTIONS]
+
+    Find the Nanopore output directory and create the config file.
+
+    Options:
+    --config TEXT
+    --nanopore_dir TEXT
+    --help               Show this message and exit.
 
 ::
 

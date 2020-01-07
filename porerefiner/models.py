@@ -118,8 +118,6 @@ class Run(PorerefinerModel):
     ended = DateTimeField(null=True, default=None)
     status = StatusField(default='RUNNING')
     path = PathField(index=True)
-    # flowcell_type = CharField()
-    # flowcell_id = CharField()
     basecalling_model = CharField(default='DNA', choices=basecallers, null=True)
 
     def __str__(self):
@@ -173,8 +171,8 @@ class Run(PorerefinerModel):
     def spawn(self, job):
         job = Job.create(job_state=deepcopy(job), status='READY', datadir=pathlib.Path(tempfile.mkdtemp()), run=self)
         # JobRunJunction.create(job=job, run=self)
-        for file in self.files:
-            JobFileJunction.create(job=job, file=file)
+        # for file in self.files:
+        #     JobFileJunction.create(job=job, file=file)
         return job
 
 # class JobRunJunction(BaseModel):
@@ -248,6 +246,10 @@ class SampleSheet(PorerefinerModel):
     barcoding_kit = CharField(null=True, choices=BARCODES)
     library_id = CharField(null=True)
 
+    @property
+    def barcode_kit_barcodes(self):
+        return {} #TODO
+
     @classmethod
     def get_unused_sheets(cls):
         return (cls.select()
@@ -294,9 +296,9 @@ class Sample(PorerefinerModel):
 
     samplesheet = ForeignKeyField(SampleSheet, backref='samples')
 
-    # @property
-    # def barcode_seq(self):
-    #     return self.BARCODES.get(self.barcode_id, "")
+    @property
+    def barcode_seq(self):
+        return self.samplesheet.barcode_kit_barcodes.get(self.barcode_id, "")
 
     @property
     def tags(self):

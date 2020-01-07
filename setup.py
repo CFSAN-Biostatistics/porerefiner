@@ -28,7 +28,7 @@ requirements = ['Click>=7.0',
 
 setup_requirements = [ ]
 
-test_requirements = [ 'hypothesis>=4.38.0',
+test_requirements = [ 'hypothesis>=4.57.1',
                       'hypothesis-fspaths>=0.1',
                       'asyncmock>=0.4.1',
                       'aiounittest>=1.3.0']
@@ -66,6 +66,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/crashfrog/porerefiner',
-    version='0.1.0',
+    version='0.8.0',
     zip_safe=False,
 )

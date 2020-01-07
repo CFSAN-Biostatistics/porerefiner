@@ -23,6 +23,8 @@ from peewee import SqliteDatabase
 
 from porerefiner.protocols.porerefiner.rpc import porerefiner_pb2 as messages
 
+the_present = datetime.now()
+
 # SQLite can't accept a 32-bit integer
 sql_ints = lambda: integers(min_value=-2**16, max_value=2**16)
 
@@ -84,7 +86,7 @@ def flowcells(draw, path=None):
     else:
         pat = just(Path(path))
     return draw(builds(models.Flowcell,
-                       pk=pk,
+                       #pk=pk,
                        consumable_id=cid,
                        consumable_type=cty,
                        path=pat))
@@ -97,14 +99,14 @@ def runs(draw, sheet=True):
         ss = just(None)
     path = draw(paths(pathlib_only=True))
     return draw(builds(models.Run,
-                       pk=sql_ints(),
+                       #pk=sql_ints(),
                        flowcell=flowcells(path=path.parent),
                        _sample_sheets=ss,
                        name=text(),
                        library_id=text(),
                        run_id=text(),
-                       started=datetimes(max_value=datetime.now()),
-                       ended=datetimes(min_value=datetime.now()),
+                       started=datetimes(max_value=the_present),
+                       ended=datetimes(min_value=the_present),
                        status=sampled_from([status[0] for status in models.Run.statuses]),
                        path=just(path),
                        basecalling_model=sampled_from([model[0] for model in models.Run.basecallers])))
@@ -118,16 +120,24 @@ def fsevents(draw, min_deep=3):
                        is_directory=booleans()))
 
 def random_name_subclass(of=object, **classdef):
+    classdef['__module__'] = __name__
     new_typename = namesgenerator.get_random_name(sep=' ').title().replace(' ', '') + of.__name__
-    return type(new_typename, (of,), classdef)
+    new_type = type(new_typename, (of,), classdef)
+    globals()[new_typename] = new_type
+    return new_type
 
 @composite
 def submitters(draw, subclass_of=jobs.submitters.Submitter):
-    return draw(builds(random_name_subclass(of=subclass_of)))
+    return draw(builds(random_name_subclass(of=subclass_of,
+                                            test_noop=lambda: None,
+                                            reroot_path=lambda: None,
+                                            begin_job=lambda: "",
+                                            poll_job=lambda: "",
+                                            closeout_job=lambda: None)))
 
 @composite
-def jobs(draw, subclass_of=jobs.RunJob):
-    return draw(builds(random_name_subclass(of=subclass_of),
+def jobs(draw, subclass_of=jobs.RunJob, classdef=dict(setup=lambda *a, **k: None, collect=lambda *a, **k: None)):
+    return draw(builds(random_name_subclass(of=subclass_of, **classdef),
                        submitter=submitters()))
 
 class TestBase(TestCase):

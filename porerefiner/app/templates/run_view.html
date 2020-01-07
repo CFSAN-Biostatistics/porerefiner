@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Run Viewer</title>
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body>
+        <h1>PoreRefiner on {{ hostname }}</h1>
+        <h2>Run Viewer</h2>
+        <p><a href='/view'><- [back]</a></p>
+        <table>
+            <caption>run {{ run.id }}: {{ run.name }} ({{ run.mnemonic_name }})</caption>
+            <thead>
+                <tr>
+                    <th colspan=2>Library ID</th>
+                    <th colspan=2>Status</th>
+                    <th colspan=2>Flowcell Type</th>
+                    <th colspan=2>Flowcell ID</th>
+                    <th colspan=2>Basecalling Model</th>
+                </tr>
+                <tr>
+                    <td colspan="2">{{ run.library_id }}</td>
+                    <td colspan="2">{{ run.status }}</td>
+                    <td colspan="2">{{ run.flowcell_type }}</td>
+                    <td colspan="2">{{ run.flowcell_id }}</td>
+                    <td colspan="2">{{ run.basecalling_model }}</td>
+                </tr>
+                <tr>
+                    <td>Path:</td><td colspan="4">{{ run.path }}</td>
+                    <td>Started:</td><td colspan="4">{{ run.started }} ({{ run.elapsed }} elapsed)</td>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <th>Sample Name</th>
+                    <th>Sample Accession</th>
+                    <th>Barcode ID</th>
+                    <th>Barcode Sequence</th>
+                    <th>Organism</th>
+                    <th>Extraction Kit</th>
+                    <th>Comments</th>
+                    <th>User</th>
+                    <th>Files</th>
+                    <th>Tags</th>
+                </tr>
+                {% for sample in run.samples %}
+                <tr>
+                    <td>{{ sample.name }}</td>
+                    <td>{{ sample.accession }}</td>
+                    <td>{{ sample.barcode_id }}</td>
+                    <td>{{ sample.barcode_seq }}</td>
+                    <td>{{ sample.organism }}</td>
+                    <td>{{ sample.extraction_kit }}</td>
+                    <td>{{ sample.comment }}</td>
+                    <td>{{ sample.user }}</td>
+                    <td>{{ sample.files|length }}</td>
+                    <td>{{ sample.tags|join(', ') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td rowspan="10">{{ run.tags|join(', ') }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    </body>
+</html>

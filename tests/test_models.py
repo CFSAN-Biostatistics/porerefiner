@@ -6,7 +6,7 @@ from tests import paths, with_database, TestBase, sql_ints, samples, samplesheet
 
 from porerefiner import models, jobs
 
-from hypothesis import given, strategies as strat, example, seed
+from hypothesis import given, strategies as strat, example, seed, settings
 #from hypothesis_fspaths import fspaths, _PathLike
 
 from datetime import datetime
@@ -32,9 +32,10 @@ class TestModels(TestCase):
         fld = models.PathField()
         self.assertEqual(fld.python_value(fld.db_value(path)), pa)
 
-    @skip('not yet implemented')
-    def test_job_field(self):
-        assert False
+    @given(job=_jobs())
+    def test_job_field(self, job):
+        fld = models.JobField()
+        self.assertEqual(type(fld.python_value(fld.db_value(job))), type(job))
 
     def test_models_registered(self):
         self.assertEqual(len(models.REGISTRY), 9)
@@ -80,11 +81,14 @@ class TestRun(TestCase):
                                            path='TEST/TEST')
         assert models.Run.create(flowcell=self.flow, **kwargs).run_duration
 
+    @settings(deadline=500)
     @given(run=runs(),
            job=_jobs())
     @with_database
     def test_job_spawn(self, run, job):
+        run.flowcell.save()
         run.save()
+        self.assertIsNotNone(run.pk)
         jobb = run.spawn(job)
         #test that a deepcopy of the job state object was made
         self.assertIsNot(job, jobb.job_state)

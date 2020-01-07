@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 from contextlib import contextmanager
 from functools import wraps, partial
+from io import TextIOWrapper
 
 
 from grpclib.client import Channel, GRPCError
@@ -73,8 +74,9 @@ def handle_connection_errors(func):
 # Channel context manager for CLI utils
 
 @contextmanager
-def server():
-    from porerefiner.config import config
+def server(config_file):
+    from porerefiner.config import Config
+    config = Config(config_file, client_only=True).config
     channel = Channel(path=config['server']['socket'], ssl=config['server']['use_ssl'])
     client = PoreRefinerStub(channel)
     try:
@@ -142,14 +144,15 @@ def xml_formatter(extend=False):
 
 # We should do sample sheet parsing on the client side
 
-def load_from_csv(file, delimiter=',') -> SampleSheet:
+def load_from_csv(file, delimiter=b',') -> SampleSheet:
     ss = SampleSheet()
     _, ss.porerefiner_ver, *_ = file.readline().split(delimiter)
     if ss.porerefiner_ver == '1.0.0':
         ss.date.GetCurrentTime()
         _, ss.library_id, *_ = file.readline().split(delimiter)
         _, ss.sequencing_kit, *_ = file.readline().split(delimiter)
-        [ss.samples.add(**row) for row in csv.DictReader(file, delimiter=delimiter, dialect='excel')] #this should handle commas in fields
+        delimiter = delimiter.decode()
+        [ss.samples.add(**row) for row in csv.DictReader(TextIOWrapper(file), delimiter=delimiter, dialect='excel')] #this should handle commas in fields
     else:
         raise ValueError(f"Sample sheet of version {ss.porerefiner_ver} not supported.")
     return ss

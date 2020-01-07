@@ -9,11 +9,11 @@
         <h1>PoreRefiner on {{ hostname }}</h1>
         <h2>Load a sample sheet</h2>
         <a href="/template">or download a template.</a>
-        <form action="/api/form/attach/submit">
+        <form action="/api/form/attach/submit" method="post" enctype="multipart/form-data">
             <p>Sample Sheet (in csv format)<input type="file" name="sample_sheet"></p>
             <select name="run_id">
                 {% for run in runs %}
-                <option value="{{ run.mnemonic }}">{{ run.id }}: {{ run.name }}</option>
+                <option value="{{ run.name }}">{{ run.id }}: {{ run.name }} ({{ run.mnemonic_name }})</option>
                 {% endfor %}
             </select>
             <input type="submit" value="Upload">

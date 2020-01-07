@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
 
 """Console script for porerefiner."""
-import sys
+import sys, os
 import click
 
 from asyncio import run
+from pathlib import Path
 
 from porerefiner.cli_utils import VALID_RUN_ID, server, hr_formatter, json_formatter, xml_formatter, handle_connection_errors, load_from_csv, load_from_excel
 from porerefiner.protocols.porerefiner.rpc.porerefiner_pb2 import RunRequest, RunListRequest, RunAttachRequest, RunRsyncRequest, TagRequest
 
+default_config = lambda: os.environ.get('POREREFINER_CONFIG', Path.home() / '.porerefiner' / 'config.yaml')
+with_config = click.option('--config', default=default_config, help='Path to PoreRefiner config')
 
 @click.group()
 def cli():
@@ -18,16 +21,17 @@ def cli():
 
 @cli.command()
 @handle_connection_errors
+@with_config
 @click.option('-a', '--all', is_flag=True, default=False, help="Show finished and ongoing runs.")
 @click.option('-h', '--human-readable', 'output_format', flag_value=hr_formatter, help='Output in a human-readable table.', default=hr_formatter)
 @click.option('-j', '--json', 'output_format', flag_value=json_formatter, help='Output in JSON.')
 @click.option('-x', '--xml', 'output_format', flag_value=xml_formatter, help='Output in schemaless XML.')
 @click.option('-t', '--tag', 'tags', multiple=True)
 @click.option('-e', '--extended', 'extend', default=False, is_flag=True, help="Extended output format.")
-def ps(output_format, extend, all=False, tags=[]):
+def ps(config, output_format, extend, all=False, tags=[]):
     "Show runs in progress, or every tracked run (--all), or with a particular tag (--tag)."
     async def ps_runner(formatter):
-        with server() as serv:
+        with server(config) as serv:
             resp = await serv.GetRuns(RunListRequest(all=all, tags=tags))
             for run in resp.runs.runs:
                 formatter(run)
@@ -50,10 +54,10 @@ def ps(output_format, extend, all=False, tags=[]):
 @click.option('-j', '--json', 'output_format', flag_value=json_formatter, help='Output in JSON.')
 @click.option('-x', '--xml', 'output_format', flag_value=xml_formatter, help='Output in schemaless XML.')
 @click.argument('run_id', type=VALID_RUN_ID)
-def info(output_format, run_id):
+def info(config, output_format, run_id):
     "Return information about a run, historical or in progress."
     async def info_runner(formatter):
-        with server() as serv:
+        with server(config) as serv:
             req = RunRequest()
             if isinstance(run_id, str):
                 req.name = run_id
@@ -77,8 +81,8 @@ sequencing_kit,
 sample_id,accession,barcode_id,organism,extraction_kit,comment,user
 """)
 
-async def tag_runner(run_id, tags=[], untag=False):
-    with server() as serv:
+async def tag_runner(config, run_id, tags=[], untag=False):
+    with server(config) as serv:
         req = RunRequest()
         if isinstance(run_id, str):
             req.name = run_id
@@ -94,26 +98,29 @@ async def tag_runner(run_id, tags=[], untag=False):
 
 @cli.command()
 @handle_connection_errors
+@with_config
 @click.argument('run_id', type=VALID_RUN_ID)
 @click.argument('tag', type=click.STRING, nargs=-1)
-def tag(run_id, tag=[]):
+def tag(config, run_id, tag=[]):
     "Add one or more tags to a run."
-    run(tag_runner(run_id, tag, False))
+    run(tag_runner(config, run_id, tag, False))
 
 
 @cli.command()
 @handle_connection_errors
+@with_config
 @click.argument('run_id', type=VALID_RUN_ID)
 @click.argument('tag', type=click.STRING, nargs=-1)
-def untag(run_id, tag=[]):
+def untag(config, run_id, tag=[]):
     "Remove one or more tags from a run."
-    run(tag_runner(run_id, tag, True))
+    run(tag_runner(config, run_id, tag, True))
 
 @cli.command()
 @handle_connection_errors
-@click.argument('samplesheet', type=click.File())
+@with_config
+@click.argument('samplesheet', type=click.File('rb'))
 @click.option('-r', '--run', 'run_id', type=VALID_RUN_ID, )
-def load(samplesheet, run_id=None):
+def load(config, samplesheet, run_id=None):
     "Load a sample sheet to be attached to a run, or to the next run that is started."
     try:
         if 'csv' in samplesheet.name:
@@ -128,7 +135,7 @@ def load(samplesheet, run_id=None):
         click.echo(f"ERROR: OpenPyXL not installed; Excel files ({samplesheet.name}) can't be read. Use pip to install OpenPyXL.", err=True)
     else:
         async def load_runner(run_id, message):
-            with server() as serv:
+            with server(config) as serv:
                 if not run_id: #TODO
                     # find first unassociated run
                     run_id = 1

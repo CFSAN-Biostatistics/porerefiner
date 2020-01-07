@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Run Viewer</title>
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body>
+        <h1>PoreRefiner on {{ hostname }}</h1>
+        <h2>Run Viewer</h2>
+        <table>
+            <tr>
+                <th>Id</th>
+                <th>Name</th>
+                <th>Nickname</th>
+                <th>Status</th>
+                <th>Samples</th>
+                <th>Files</th>
+                <th>Tags</th>
+            </tr>
+            {% for run in runs %}
+            <tr>
+                <td><a href="/view/{{ run.id}}">{{ run.id }}</a></td>
+                <td><a href="/view/{{ run.id}}">{{ run.name }}</a></td>
+                <td><a href="/view/{{ run.id}}">{{ run.mnemonic_name }}</a></td>
+                <td>{{ run.status }}</td>
+                <td>{{ run.samples|length }}</td>
+                <td>{{ run.files|length }}</td>
+                <td>{{ run.tags|join(', ') }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </body>
+</html>

@@ -14,6 +14,7 @@ from click.testing import CliRunner
 from porerefiner import porerefiner, fsevents as pr_fsevents, rpc
 from porerefiner import cli
 from porerefiner import models
+from porerefiner import config
 from porerefiner.cli_utils import absolutize_path as ap, relativize_path as rp
 from porerefiner.protocols.porerefiner.rpc import porerefiner_pb2 as messages
 from tests import paths, with_database, TestBase as DBSetupTestCase, samplesheets, samples, runs, fsevents
@@ -22,7 +23,7 @@ from shutil import rmtree
 
 from os.path import split
 
-from tempfile import mkdtemp
+from tempfile import mkdtemp, mktemp
 
 from hypothesis import given
 import hypothesis.strategies as strat
@@ -270,3 +271,12 @@ class TestServerStart(TestCase):
             await asyncio.sleep(5)
             task.cancel()
             mock.assert_called()
+
+class TestConfig(TestCase):
+
+    def test_config_create_defaults(self):
+        f = mktemp()
+        c = config.Config(f)
+        self.assertTrue(c.config)
+        os.unlink(f)
+

@@ -7,7 +7,7 @@ import daemon
 import datetime
 import json
 import logging
-import sys
+import sys, os
 import yaml
 
 from asyncio import run, gather, wait
@@ -25,10 +25,11 @@ log = logging.getLogger('porerefiner.service')
 
 
 
-async def serve(db_path=None, db_pragmas=None, wdog_settings=None, server_settings=None, system_settings=None):
+async def serve(config_file, db_path=None, db_pragmas=None, wdog_settings=None, server_settings=None, system_settings=None):
     "Initialize and gather coroutines"
     if not all([db_path, db_pragmas, wdog_settings, server_settings, system_settings]): #need to defer loading config for testing purposes
-        from porerefiner.config import config
+        from porerefiner.config import Config
+        config = Config(config_file).config
         db_path=config['database']['path']
         db_pragmas=config['database']['pragmas']
         wdog_settings=config['nanopore']
@@ -45,23 +46,35 @@ async def serve(db_path=None, db_pragmas=None, wdog_settings=None, server_settin
     finally:
         log.critical("Shutting down...")
 
+default_config = lambda: os.environ.get('POREREFINER_CONFIG', Path.home() / '.porerefiner' / 'config.yaml')
+
+
 @click.group()
 @click.option('-v', '--verbose', is_flag=True)
 def cli(verbose):
     logging.basicConfig(stream=sys.stdout, level=(logging.CRITICAL, logging.DEBUG)[verbose])
 
 @cli.command()
+@click.option('--config', prompt='path to config file', default = default_config)
+@click.option('--nanopore_dir')
+def init(config, nanopore_dir=None):
+    "Find the Nanopore output directory and create the config file."
+    if click.prompt(f"create PoreRefiner config at {config}?"):
+        pass
+
+@cli.command()
+@click.option('--config', prompt='path to config file', default = default_config)
 @click.option('-d', '--daemonize', 'demonize', is_flag=True, default=False)
-def start(demonize=False):
+def start(config, demonize=False):
     "Start the PoreRefiner service."
     log = logging.getLogger('porerefiner')
     if demonize:
         log.info("Starting daemon...")
         with daemon.DaemonContext():
-            run(serve())
+            run(serve(config))
     else:
         log.info("Starting server...")
-        run(serve())
+        run(serve(config))
     return 0
 
 @cli.group()
@@ -82,20 +95,20 @@ def runs(): #TODO
     if click.confirm(f"This will set all runs to in-progress status, triggering notifiers and jobs in the next hour. Are you sure?"):
         click.echo("reset runs")
 
-@reset.command()
-def config():
-    "Reset config to defaults."
-    if click.confirm("This will reset your config to defaults. Are you sure?"):
-        try:
-            import importlib
-            import porerefiner.config
-            porerefiner.config.config_file.unlink()
-            importlib.reload(porerefiner.config)
-        except Exception:
-            from os import environ
-            config_file = Path(environ.get('POREREFINER_CONFIG', '/Users/justin.payne/.porerefiner/config.yml'))
-            config_file.unlink()
-            import porerefiner.config
+# @reset.command()
+# def config():
+#     "Reset config to defaults."
+#     if click.confirm("This will reset your config to defaults. Are you sure?"):
+#         try:
+#             import importlib
+#             import porerefiner.config
+#             porerefiner.config.config_file.unlink()
+#             importlib.reload(porerefiner.config)
+#         except Exception:
+#             from os import environ
+#             config_file = Path(environ.get('POREREFINER_CONFIG', '/Users/justin.payne/.porerefiner/config.yml'))
+#             config_file.unlink()
+#             import porerefiner.config
 
 @reset.command()
 def database():

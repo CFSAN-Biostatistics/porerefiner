@@ -15,7 +15,7 @@ REGISTRY = {} # available submitter classes
 
 log = logging.getLogger('porerefiner.submitter.registry')
 
-class _MetaRegistry(ABCMeta):
+class _MetaRegistry(type):
 
     def __new__(meta, name, bases, class_dict):
         cls = type.__new__(meta, name, bases, class_dict)
@@ -29,7 +29,10 @@ class _MetaRegistry(ABCMeta):
         log.debug(cls.__name__)
         return the_instance
 
-class Submitter(metaclass=_MetaRegistry):
+class RegisteringABCMeta(ABCMeta, _MetaRegistry):
+    pass
+
+class Submitter(metaclass=RegisteringABCMeta):
 
     def __repr__(self):
         return type(self).__name__
