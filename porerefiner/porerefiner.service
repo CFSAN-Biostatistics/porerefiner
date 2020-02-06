@@ -5,9 +5,9 @@ After=network.target
 [Service]
 Type=simple
 # Another Type: forking
-User=porerefiner
-Group=porerefiner
-WorkingDirectory=/home/porerefiner
+# User=porerefiner
+# Group=porerefiner
+# WorkingDirectory=/home/porerefiner
 ExecStart=/usr/bin/python3.7 -m porerefiner.porerefiner start --config $POREREFINER_CONFIG
 ExecStop=/bin/kill -s QUIT $MAINPID
 Restart=on-failure
