@@ -8,7 +8,8 @@ Type=simple
 User=porerefiner
 Group=porerefiner
 WorkingDirectory=/home/porerefiner
-ExecStart=python3 -m porerefiner.porerefiner start --config $POREREFINER_CONFIG
+ExecStart=/usr/bin/python3.7 -m porerefiner.porerefiner start --config $POREREFINER_CONFIG
+ExecStop=/bin/kill -s QUIT $MAINPID
 Restart=on-failure
 Environment=PYTHONUNBUFFERED=1
 

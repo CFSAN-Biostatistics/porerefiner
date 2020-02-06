@@ -14,6 +14,7 @@ Group=porerefiner
 RuntimeDirectory=gunicorn
 WorkingDirectory=/home/porerefiner/applicationroot
 ExecStart=/usr/bin/gunicorn applicationname.wsgi
+ExecStop=/bin/kill -s QUIT $MAINPID
 ExecReload=/bin/kill -s HUP $MAINPID
 KillMode=mixed
 TimeoutStopSec=5
