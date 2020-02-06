@@ -71,13 +71,12 @@ setup(
 )
 
 from pathlib import Path
-from shutil import copyfile
-from os.path import expanduser
+from shutil import copy
 
 installdir = Path(__file__).parent
 
-copyfile(installdir / 'porerefiner' / 'porerefiner.service',
-         Path.home() / '.config' / 'systemd' / 'user.control' / 'porerefiner.service')
+copy(installdir / 'porerefiner' / 'porerefiner.service',
+     Path.home() / '.config' / 'systemd' / 'user.control' / 'porerefiner.service')
 
-copyfile(installdir / 'porerefiner' / 'porerefiner.app.service',
-         Path.home() / '.config' / 'systemd' / 'user.control' / 'porerefiner.app.service')
+copy(installdir / 'porerefiner' / 'porerefiner.app.service',
+     Path.home() / '.config' / 'systemd' / 'user.control' / 'porerefiner.app.service')
