@@ -5,7 +5,7 @@ from asyncio import subprocess
 
 
 
-class LocalSubmitter(Submitter): #TODO
+class LocalSubmitter(Submitter):
 
     async def test_noop(self):
         pass

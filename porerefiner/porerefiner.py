@@ -12,7 +12,7 @@ import yaml
 
 from asyncio import run, gather, wait
 from porerefiner import models
-from porerefiner.models import Job
+from porerefiner.models import Job, Run
 import porerefiner.jobs.submitters as submitters
 from pathlib import Path
 
@@ -52,15 +52,19 @@ default_config = lambda: os.environ.get('POREREFINER_CONFIG', Path.home() / '.po
 @click.group()
 @click.option('-v', '--verbose', is_flag=True)
 def cli(verbose):
-    logging.basicConfig(stream=sys.stdout, level=(logging.CRITICAL, logging.DEBUG)[verbose])
+    logging.basicConfig(stream=sys.stdout,
+                        style='{',
+                        format=("{asctime} {name}:{message}","{asctime} {levelname} {name}:{message} ({module} {lineno})")[verbose],
+                        level=(logging.ERROR, logging.INFO)[verbose])
 
 @cli.command()
 @click.option('--config', prompt='path to config file', default = default_config)
 @click.option('--nanopore_dir')
 def init(config, nanopore_dir=None):
     "Find the Nanopore output directory and create the config file."
-    if click.prompt(f"create PoreRefiner config at {config}?"):
-        pass
+    if click.prompt(f"create PoreRefiner config at {config}? y/n"):
+        from porerefiner.config import Config
+        Config(config).new_config_file(config)
 
 @cli.command()
 @click.option('--config', prompt='path to config file', default = default_config)
@@ -84,58 +88,65 @@ def reset():
 
 @reset.command()
 @click.argument('status', default="QUEUED", type=click.Choice([v for v, _ in Job.statuses], case_sensitive=True))
-def jobs(status): #TODO
+def jobs(status):
     "Reset all jobs to a particular status."
     if click.confirm(f"This will set all jobs to {status} status. Are you sure?"):
-        click.echo("reset jobs")
+        Job.update(status=status).execute()
+        click.echo(f"Jobs set to {status}.")
 
 @reset.command()
-def runs(): #TODO
+@click.argument('status', default="RUNNING", type=click.Choice([v for v, _ in Run.statuses], case_sensitive=True))
+@click.option('--run', 'run_name', default=None)
+@click.option('--config', prompt='path to config file', default = default_config)
+def runs(status, config, run_name=None):
     "Reset all runs to in-progress status."
-    if click.confirm(f"This will set all runs to in-progress status, triggering notifiers and jobs in the next hour. Are you sure?"):
-        click.echo("reset runs")
-
-# @reset.command()
-# def config():
-#     "Reset config to defaults."
-#     if click.confirm("This will reset your config to defaults. Are you sure?"):
-#         try:
-#             import importlib
-#             import porerefiner.config
-#             porerefiner.config.config_file.unlink()
-#             importlib.reload(porerefiner.config)
-#         except Exception:
-#             from os import environ
-#             config_file = Path(environ.get('POREREFINER_CONFIG', '/Users/justin.payne/.porerefiner/config.yml'))
-#             config_file.unlink()
-#             import porerefiner.config
+    from porerefiner.config import Config
+    config = Config(config).config
+    db_path=config['database']['path']
+    db_pragmas=config['database']['pragmas']
+    models._db.init(db_path, db_pragmas)
+    if run_name:
+        if click.confirm("This will set run {run_name} to {status} status. Are you sure?"):
+            Run.update(status=status).where(alt_name=run_name).execute()
+            click.echo(f"Run {run_name} set to {status}.")
+    else:
+        if click.confirm(f"This will set all runs to {status} status, triggering notifiers and jobs in the next hour. Are you sure?"):
+            Run.update(status=status).execute()
+            click.echo(f'Runs set to {status}.')
 
 @reset.command()
-def database():
+@click.option('--config', prompt='path to config file', default = default_config)
+def database(config):
     "Reset database to empty state."
     if click.confirm("This will delete the porerefiner database. Are you sure?"):
         import porerefiner.config
-        Path(porerefiner.config.config['database']['path']).unlink()
+        Path(porerefiner.config.Config(config).config['database']['path']).unlink()
 
 @reset.command()
-def samplesheets(): #TODO
+def samplesheets():
     "Clear samplesheets that aren't attached to any run."
     click.echo("clear sheets")
 
 @cli.group(name="list")
-def _list():
+@click.option('--config', prompt='path to config file', default = default_config)
+def _list(config):
     "List job system stuff."
-    pass
+    from porerefiner.config import Config
+    config = Config(config).config
+    db_path=config['database']['path']
+    db_pragmas=config['database']['pragmas']
+    models._db.init(db_path, db_pragmas)
 
 @_list.command(name='jobs')
 def _jobs():
-    "List the configurable and configured jobs."
+    "List the configurable, configured, and spawned jobs."
     import porerefiner.jobs
     click.echo("Installed job modules:")
     click.echo(yaml.dump(list(porerefiner.jobs.REGISTRY.keys())))
-    import porerefiner.config
     click.echo("Configured jobs:")
     click.echo(yaml.dump(porerefiner.jobs.JOBS))
+    click.echo("Spawned jobs:")
+    [click.echo(yaml.dump(job)) for job in Job.select().dicts()]
 
 @_list.command(name='submitters')
 def _submitters():
@@ -143,7 +154,6 @@ def _submitters():
     import porerefiner.jobs
     click.echo("Installed submitters:")
     click.echo(yaml.dump(list(porerefiner.jobs.submitters.REGISTRY.keys())))
-    import porerefiner.config
     click.echo("Configured submitters:")
     click.echo(yaml.dump(porerefiner.jobs.submitters.SUBMITTERS))
 
@@ -153,7 +163,6 @@ def notifiers():
     import porerefiner.notifiers
     click.echo("Installed notifiers:")
     click.echo(yaml.dump(list(porerefiner.notifiers.REGISTRY.keys())))
-    import porerefiner.config
     click.echo("Configured notifiers:")
     click.echo(yaml.dump(porerefiner.notifiers.NOTIFIERS))
 

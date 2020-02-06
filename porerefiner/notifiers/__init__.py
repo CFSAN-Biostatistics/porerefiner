@@ -34,10 +34,6 @@ class Notifier(metaclass=_MetaRegistry):
     async def notify(self, run, state, message):
         raise NotImplementedError('Notifier not implemented.')
 
-    @classmethod
-    def to_yaml(cls): #TODO
-        pass
-
 
 
 NOTIFIERS = []

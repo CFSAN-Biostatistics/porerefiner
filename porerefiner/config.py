@@ -37,56 +37,9 @@ class Config:
 
         except OSError:
             log.warning(f'No config file at {config_file}, creating...')
-            from collections import defaultdict
-            tree = lambda: defaultdict(tree) #this is a trick for defining a recursive defaultdict
-            defaults = tree()
-
-            defaults['server']['socket'] = '/Users/justin.payne/.porerefiner/socket'
-            defaults['server']['use_ssl'] = False
-
-            if not client_only:
-                defaults['porerefiner']['log_level'] = logging.INFO
-                defaults['porerefiner']['run_polling_interval'] = 600
-                defaults['porerefiner']['job_polling_interval'] = 1800
-                defaults['database']['path'] = '/Users/justin.payne/.porerefiner/database.db'
-                defaults['database']['pragmas']['foreign_keys'] = 1
-                defaults['database']['pragmas']['journal_mode'] = 'wal'
-                defaults['database']['pragmas']['cache_size'] = 1000
-                defaults['database']['pragmas']['ignore_check_constraints'] = 0
-                defaults['database']['pragmas']['synchronous'] = 0
-                defaults['nanopore']['path'] = '/Users/justin.payne/nanop'
-                defaults['nanopore']['api'] = "localhost:9501"
-
-                defaults['notifiers'] = [{'class':'ToastNotifier', 'config':dict(name='Default notifier', max=3)}]
-
-                defaults['submitters'] = [{'class':'HpcSubmitter', 'config':dict(login_host="login1-raven2.fda.gov",
-                                                                                username="nanopore",
-                                                                                private_key_path=".ssh/id_rsa",
-                                                                                known_hosts_path=".ssh/known_hosts",
-                                                                                scheduler="uge",
-                                                                                queue="service.q"),
-                                            'jobs':[{'class':'GuppyJob', 'config':dict(num_cores=16)}]
-                                            },
-                                        {'class':'Epi2meSubmitter', 'config':dict(api_key=''),
-                                        'jobs':[{'class':'EpiJob', 'config':dict()}]
-                                        }
-                                        ]
 
 
-            def c(d):
-                "Recursively convert this defaultdict to a dict"
-                if isinstance(d, defaultdict):
-                    return {k:c(v) for k,v in d.items()}
-                else:
-                    return d
-
-            defaults = c(defaults)
-
-            # defaults['']['']
-            with open(config_file, 'w') as conf:
-                yaml.dump(defaults, conf)
-
-            self.config = defaults
+            self.config = self.new_config_file(config_file, client_only)
 
         except yaml.YAMLError as e:
             log.error(f"Couldn't read config file at {config_file}, error was:")
@@ -117,6 +70,61 @@ class Config:
                 clss = jobs.REGISTRY[job_config['class']]
                 log.info(f"Found job {clss.__name__}")
                 job = clss(submitter=submitter, **job_config['config'])
+
+
+    def new_config_file(self, config_file, client_only=False):
+        from collections import defaultdict
+        tree = lambda: defaultdict(tree) #this is a trick for defining a recursive defaultdict
+        defaults = tree()
+
+        defaults['server']['socket'] = Path.home() / '.porerefiner' / 'socket' # '/Users/justin.payne/.porerefiner/socket'
+        defaults['server']['use_ssl'] = False
+
+        if not client_only:
+            defaults['porerefiner']['log_level'] = logging.INFO
+            defaults['porerefiner']['run_polling_interval'] = 600
+            defaults['porerefiner']['job_polling_interval'] = 1800
+            defaults['database']['path'] = Path.home() / '.porerefiner' / 'database.db' # '/Users/justin.payne/.porerefiner/database.db'
+            defaults['database']['pragmas']['foreign_keys'] = 1
+            defaults['database']['pragmas']['journal_mode'] = 'wal'
+            defaults['database']['pragmas']['cache_size'] = 1000
+            defaults['database']['pragmas']['ignore_check_constraints'] = 0
+            defaults['database']['pragmas']['synchronous'] = 0
+            defaults['nanopore']['path'] = '/data'
+            defaults['nanopore']['api'] = "localhost:9501"
+
+            defaults['notifiers'] = [{'class':'ToastNotifier', 'config':dict(name='Default notifier', max=3)}]
+
+            defaults['submitters'] = [{'class':'HpcSubmitter', 'config':dict(login_host="login1-raven2.fda.gov",
+                                                                            username="nanopore",
+                                                                            private_key_path=".ssh/id_rsa",
+                                                                            known_hosts_path=".ssh/known_hosts",
+                                                                            scheduler="uge",
+                                                                            queue="service.q"),
+                                        'jobs':[{'class':'GuppyJob', 'config':dict(num_cores=16)}]
+                                        },
+                                    {'class':'Epi2meSubmitter', 'config':dict(api_key=''),
+                                    'jobs':[{'class':'EpiJob', 'config':dict()}]
+                                    }
+                                    ]
+
+
+        def c(d):
+            "Recursively convert this defaultdict to a dict"
+            if isinstance(d, defaultdict):
+                return {k:c(v) for k,v in d.items()}
+            elif isinstance(d, Path):
+                return str(d)
+            else:
+                return d
+
+        defaults = c(defaults)
+
+        # defaults['']['']
+        with open(config_file, 'w') as conf:
+            yaml.dump(defaults, conf)
+
+        return defaults
 
 #Jobs
 # log.info("Loading jobs...")

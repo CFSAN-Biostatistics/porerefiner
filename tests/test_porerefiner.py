@@ -51,8 +51,8 @@ class TestCoreFunctions(DBSetupTestCase):
 
     def setUp(self):
         super().setUp()
-        self.flow = flow = models.Flowcell.create(consumable_id="TEST|TEST|TEST", consumable_type="TEST|TEST|TEST", path="TEST/TEST/TEST")
-        self.run = models.Run.create(pk=RUN_PK, library_id='x', name=RUN_NAME, flowcell=flow, path="TEST/TEST/TEST")
+        # self.flow = flow = models.Flowcell.create(consumable_id="TEST|TEST|TEST", consumable_type="TEST|TEST|TEST", path="TEST/TEST/TEST")
+        self.run = models.Run.create(pk=RUN_PK, library_id='x', name=RUN_NAME, path="TEST/TEST/TEST")
         self.file = models.File.create(run=self.run, path='TEST/TEST/TEST/TEST', last_modified=datetime.now() - timedelta(hours=2))
 
 
@@ -90,7 +90,7 @@ class TestCoreFunctions(DBSetupTestCase):
         self.assertEqual(len(_run(rpc.list_runs(all=True))), 1)
 
     def test_list_runs_running(self):
-        models.Run.create(library_id='x', name=RUN_NAME, flowcell=self.flow, path="TEST/TEST/TEST", ended=datetime.now())
+        models.Run.create(library_id='x', name=RUN_NAME, path="TEST/TEST/TEST", ended=datetime.now())
         self.assertEqual(len(_run(rpc.list_runs())), 1)
 
     def test_list_runs_tags(self):
@@ -231,8 +231,8 @@ class TestPoreDispatchServer(TestCase):
     @given(ss=samplesheets())
     @with_database
     def test_attach_sheet_to_run(self, ss):
-        self.flow = flow = models.Flowcell.create(consumable_id="TEST|TEST|TEST", consumable_type="TEST|TEST|TEST", path="TEST/TEST/TEST")
-        self.run = models.Run.create(pk=RUN_PK, library_id='x', name=RUN_NAME, flowcell=flow, path="TEST/TEST/TEST")
+        # self.flow = flow = models.Flowcell.create(consumable_id="TEST|TEST|TEST", consumable_type="TEST|TEST|TEST", path="TEST/TEST/TEST")
+        self.run = models.Run.create(pk=RUN_PK, library_id='x', name=RUN_NAME, path="TEST/TEST/TEST")
         self.file = models.File.create(run=self.run, path='TEST/TEST/TEST/TEST', last_modified=datetime.now() - timedelta(hours=2))
         ut = rpc.PoreRefinerDispatchServer()
         strm = AsyncMock()

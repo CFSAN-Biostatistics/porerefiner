@@ -16,7 +16,7 @@ from hachiko.hachiko import AIOEventHandler, AIOWatchdog
 from itertools import chain
 from peewee import JOIN
 from porerefiner import models
-from porerefiner.models import Flowcell, Run, Qa, File, Job, SampleSheet, Sample, Tag, TagJunction
+from porerefiner.models import Run, Qa, File, Job, SampleSheet, Sample, Tag, TagJunction
 from porerefiner.cli_utils import relativize_path as r, absolutize_path as a, json_formatter
 from porerefiner.jobs import poll_jobs, REGISTRY, JOBS
 from os.path import split, getmtime
@@ -46,8 +46,8 @@ def make_run_msg(run):
         library_id=run.library_id,
         status=run.status,
         path=a(run.path),
-        flowcell_type=run.flowcell.consumable_type,
-        flowcell_id=run.flowcell.consumable_id,
+        # flowcell_type=run.flowcell.consumable_type,
+        # flowcell_id=run.flowcell.consumable_id,
         basecalling_model=run.basecalling_model,
         sequencing_kit=run.sample_sheet.sequencing_kit,
         samples=[
@@ -63,8 +63,8 @@ def make_run_msg(run):
                     files=[
                     RunMessage.File(name=file.name,
                             path=a(file.path),
-                            size=0,
-                            ready=False,
+                            size=file.path.stat().st_size,
+                            ready=datetime.now() - file.last_modified > timedelta(hours=1),
                             hash=file.checksum,
                             tags=[tag.name for tag in file.tags])
                     for file in sample.files],
@@ -74,8 +74,8 @@ def make_run_msg(run):
         files=[
             RunMessage.File(name=file.name,
                 path=a(file.path),
-                size=0,
-                ready=False,
+                size=file.path.stat().st_size,
+                ready=datetime.now() - file.last_modified > timedelta(hours=1),
                 hash=file.checksum,
                 tags=[tag.name for tag in file.tags])
         for file in run.files],
@@ -122,10 +122,13 @@ class PoreRefinerDispatchServer(PoreRefinerBase):
     async def AttachSheetToRun(self, stream: 'grpclib.server.Stream[porerefiner_pb2.RunAttachRequest, porerefiner_pb2.RunAttachResponse]') -> None:
         request = await stream.recv_message()
         log.debug("API call: Attach sample sheet")
+        run = None
         try:
             run = get_run(request.id or request.name)
         except ValueError: #no run
-            run = None
+            query = Run.get_unannotated_runs()
+            if query.count() == 1:
+                run = next(query)
         ss = SampleSheet.new_sheet_from_message(request.sheet, run)
         await stream.send_message(GenericResponse())
         log.debug("Response sent")

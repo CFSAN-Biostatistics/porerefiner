@@ -4,6 +4,7 @@ import click
 import csv
 import datetime
 import json
+import sys
 from pathlib import Path
 from contextlib import contextmanager
 from functools import wraps, partial
@@ -14,6 +15,7 @@ from grpclib.client import Channel, GRPCError
 
 from tabulate import tabulate
 from xml.etree import ElementTree as xml
+from xml.dom import minidom
 from sys import stderr
 
 from porerefiner.protocols.porerefiner.rpc.porerefiner_grpc import PoreRefinerStub
@@ -112,6 +114,12 @@ def hr_formatter(extend=False):
                                 user=sample.user,
                                 files=len(sample.files),
                                 tags=",".join(sample.tags)))
+            for file in run.files:
+                rec.append(dict(id='-',
+                                name=file.name,
+                                path=file.path,
+                                status=('UNREADY', 'READY')[file.ready],
+                                tags=",".join(file.tags)))
     yield print_run
     print(tabulate(rec, headers="keys"))
 
@@ -134,12 +142,61 @@ def json_formatter(extend=False):
     click.echo(json.dumps(rec, cls=MessageAwareEncoder, indent=2))
 
 @contextmanager
-def xml_formatter(extend=False):
-    rec = []
+def xml_formatter(extend=False): #TODO
+    rec = xml.Element('root')
     def print_run(run):
-        rec.append(run)
+        r = xml.SubElement(rec, 'run')
+        xml.SubElement(r, 'id').text = str(run.id)
+        xml.SubElement(r, 'name').text = run.name
+        xml.SubElement(r, 'nickname').text = run.mnemonic_name
+        xml.SubElement(r, 'status').text = run.status
+        xml.SubElement(r, 'path').text = run.path
+        xml.SubElement(r, 'basecallingModel').text = run.basecalling_model
+
+        s = xml.SubElement(r, 'samples')
+        for sample in run.samples:
+            sa = xml.SubElement(s, 'sample')
+            xml.SubElement(sa, 'id').text = str(sample.id)
+            xml.SubElement(sa, 'name').text = sample.name
+            xml.SubElement(sa, 'accession').text = sample.accession
+            xml.SubElement(sa, 'barcodeId').text = sample.barcode_id
+            xml.SubElement(sa, 'organism').text = sample.organism
+            xml.SubElement(sa, 'comment').text = sample.comment
+            xml.SubElement(sa, 'user').text = sample.user
+            f = xml.SubElement(sa, 'files')
+            for file in sample.files:
+                fi = xml.SubElement(f, 'file')
+                xml.SubElement(fi, 'name').text = file.name
+                xml.SubElement(fi, 'path').text = file.path
+                xml.SubElement(fi, 'status').text = ('UNREADY', 'READY')[file.ready]
+                xml.SubElement(fi, 'hash').text = file.hash
+                t = xml.SubElement(fi, 'tags')
+                for tag in file.tags:
+                    xml.SubElement(t, 'tag').text = tag
+            t = xml.SubElement(sa, 'tags')
+            for tag in sample.tags:
+                xml.SubElement(t, 'tag').text = tag
+
+
+        f = xml.SubElement(r, 'files')
+        for file in run.files:
+            fi = xml.SubElement(f, 'file')
+            xml.SubElement(fi, 'name').text = file.name
+            xml.SubElement(fi, 'path').text = file.path
+            xml.SubElement(fi, 'status').text = ('UNREADY', 'READY')[file.ready]
+            xml.SubElement(fi, 'hash').text = file.hash
+            t = xml.SubElement(fi, 'tags')
+            for tag in file.tags:
+                xml.SubElement(t, 'tag').text = tag
+
+        t = xml.SubElement(r, 'tags')
+        for tag in run.tags:
+            xml.SubElement(t, 'tag').text = tag
+
     yield print_run
-    click.echo(xml.toString())
+    pretty = minidom.parseString(xml.tostring(rec, 'utf-8'))
+    click.echo(pretty.toprettyxml(indent='  '))
+    #xml.ElementTree(rec).write(sys.stdout, encoding='unicode', xml_declaration=True)
 
 
 # We should do sample sheet parsing on the client side

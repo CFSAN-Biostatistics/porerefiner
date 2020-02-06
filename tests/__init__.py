@@ -7,6 +7,7 @@
 #safe_paths = lambda: fspaths().filter(lambda x: isinstance(x, str) or hasattr(x, '__fspath__'))
 
 import asyncio
+import tempfile
 
 from unittest import TestCase
 
@@ -41,6 +42,17 @@ def paths(draw, under="", min_deep=2, pathlib_only=False):
     if pathlib_only:
         return draw(p)
     return draw(one_of(p, p.map(str)))
+
+@composite
+def files(draw, real=False):
+    if real:
+        path = builds(Path, builds(lambda: tempfile.NamedTemporaryFile().name))
+    else:
+        path = paths(pathlib_only=True)
+    return draw(builds(models.File,
+                       pk=sql_ints(),
+                       path=path))
+
 
 @composite
 def samples(draw):
@@ -80,14 +92,16 @@ def samplesheets(draw):
 def flowcells(draw, path=None):
     pk  = sql_ints()
     cid = text()
+    cname = text()
     cty = text()
     if not path:
-        pat = paths()
+        pat = paths(min_deep=2, under="/data")
     else:
         pat = just(Path(path))
     return draw(builds(models.Flowcell,
                        #pk=pk,
                        consumable_id=cid,
+                       consumable_name=cname,
                        consumable_type=cty,
                        path=pat))
 
@@ -100,7 +114,7 @@ def runs(draw, sheet=True):
     path = draw(paths(pathlib_only=True))
     return draw(builds(models.Run,
                        #pk=sql_ints(),
-                       flowcell=flowcells(path=path.parent),
+                       # flowcell=flowcells(path=path.parent),
                        _sample_sheets=ss,
                        name=text(),
                        library_id=text(),

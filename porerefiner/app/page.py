@@ -8,11 +8,6 @@ import subprocess
 
 from os import environ
 
-@app.route('/')
-def index(): #TODO - make a webpage
-    "Home view"
-    pass
-
 async def list_run_runner():
     config = current_app.config['config_file']
     with server(config) as serv:
@@ -26,6 +21,7 @@ def list_runs():
 def form():
     return render_template('submit.html', runs=list_runs(), hostname=current_app.config['host'])
 
+@app.route('/')
 @app.route('/view')
 def runs():
     return render_template('view.html', runs=list_runs(), hostname=current_app.config['host'])

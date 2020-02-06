@@ -25,14 +25,7 @@ def attach_to_run(run_id=None):
     resp = run(attach_runner(run_id, message))
     return json.dumps({'success':True}), 200, {'ContentType':'application/json'}
 
-# @app.route('/api/runs/<int:run_id>/send', methods=['POST'])
-# def send_run(run_id, dest): #TODO
-#     "Schedule a run to be sent via Rsync to the dest"
-#     pass
 
-# @app.route('/api/runs/<int:run_id>', methods=['GET', 'POST', 'DELETE'])
-# def run_control(run_id): #TODO
-#     pass
 
 @app.route('/api/runs/<int:run_id>')
 def get_run(run_id):

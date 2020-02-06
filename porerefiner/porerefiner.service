@@ -8,8 +8,9 @@ Type=simple
 User=porerefiner
 Group=porerefiner
 WorkingDirectory=/home/porerefiner
-ExecStart=python3 -m porerefiner.porerefiner start
+ExecStart=python3 -m porerefiner.porerefiner start --config $POREREFINER_CONFIG
 Restart=on-failure
+Environment=PYTHONUNBUFFERED=1
 
 [Install]
 WantedBy=user.target

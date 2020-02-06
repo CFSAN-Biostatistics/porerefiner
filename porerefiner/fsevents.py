@@ -5,6 +5,7 @@ import daemon
 import datetime
 import json
 import logging
+import subprocess
 import sys
 import watchdog
 
@@ -16,7 +17,7 @@ from hachiko.hachiko import AIOEventHandler, AIOWatchdog
 from itertools import chain
 from peewee import JOIN
 from porerefiner import models
-from porerefiner.models import Flowcell, Run, Qa, File, Job, SampleSheet, Sample, Tag, TagJunction
+from porerefiner.models import Run, Qa, File, Job, SampleSheet, Sample, Tag, TagJunction
 from porerefiner.cli_utils import relativize_path as r, absolutize_path as a, json_formatter
 from porerefiner.jobs import poll_jobs, REGISTRY, JOBS
 from os.path import split, getmtime
@@ -46,7 +47,7 @@ async def register_new_flowcell(flow, nanopore_api=None):
 
 async def register_new_run(run, nanopore_api=None):
     "Hook for new runs"
-    log.info(f"Registering run {run.name}")
+    log.critical(f"Registering run {run.name}")
     if nanopore_api:
         pass
 
@@ -110,7 +111,7 @@ async def end_run(run):
     run.status = 'DONE'
     run.save()
     run.tag('finished')
-    log.info(f"Run {run.alt_name} ended, no file modifications in the past hour")
+    log.critical(f"Run {run.alt_name} ended, no file modifications in the past hour")
     for notifier in NOTIFIERS:
         log.info(f"Firing notifier {notifier.name}")
         await notifier.notify(run, None, "Run finished")
@@ -121,6 +122,15 @@ async def end_run(run):
 async def end_file(file):
     "Put file in closed state"
     log.info(f"No recent modifications to {file.path}, scheduling analysis.")
+    try:
+        proc = await asyncio.create_subprocess_shell(f'md5sum {file.path}', stdout=subprocess.PIPE)
+        await proc.wait()
+        return_val = await proc.stdout.readline()
+        hash_val = return_val.split(b' ')[0]
+        file.hash = hash_val
+        file.save()
+    except (subprocess.CalledProcessError, ValueError) as e:
+        log.error(e)
     for job in JOBS.FILES:
         log.info(f"Scheduling job {type(job).__name__} on {file.path}")
         file.spawn(job)
@@ -145,12 +155,16 @@ class PoreRefinerFSEventHandler(AIOEventHandler):
 
         RULES: we're watching the nanopore output directory configured by config.
 
-        A folder created under the output directory is a FLOWCELL.
+        A folder created under the output directory is an EXPERIMENT.
 
-        A folder created under a flowcell is a RUN.
+        A folder created under an experiment is a SAMPLE. We're ignoring both of these because the semantics don't map.
+
+        A folder created under a SAMPLE is a RUN. This, we care about.
 
         A FILE created anywhere beneath a RUN directory is a file that is part of that run,
         as long as '_porerefiner' isn't part of the path.
+
+        [EXPERIMENT_ID]/[SAMPLE_ID]/[START_TIME]_[DEVICE_ID]_[FLOWCELL_ID]_[SHORT_PROTOCOL_RUN_ID]
 
 
         """
@@ -158,21 +172,34 @@ class PoreRefinerFSEventHandler(AIOEventHandler):
         if '_porerefiner' not in str(event.src_path): #may need to exclude analysis results we create ourselves
             path = Path(event.src_path)
             rel = path.relative_to(self.path)
-            if len(rel.parts) >= 1:
-                rel_flow_path, *_ = rel.parts
-                flow_path = self.path / Path(rel_flow_path)
-                flow, new = Flowcell.get_or_create(path=r(flow_path), consumable_id=rel_flow_path)
+            # if len(rel.parts) >= 1: # not doing flowcells anymore
+            #     rel_flow_path, *_ = rel.parts
+            #     flow_path = self.path / Path(rel_flow_path)
+            #     flow, new = Flowcell.get_or_create(path=r(flow_path), consumable_id=rel_flow_path)
+            #     if new:
+            #         await register_new_flowcell(flow)
+            if len(rel.parts) >= 3:
+                exp, sam, rel_run_path, *_ = rel.parts
+                run_path = self.path / Path(exp) / Path(sam) / Path(rel_run_path)
+                run, new = Run.get_or_create(path=r(run_path), name=rel_run_path)
                 if new:
-                    await register_new_flowcell(flow)
-            if len(rel.parts) >= 2:
-                _, rel_run_path, *_ = rel.parts
-                run_path = self.path / Path(rel_flow_path) / Path(rel_run_path)
-                run, new = Run.get_or_create(flowcell=flow, path=r(run_path), name=rel_run_path)
-                if new:
+                    run.tag(exp)
+                    run.tag(sam)
                     await register_new_run(run)
-            if len(rel.parts) >=3 and not event.is_directory: #there's a file
-                log.info(f"Registering new file {path} in {run.name}")
-                File.create(run=run, path=path)
+                    try:
+                        st, dev_id, fc_id, prot_id = rel_run_path.split('_')
+                        run.flowcell = fc_id
+                        run.tag(st)
+                        run.tag(dev_id)
+                        run.tag(prot_id)
+                        run.save()
+                    except ValueError:
+                        pass
+            if len(rel.parts) >=4 and not event.is_directory: #there's a file
+                log.critical(f"Registering new file {path} in {run.name}")
+                f = File.create(run=run, path=path)
+                f.tag(rel.parent.name)
+                f.save()
 
 
 
@@ -206,6 +233,7 @@ async def start_fs_watchdog(path, *a, **k):
 async def in_progress_run_update(*args, **kwargs):
     "On server start, update all in-progress run files with last modified date."
     for run in Run.select().where(Run.status == 'RUNNING'):
+        log.critical(f"Checking in-progress run {run.name} for modifications")
         for file in run.all_files:
             file.last_modified = datetime.fromtimestamp(getmtime(a(file.path)))
             file.save()
@@ -216,9 +244,9 @@ async def start_run_end_polling(run_polling_interval, *a, **k):
     "Coro to bring up the run termination polling"
     log.critical(f"Starting run polling...")
     async def run_end_polling():
-        await asyncio.sleep(run_polling_interval) #poll every ten minutes
         run_num = await poll_active_run()
         log.info(f"{run_num} runs polled.")
+        await asyncio.sleep(run_polling_interval) #poll every ten minutes
         return asyncio.ensure_future(run_end_polling())
     return asyncio.ensure_future(run_end_polling())
 
@@ -226,7 +254,7 @@ async def start_job_polling(job_polling_interval, *a, **k):
     log.critical(f'Starting job polling...')
     async def run_job_polling():
         po, su, co = await poll_jobs()
-        log.critical(f'{po} jobs polled, {su} submitted, {co} collected.')
+        log.info(f'{po} jobs polled, {su} submitted, {co} collected.')
         await asyncio.sleep(job_polling_interval) #poll every 30 minutes
         return asyncio.ensure_future(run_job_polling())
     return asyncio.ensure_future(run_job_polling())

@@ -54,7 +54,7 @@ def ps(config, output_format, extend, all=False, tags=[]):
 @click.option('-j', '--json', 'output_format', flag_value=json_formatter, help='Output in JSON.')
 @click.option('-x', '--xml', 'output_format', flag_value=xml_formatter, help='Output in schemaless XML.')
 @click.argument('run_id', type=VALID_RUN_ID)
-def info(config, output_format, run_id):
+def info(output_format, run_id, config=default_config()):
     "Return information about a run, historical or in progress."
     async def info_runner(formatter):
         with server(config) as serv:
@@ -136,13 +136,13 @@ def load(config, samplesheet, run_id=None):
     else:
         async def load_runner(run_id, message):
             with server(config) as serv:
-                if not run_id: #TODO
-                    # find first unassociated run
-                    run_id = 1
+                # if not run_id: #TODO
+                #     # find first unassociated run
+                #     run_id = 1
                 req = RunAttachRequest(sheet=message)
                 if isinstance(run_id, int):
                     req.id = run_id
-                else:
+                elif run_id:
                     req.name = run_id
                 resp = await serv.AttachSheetToRun(req)
                 if resp.error:

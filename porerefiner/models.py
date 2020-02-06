@@ -56,13 +56,13 @@ class Tag(BaseModel):
 
 class PathField(Field):
 
-    field_type = 'blob'
+    field_type = 'varchar'
 
     def db_value(self, value):
         if hasattr(value, '__fspath__'):
             value = str(value)
         if isinstance(value, bytes):
-            value = value.decode(sys.getfilesystemencoding(), 'surrogateescape')
+            value = str(value.decode(sys.getfilesystemencoding(), 'surrogateescape'))
         return value
 
     def python_value(self, value):
@@ -71,7 +71,7 @@ class PathField(Field):
 
 class JobField(Field):
 
-    field_type = 'varchar'
+    field_type = 'blob'
 
     def db_value(self, value):
         from porerefiner.jobs import AbstractJob
@@ -90,14 +90,15 @@ def create_readable_name():
     "Docker-style random name from namesgenerator"
     return namesgenerator.get_random_name()
 
-class Flowcell(PorerefinerModel):
-    "A flowcell is the disposable part of the sequencer"
+# class Flowcell(PorerefinerModel):
+#     "A flowcell is the disposable part of the sequencer"
 
-    pk = AutoField()
+#     pk = AutoField()
 
-    consumable_id = CharField(null=False)
-    consumable_type = CharField(null=True)
-    path = PathField(index=True)
+#     consumable_id = CharField(null=False)
+#     consumable_name = CharField(null=False)
+#     consumable_type = CharField(null=True)
+#     path = PathField(index=True)
 
 class Run(PorerefinerModel):
     "A run is an annotated collection of files being produced"
@@ -107,7 +108,8 @@ class Run(PorerefinerModel):
 
     pk = AutoField()
 
-    flowcell = ForeignKeyField(Flowcell, backref='runs')
+    # flowcell = ForeignKeyField(Flowcell, backref='runs')
+    flowcell = CharField(null=True)
     _sample_sheet = DeferredForeignKey('SampleSheet', null=True, backref='runs')
 
     name = CharField()
@@ -195,7 +197,7 @@ class Job(PorerefinerModel):
     job_id = TextField(null=True)
     job_state = JobField(null=True)
     status = StatusField(default='QUEUED')
-    datadir = PathField()
+    datadir = PathField(null=False)
     outputdir = PathField(null=True)
     run = ForeignKeyField(Run, null=True, backref='jobs')
     file = DeferredForeignKey('File', null=True, backref='jobs')
@@ -210,6 +212,11 @@ class Job(PorerefinerModel):
                     .join(JobFileJunction)
                     .join(Job)
                     .where(Job.pk == self.pk))
+
+    def tag(self, tag):
+        ta, _ = Tag.get_or_create(name=tag)
+        tj, _ = TagJunction.get_or_create(tag=ta, job=self)
+        return ta
 
 class JobFileJunction(BaseModel):
     pk = AutoField()
@@ -306,6 +313,11 @@ class Sample(PorerefinerModel):
                    .join(TagJunction)
                    .where(TagJunction.sample == self))
 
+    def tag(self, tag):
+        ta, _ = Tag.get_or_create(name=tag)
+        tj, _ = TagJunction.get_or_create(tag=ta, sample=self)
+        return ta
+
 
 
 class File(PorerefinerModel):
@@ -334,10 +346,15 @@ class File(PorerefinerModel):
         JobFileJunction.create(job=job, file=self)
         return job
 
+    def tag(self, tag):
+        ta, _ = Tag.get_or_create(name=tag)
+        tj, _ = TagJunction.get_or_create(tag=ta, file=self)
+        return ta
+
 
 class TagJunction(BaseModel):
     tag = ForeignKeyField(Tag, backref='junctions')
-    flowcell = ForeignKeyField(Flowcell, null=True, backref='tag_junctions')
+    # flowcell = ForeignKeyField(Flowcell, null=True, backref='tag_junctions')
     run = ForeignKeyField(Run, null=True, backref='tag_junctions')
     qa = ForeignKeyField(Qa, null=True, backref='tag_junctions')
     job = ForeignKeyField(Job, null=True, backref='tag_junctions')
@@ -353,4 +370,4 @@ class TagJunction(BaseModel):
     #             return cls.create
 
 
-REGISTRY = [Tag, Flowcell, Run, Qa, Job, SampleSheet, Sample, File, TagJunction]
+REGISTRY = [Tag, Run, Qa, Job, SampleSheet, Sample, File, TagJunction]
