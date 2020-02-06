@@ -70,13 +70,13 @@ setup(
     zip_safe=False,
 )
 
-from pathlib import Path
-from shutil import copy
+# from pathlib import Path
+# from shutil import copy
 
-installdir = Path(__file__).parent
+# installdir = Path(__file__).parent
 
-copy(installdir / 'porerefiner' / 'porerefiner.service',
-     Path.home() / '.config' / 'systemd' / 'user.control' / 'porerefiner.service')
+# copy(installdir / 'porerefiner' / 'porerefiner.service',
+#      Path.home() / '.config' / 'systemd' / 'user.control' / 'porerefiner.service')
 
-copy(installdir / 'porerefiner' / 'porerefiner.app.service',
-     Path.home() / '.config' / 'systemd' / 'user.control' / 'porerefiner.app.service')
+# copy(installdir / 'porerefiner' / 'porerefiner.app.service',
+#      Path.home() / '.config' / 'systemd' / 'user.control' / 'porerefiner.app.service')
