@@ -120,7 +120,7 @@ class Config:
 
         defaults = c(defaults)
 
-        makedirs(config_file.parent)
+        makedirs(config_file.parent, exist_ok=True)
 
         # defaults['']['']
         with open(config_file, 'w') as conf:
