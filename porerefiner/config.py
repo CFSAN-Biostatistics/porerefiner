@@ -1,6 +1,6 @@
 import yaml
 from pathlib import Path
-from os import environ
+from os import environ, makedirs
 import logging
 
 #from porerefiner.notifiers import REGISTRY, NOTIFIERS
@@ -119,6 +119,8 @@ class Config:
                 return d
 
         defaults = c(defaults)
+
+        makedirs(config_file.parent)
 
         # defaults['']['']
         with open(config_file, 'w') as conf:
