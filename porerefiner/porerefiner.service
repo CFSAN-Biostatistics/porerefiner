@@ -8,10 +8,11 @@ Type=simple
 # User=porerefiner
 # Group=porerefiner
 # WorkingDirectory=/home/porerefiner
-ExecStart=/usr/bin/python3.7 -m porerefiner.porerefiner start --config $POREREFINER_CONFIG
+ExecStart=/usr/bin/python3.7 -m porerefiner.porerefiner -v start --config $POREREFINER_CONFIG
 ExecStop=/bin/kill -s QUIT $MAINPID
 Restart=on-failure
 Environment=PYTHONUNBUFFERED=1
+Environment=POREREFINER_CONFIG=$HOME/.porerefiner/config.yaml
 
 [Install]
 WantedBy=user.target

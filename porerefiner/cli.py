@@ -6,12 +6,20 @@ import click
 
 from asyncio import run
 from pathlib import Path
+from functools import wraps
 
 from porerefiner.cli_utils import VALID_RUN_ID, server, hr_formatter, json_formatter, xml_formatter, handle_connection_errors, load_from_csv, load_from_excel
 from porerefiner.protocols.porerefiner.rpc.porerefiner_pb2 import RunRequest, RunListRequest, RunAttachRequest, RunRsyncRequest, TagRequest
 
 default_config = lambda: os.environ.get('POREREFINER_CONFIG', Path.home() / '.porerefiner' / 'config.yaml')
 with_config = click.option('--config', default=default_config, help='Path to PoreRefiner config')
+
+def coroutine(func):
+    "Coroutine runner"
+    @wraps(func)
+    def wrapper(*a, **k):
+        return run(func(*a, **k))
+    return wrapper
 
 @click.group()
 def cli():
@@ -28,25 +36,14 @@ def cli():
 @click.option('-x', '--xml', 'output_format', flag_value=xml_formatter, help='Output in schemaless XML.')
 @click.option('-t', '--tag', 'tags', multiple=True)
 @click.option('-e', '--extended', 'extend', default=False, is_flag=True, help="Extended output format.")
-def ps(config, output_format, extend, all=False, tags=[]):
+@coroutine
+async def ps(config, output_format, extend, all=False, tags=[]):
     "Show runs in progress, or every tracked run (--all), or with a particular tag (--tag)."
-    async def ps_runner(formatter):
-        with server(config) as serv:
+    with server(config) as serv:
+        with output_format(extend) as formatter:
             resp = await serv.GetRuns(RunListRequest(all=all, tags=tags))
             for run in resp.runs.runs:
                 formatter(run)
-    with output_format(extend) as formatter:
-        run(ps_runner(formatter=formatter))
-
-
-
-
-# @cli.command()
-# @click.argument('run', type=VALID_RUN_ID)
-# @click.confirmation_option("Are you sure you want to delete the run?")
-# def rm(run):
-#     "Remove a run and recover hard drive space."
-#     pass
 
 @cli.command()
 @handle_connection_errors
@@ -54,10 +51,11 @@ def ps(config, output_format, extend, all=False, tags=[]):
 @click.option('-j', '--json', 'output_format', flag_value=json_formatter, help='Output in JSON.')
 @click.option('-x', '--xml', 'output_format', flag_value=xml_formatter, help='Output in schemaless XML.')
 @click.argument('run_id', type=VALID_RUN_ID)
-def info(output_format, run_id, config=default_config()):
+@coroutine
+async def info(output_format, run_id, config=default_config()):
     "Return information about a run, historical or in progress."
-    async def info_runner(formatter):
-        with server(config) as serv:
+    with server(config) as serv:
+        with output_format(extend=True) as formatter:
             req = RunRequest()
             if isinstance(run_id, str):
                 req.name = run_id
@@ -69,8 +67,6 @@ def info(output_format, run_id, config=default_config()):
                 quit(1)
             else:
                 formatter(resp.run)
-    with output_format(extend=True) as formatter:
-        run(info_runner(formatter))
 
 @cli.command()
 def template():
@@ -103,7 +99,7 @@ async def tag_runner(config, run_id, tags=[], untag=False):
 @click.argument('tag', type=click.STRING, nargs=-1)
 def tag(config, run_id, tag=[]):
     "Add one or more tags to a run."
-    run(tag_runner(config, run_id, tag, False))
+    run(tag_runner(config, run_id, tag))
 
 
 @cli.command()
@@ -113,14 +109,15 @@ def tag(config, run_id, tag=[]):
 @click.argument('tag', type=click.STRING, nargs=-1)
 def untag(config, run_id, tag=[]):
     "Remove one or more tags from a run."
-    run(tag_runner(config, run_id, tag, True))
+    run(tag_runner(config, run_id, tag, untag=True))
 
 @cli.command()
 @handle_connection_errors
 @with_config
 @click.argument('samplesheet', type=click.File('rb'))
 @click.option('-r', '--run', 'run_id', type=VALID_RUN_ID, )
-def load(config, samplesheet, run_id=None):
+@coroutine
+async def load(config, samplesheet, run_id=None):
     "Load a sample sheet to be attached to a run, or to the next run that is started."
     try:
         if 'csv' in samplesheet.name:
@@ -129,33 +126,22 @@ def load(config, samplesheet, run_id=None):
             ss = load_from_csv(samplesheet, delimiter='\t')
         elif 'xls' in samplesheet.name:
             ss = load_from_excel(samplesheet)
-    except TypeError:
-        click.echo("ERROR: File in bad format or has missing fields.", err=True)
+    except TypeError as e:
+        click.echo(e, err=True)
     except ImportError:
         click.echo(f"ERROR: OpenPyXL not installed; Excel files ({samplesheet.name}) can't be read. Use pip to install OpenPyXL.", err=True)
     else:
-        async def load_runner(run_id, message):
-            with server(config) as serv:
-                # if not run_id: #TODO
-                #     # find first unassociated run
-                #     run_id = 1
-                req = RunAttachRequest(sheet=message)
-                if isinstance(run_id, int):
-                    req.id = run_id
-                elif run_id:
-                    req.name = run_id
-                resp = await serv.AttachSheetToRun(req)
-                if resp.error:
-                    click.echo(resp.error.err_message, err=True)
-                    quit(1)
-        run(load_runner(run_id, ss))
+        with server(config) as serv:
+            req = RunAttachRequest(sheet=ss)
+            if isinstance(run_id, int):
+                req.id = run_id
+            elif run_id:
+                req.name = run_id
+            resp = await serv.AttachSheetToRun(req)
+            if resp.error:
+                click.echo(resp.error.err_message, err=True)
+                quit(1)
 
-
-
-# @cli.command()
-# def proto():
-#     "Append to the notifiers section of the config a default config for a new notifier."
-#     pass
 
 
 if __name__ == "__main__":

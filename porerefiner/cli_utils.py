@@ -218,15 +218,22 @@ def load_from_excel(file) -> SampleSheet:
     import openpyxl
     ss = SampleSheet()
     book = openpyxl.load_workbook(file)
-    rows = iter(book.rows)
+    rows = (tuple(c.value for c in row) for row in book.worksheets[0].iter_rows())
     _, ss.porerefiner_ver, *_ = next(rows)
     if ss.porerefiner_ver == '1.0.0':
         ss.date.GetCurrentTime()
         _, ss.library_id, *_ = next(rows)
         _, ss.sequencing_kit, *_ = next(rows)
-        next(rows)
-        for sample_id, accession, barcode_id, organism, extraction_kit, comment, user in rows:
-            ss.samples.add(sample_id, accession, barcode_id, organism, extraction_kit, comment, user)
+        next(rows) # ditch the header
+        for sample_id, accession, barcode_id, organism, extraction_kit, comment, user, *_ in rows:
+            ss.samples.add(sample_id=sample_id,
+                           accession=accession,
+                           barcode_id=str(barcode_id),
+                           organism=organism,
+                           extraction_kit=extraction_kit,
+                           comment=comment,
+                           user=user)
+        #[ss.samples.add(*(cell.value for cell in row[:6])) for row in rows]
 
     else:
         raise ValueError(f"Sample sheet of version {ss.porerefiner_ver} not supported.")

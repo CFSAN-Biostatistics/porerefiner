@@ -123,7 +123,7 @@ def database(config):
         Path(porerefiner.config.Config(config).config['database']['path']).unlink()
 
 @reset.command()
-def samplesheets():
+def samplesheets(): #TODO
     "Clear samplesheets that aren't attached to any run."
     click.echo("clear sheets")
 
