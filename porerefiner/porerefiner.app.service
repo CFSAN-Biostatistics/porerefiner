@@ -11,7 +11,7 @@ Type=notify
 # another option for an even more restricted service is
 # DynamicUser=yes
 # see http://0pointer.net/blog/dynamic-users-with-systemd.html
-RuntimeDirectory=gunicorn
+# RuntimeDirectory=gunicorn
 # WorkingDirectory=/home/porerefiner/applicationroot
 ExecStart=/usr/bin/gunicorn applicationname.wsgi
 ExecStop=/bin/kill -s QUIT $MAINPID

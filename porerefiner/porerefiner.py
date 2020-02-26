@@ -7,6 +7,7 @@ import daemon
 import datetime
 import json
 import logging
+import setproctitle
 import sys, os
 import yaml
 
@@ -20,9 +21,6 @@ from porerefiner.rpc import start_server
 from porerefiner.fsevents import start_fs_watchdog, start_run_end_polling, start_job_polling, in_progress_run_update
 
 log = logging.getLogger('porerefiner.service')
-
-
-
 
 
 async def serve(config_file, db_path=None, db_pragmas=None, wdog_settings=None, server_settings=None, system_settings=None):
@@ -71,6 +69,7 @@ def init(config, nanopore_dir=None):
 @click.option('-d', '--daemonize', 'demonize', is_flag=True, default=False)
 def start(config, demonize=False):
     "Start the PoreRefiner service."
+    setproctitle.setproctitle("porerefiner")
     log = logging.getLogger('porerefiner')
     if demonize:
         log.info("Starting daemon...")

@@ -23,7 +23,8 @@ requirements = ['Click>=7.0',
                 'protobuf>=3.10.0',
                 'grpclib>=0.3.0',
                 'tabulate>=0.8.5',
-                'asyncssh>=2.0.1'
+                'asyncssh>=2.0.1',
+                'setproctitle>=1.1.10'
                 ]
 
 setup_requirements = [ ]
