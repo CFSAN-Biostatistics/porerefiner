@@ -14,6 +14,7 @@ import yaml
 from asyncio import run, gather, wait
 from porerefiner import models
 from porerefiner.models import Job, Run
+import porerefiner.cli_utils as cli_utils
 import porerefiner.jobs.submitters as submitters
 from pathlib import Path
 
@@ -44,7 +45,13 @@ async def serve(config_file, db_path=None, db_pragmas=None, wdog_settings=None, 
     finally:
         log.critical("Shutting down...")
 
-default_config = lambda: os.environ.get('POREREFINER_CONFIG', Path.home() / '.porerefiner' / 'config.yaml')
+default_config = lambda: os.environ.get('POREREFINER_CONFIG', lambda: Path.home() / '.porerefiner' / 'config.yaml')
+
+config = click.option('--config',
+                      prompt=('path to config file', False)['POREREFINER_CONFIG' in os.environ],
+                      default=default_config(),
+                      show_envvar=True,
+                      type=cli_utils.PathPath())
 
 
 @click.group()
@@ -52,20 +59,23 @@ default_config = lambda: os.environ.get('POREREFINER_CONFIG', Path.home() / '.po
 def cli(verbose):
     logging.basicConfig(stream=sys.stdout,
                         style='{',
-                        format=("{asctime} {name}:{message}","{asctime} {levelname} {name}:{message} ({module} {lineno})")[verbose],
+                        format="{levelname} {module}:{message}",
                         level=(logging.ERROR, logging.INFO)[verbose])
 
 @cli.command()
-@click.option('--config', prompt='path to config file', default = default_config)
+@config
 @click.option('--nanopore_dir')
 def init(config, nanopore_dir=None):
     "Find the Nanopore output directory and create the config file."
-    if click.prompt(f"create PoreRefiner config at {config}? y/n"):
+    if config.exists():
+        if click.confirm(f"delete existing config file at {config}?"):
+            config.unlink()
+    if click.confirm(f"create PoreRefiner config at {config}?"):
         from porerefiner.config import Config
-        Config(config).new_config_file(config)
+        Config.new_config_file(config)
 
 @cli.command()
-@click.option('--config', prompt='path to config file', default = default_config)
+@config
 @click.option('-d', '--daemonize', 'demonize', is_flag=True, default=False)
 def start(config, demonize=False):
     "Start the PoreRefiner service."
@@ -96,7 +106,7 @@ def jobs(status):
 @reset.command()
 @click.argument('status', default="RUNNING", type=click.Choice([v for v, _ in Run.statuses], case_sensitive=True))
 @click.option('--run', 'run_name', default=None)
-@click.option('--config', prompt='path to config file', default = default_config)
+@config
 def runs(status, config, run_name=None):
     "Reset all runs to in-progress status."
     from porerefiner.config import Config
@@ -114,7 +124,7 @@ def runs(status, config, run_name=None):
             click.echo(f'Runs set to {status}.')
 
 @reset.command()
-@click.option('--config', prompt='path to config file', default = default_config)
+@config
 def database(config):
     "Reset database to empty state."
     if click.confirm("This will delete the porerefiner database. Are you sure?"):
@@ -127,7 +137,7 @@ def samplesheets(): #TODO
     click.echo("clear sheets")
 
 @cli.group(name="list")
-@click.option('--config', prompt='path to config file', default = default_config)
+@config
 def _list(config):
     "List job system stuff."
     from porerefiner.config import Config

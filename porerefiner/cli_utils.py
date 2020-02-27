@@ -61,6 +61,12 @@ class ValidRunID(click.ParamType):
 
 VALID_RUN_ID = ValidRunID()
 
+class PathPath(click.Path):
+
+    def convert(self, value, param, ctx):
+        val = super().convert(value, param, ctx)
+        return Path(val)
+
 
 def handle_connection_errors(func):
     @wraps(func)

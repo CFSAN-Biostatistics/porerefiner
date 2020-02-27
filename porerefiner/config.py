@@ -39,7 +39,7 @@ class Config:
             log.warning(f'No config file at {config_file}, creating...')
 
 
-            self.config = self.new_config_file(config_file, client_only)
+            self.config = Config.new_config_file(config_file, client_only)
 
         except yaml.YAMLError as e:
             log.error(f"Couldn't read config file at {config_file}, error was:")
@@ -71,8 +71,8 @@ class Config:
                 log.info(f"Found job {clss.__name__}")
                 job = clss(submitter=submitter, **job_config['config'])
 
-
-    def new_config_file(self, config_file, client_only=False):
+    @staticmethod
+    def new_config_file(config_file, client_only=False, nanopore_path='/data'):
         from collections import defaultdict
         tree = lambda: defaultdict(tree) #this is a trick for defining a recursive defaultdict
         defaults = tree()
@@ -90,10 +90,14 @@ class Config:
             defaults['database']['pragmas']['cache_size'] = 1000
             defaults['database']['pragmas']['ignore_check_constraints'] = 0
             defaults['database']['pragmas']['synchronous'] = 0
-            defaults['nanopore']['path'] = '/data'
+            defaults['nanopore']['path'] = nanopore_path
             defaults['nanopore']['api'] = "localhost:9501"
 
-            defaults['notifiers'] = [{'class':'ToastNotifier', 'config':dict(name='Default notifier', max=3)}]
+            try:
+                from pynotifier import Notification
+                defaults['notifiers'] = [{'class':'ToastNotifier', 'config':dict(name='Default notifier', max=3)}]
+            except ImportError: # pynotifier not installed, so no need to create a Toast notifier
+                pass
 
 # {'class':'HpcSubmitter', 'config':dict(login_host="login1-raven2.fda.gov",
 #                                                                             username="nanopore",
