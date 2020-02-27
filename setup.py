@@ -54,6 +54,7 @@ setup(
     entry_points={
         'console_scripts': [
             'prfr=porerefiner.cli:cli',
+            'porerefiner=porerefiner.porerefiner:cli'
         ],
     },
     install_requires=requirements,
