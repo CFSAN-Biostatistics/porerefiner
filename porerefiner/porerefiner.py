@@ -86,7 +86,7 @@ def start(config, demonize=False):
         with daemon.DaemonContext():
             run(serve(config))
     else:
-        log.info("Starting server...")
+        log.info("Starting server, ctl-C to stop.")
         run(serve(config))
     return 0
 
