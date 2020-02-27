@@ -1,10 +1,11 @@
 [Unit]
 Description=gunicorn daemon
-Requires=gunicorn.socket
+Requires=porerefiner.app.socket
 After=porerefiner.service
 
 [Service]
 Type=notify
+SyslogIdentifier=porerefiner.app
 # the specific user that our service will run as
 # User=porerefiner
 # Group=porerefiner
@@ -13,7 +14,7 @@ Type=notify
 # see http://0pointer.net/blog/dynamic-users-with-systemd.html
 # RuntimeDirectory=gunicorn
 # WorkingDirectory=/home/porerefiner/applicationroot
-ExecStart=/usr/bin/gunicorn applicationname.wsgi
+ExecStart=/usr/bin/env gunicorn porerefiner.app
 ExecStop=/bin/kill -s QUIT $MAINPID
 ExecReload=/bin/kill -s HUP $MAINPID
 KillMode=mixed

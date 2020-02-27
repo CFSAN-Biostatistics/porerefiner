@@ -4,6 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
+SyslogIdentifier=porerefiner
 # Another Type: forking
 # User=porerefiner
 # Group=porerefiner
