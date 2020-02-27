@@ -95,18 +95,19 @@ class Config:
 
             defaults['notifiers'] = [{'class':'ToastNotifier', 'config':dict(name='Default notifier', max=3)}]
 
-            defaults['submitters'] = [{'class':'HpcSubmitter', 'config':dict(login_host="login1-raven2.fda.gov",
-                                                                            username="nanopore",
-                                                                            private_key_path=".ssh/id_rsa",
-                                                                            known_hosts_path=".ssh/known_hosts",
-                                                                            scheduler="uge",
-                                                                            queue="service.q"),
-                                        'jobs':[{'class':'GuppyJob', 'config':dict(num_cores=16)}]
-                                        },
-                                    {'class':'Epi2meSubmitter', 'config':dict(api_key=''),
-                                    'jobs':[{'class':'EpiJob', 'config':dict()}]
-                                    }
-                                    ]
+# {'class':'HpcSubmitter', 'config':dict(login_host="login1-raven2.fda.gov",
+#                                                                             username="nanopore",
+#                                                                             private_key_path=".ssh/id_rsa",
+#                                                                             known_hosts_path=".ssh/known_hosts",
+#                                                                             scheduler="uge",
+#                                                                             queue="service.q"),
+#                                         'jobs':[{'class':'GuppyJob', 'config':dict(num_cores=16)}]
+#                                         },
+#                                     {'class':'Epi2meSubmitter', 'config':dict(api_key=''),
+#                                     'jobs':[{'class':'EpiJob', 'config':dict()}]
+#                                     }
+
+            defaults['submitters'] = []
 
 
         def c(d):
