@@ -103,3 +103,4 @@ ENV/
 Pipfile
 *.lock
 config.yml
+config.yaml
