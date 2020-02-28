@@ -45,7 +45,11 @@ async def serve(config_file, db_path=None, db_pragmas=None, wdog_settings=None, 
     finally:
         log.critical("Shutting down...")
 
-default_config = lambda: os.environ.get('POREREFINER_CONFIG', lambda: Path.home() / '.porerefiner' / 'config.yaml')
+# bit of complexity here to handle different defaults for privileged vs normal users
+
+default_config = lambda: os.environ.get('POREREFINER_CONFIG',
+                                        lambda: (Path.home() / '.porerefiner' / 'config.yaml',
+                                                Path('/etc/porerefiner/config.yaml'))[os.geteuid == 0])
 
 config = click.option('--config',
                       prompt=('path to config file', False)['POREREFINER_CONFIG' in os.environ],
@@ -65,16 +69,19 @@ def cli(verbose):
 @cli.command()
 @config
 @click.option('--nanopore_dir')
-def init(config, nanopore_dir=None):
+@click.option('--client', '-c', 'client_only', is_flag=True)
+def init(config, nanopore_dir='/data', client_only=False):
     "Find the Nanopore output directory and create the config file."
     if config.exists():
         if click.confirm(f"delete existing config file at {config}?"):
             config.unlink()
     if click.confirm(f"create PoreRefiner config at {config}?"):
-        db_path = click.prompt(f"location of database?", default=config.parent() / 'database.db', show_default=True)
-        sock_path = click.prompt(f"location of porerefiner RPC socket?", default=config.parent() / 'porerefiner.sock', show_default=True)
+        sock_path = click.prompt(f"location of porerefiner RPC socket?", default=config.parent / 'porerefiner.sock', show_default=True)
+        if not client_only:
+            db_path = click.prompt(f"location of database?", default=config.parent / 'database.db', show_default=True)
+            nan_path = click.prompt("nanopore data output location?", default=nanopore_dir, show_default=True)
         from porerefiner.config import Config
-        Config.new_config_file(config, database_path=db_path, socket_path=sock_path)
+        Config.new_config_file(config, client_only=client_only, database_path=db_path, socket_path=sock_path)
         click.echo(f'''export POREREFINER_CONFIG="{config}"''')
 
 @cli.command()

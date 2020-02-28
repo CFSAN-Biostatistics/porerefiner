@@ -74,20 +74,20 @@ class Config:
     @staticmethod
     def new_config_file(config_file, client_only=False, nanopore_path='/data', database_path=False, socket_path=False):
 
-        porerefiner_dir = Path(config_file).parent()
+        porerefiner_dir = Path(config_file).parent
 
         from collections import defaultdict
         tree = lambda: defaultdict(tree) #this is a trick for defining a recursive defaultdict
         defaults = tree()
 
-        defaults['server']['socket'] = database_path or porerefiner_dir / 'socket' # '/Users/justin.payne/.porerefiner/socket'
+        defaults['server']['socket'] = socket_path or porerefiner_dir / 'socket' # '/Users/justin.payne/.porerefiner/socket'
         defaults['server']['use_ssl'] = False
 
         if not client_only:
             defaults['porerefiner']['log_level'] = logging.INFO
             defaults['porerefiner']['run_polling_interval'] = 600
             defaults['porerefiner']['job_polling_interval'] = 1800
-            defaults['database']['path'] = socket_path or porerefiner_dir / 'database.db' # '/Users/justin.payne/.porerefiner/database.db'
+            defaults['database']['path'] = database_path or porerefiner_dir / 'database.db' # '/Users/justin.payne/.porerefiner/database.db'
             defaults['database']['pragmas']['foreign_keys'] = 1
             defaults['database']['pragmas']['journal_mode'] = 'wal'
             defaults['database']['pragmas']['cache_size'] = 1000

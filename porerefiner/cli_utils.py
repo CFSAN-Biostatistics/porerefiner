@@ -76,6 +76,9 @@ def handle_connection_errors(func):
         except ConnectionRefusedError:
             print("ERROR: Connection to porerefiner service refused. Is the service running?", file=stderr)
             quit(61)
+        except FileNotFoundError as e:
+            print(f"ERROR: Socket file not found at configured path. Has the service ever been started?", file=stderr)
+            quit(e.errno)
     return wrapper
 
 
