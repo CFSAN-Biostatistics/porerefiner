@@ -71,8 +71,11 @@ def init(config, nanopore_dir=None):
         if click.confirm(f"delete existing config file at {config}?"):
             config.unlink()
     if click.confirm(f"create PoreRefiner config at {config}?"):
+        db_path = click.prompt(f"location of database?", default=config.parent() / 'database.db', show_default=True)
+        sock_path = click.prompt(f"location of porerefiner RPC socket?", default=config.parent() / 'porerefiner.sock', show_default=True)
         from porerefiner.config import Config
-        Config.new_config_file(config)
+        Config.new_config_file(config, database_path=db_path, socket_path=sock_path)
+        click.echo(f'''export POREREFINER_CONFIG="{config}"''')
 
 @cli.command()
 @config
