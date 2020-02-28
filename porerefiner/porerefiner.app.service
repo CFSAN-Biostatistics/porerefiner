@@ -1,25 +1,27 @@
 [Unit]
 Description=gunicorn daemon
-Requires=porerefiner.app.socket
+# Requires=porerefiner.app.socket
 After=porerefiner.service
 
 [Service]
 Type=notify
 SyslogIdentifier=porerefiner.app
 # the specific user that our service will run as
-# User=porerefiner
-# Group=porerefiner
+User=porerefiner
+Group=porerefiner
 # another option for an even more restricted service is
 # DynamicUser=yes
 # see http://0pointer.net/blog/dynamic-users-with-systemd.html
 # RuntimeDirectory=gunicorn
-# WorkingDirectory=/home/porerefiner/applicationroot
+WorkingDirectory=/home/porerefiner
 ExecStart=/usr/bin/env gunicorn porerefiner.app
 ExecStop=/bin/kill -s QUIT $MAINPID
 ExecReload=/bin/kill -s HUP $MAINPID
 KillMode=mixed
 TimeoutStopSec=5
 PrivateTmp=true
+Environment=PYTHONUNBUFFERED=1
+Environment=POREREFINER_CONFIG=$HOME/.porerefiner/config.yaml
 
 [Install]
 WantedBy=multi-user.target

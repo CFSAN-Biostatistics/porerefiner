@@ -6,9 +6,9 @@ After=network.target
 Type=simple
 SyslogIdentifier=porerefiner
 # Another Type: forking
-# User=porerefiner
-# Group=porerefiner
-# WorkingDirectory=/home/porerefiner
+User=porerefiner
+Group=porerefiner
+WorkingDirectory=/home/porerefiner
 ExecStart=/usr/bin/env python3.7 -m porerefiner.porerefiner -v start --config $POREREFINER_CONFIG
 ExecStop=/bin/kill -s QUIT $MAINPID
 Restart=on-failure
