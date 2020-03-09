@@ -70,7 +70,7 @@ def cli(verbose):
 @config
 @click.option('--nanopore_dir')
 @click.option('--client', '-c', 'client_only', is_flag=True)
-def init(config, nanopore_dir='/data', client_only=False):
+def init(config, nanopore_dir='/var/lib/minknow/data', client_only=False):
     "Find the Nanopore output directory and create the config file."
     if config.exists():
         if click.confirm(f"delete existing config file at {config}?"):

@@ -37,8 +37,15 @@ PoreRefiner is available as a Python package:
 
     pip install porerefiner
 
+Copy the files ``porerefiner.service`` and ``porerefiner.app.service`` from the package to your project directory. Once the package is installed, ``porerefinerd`` and ``prfr`` should be on your path. You can use ``porerefinerd init`` to set up the config file for the porerefiner service, it will prompt you for the save locations of the database, the local socket, nanopore's output directory, and where the config file should be saved.
+
+
+
 Using this software
 -------------------
+
+``prfr`` is the end-user client; Minion users should use this tool to monitor runs in progress, load sample sheets, and tag runs and samples.
+
 ::
 
     $ prfr --help
@@ -65,7 +72,7 @@ When the PoreRefiner service is stopped, it has a number of administrative funct
 
 ::
 
-    $ python -m porerefiner.porerefiner --help
+    $ porerefinerd --help
     Usage: porerefiner.py [OPTIONS] COMMAND [ARGS]...
 
     Options:
@@ -80,7 +87,7 @@ When the PoreRefiner service is stopped, it has a number of administrative funct
 
 ::
 
-    $ python -m porerefiner.porerefiner init --help
+    $ porerefinerd init --help
     Usage: porerefiner.py init [OPTIONS]
 
     Find the Nanopore output directory and create the config file.
@@ -92,7 +99,7 @@ When the PoreRefiner service is stopped, it has a number of administrative funct
 
 ::
 
-    $ python -m porerefiner.porerefiner list --help
+    $ porerefinerd list --help
     Usage: porerefiner.py list [OPTIONS] COMMAND [ARGS]...
 
     List job system stuff.
@@ -107,7 +114,7 @@ When the PoreRefiner service is stopped, it has a number of administrative funct
 
 ::
 
-    $ python -m porerefiner.porerefiner reset --help
+    $ porerefinerd reset --help
     Usage: porerefiner.py reset [OPTIONS] COMMAND [ARGS]...
 
     Utility function to reset various state.
@@ -124,7 +131,7 @@ When the PoreRefiner service is stopped, it has a number of administrative funct
 
 ::
 
-    $ python -m porerefiner.porerefiner verify --help
+    $ porerefinerd verify --help
     Usage: porerefiner.py verify [OPTIONS] COMMAND [ARGS]...
 
     Run various checks.
