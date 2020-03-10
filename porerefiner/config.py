@@ -10,6 +10,15 @@ import porerefiner.jobs.submitters as submitters
 
 # config_file = Path(environ.get('POREREFINER_CONFIG', '/Users/justin.payne/.porerefiner/config.yml'))
 
+def c(d):
+    "Recursively convert this defaultdict to a dict"
+    if isinstance(d, defaultdict):
+        return {k:c(v) for k,v in d.items()}
+    elif isinstance(d, Path):
+        return str(d)
+    else:
+        return d
+
 
 class Config:
 
@@ -117,14 +126,7 @@ class Config:
             defaults['submitters'] = []
 
 
-        def c(d):
-            "Recursively convert this defaultdict to a dict"
-            if isinstance(d, defaultdict):
-                return {k:c(v) for k,v in d.items()}
-            elif isinstance(d, Path):
-                return str(d)
-            else:
-                return d
+
 
         defaults = c(defaults)
 
