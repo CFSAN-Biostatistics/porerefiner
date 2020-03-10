@@ -14,7 +14,7 @@ Group=porerefiner
 # see http://0pointer.net/blog/dynamic-users-with-systemd.html
 # RuntimeDirectory=gunicorn
 WorkingDirectory=/home/porerefiner
-ExecStart=/usr/bin/env gunicorn porerefiner.app
+ExecStart=/usr/bin/env gunicorn porerefiner.app:app
 ExecStop=/bin/kill -s QUIT $MAINPID
 ExecReload=/bin/kill -s HUP $MAINPID
 KillMode=mixed

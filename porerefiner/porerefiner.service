@@ -9,11 +9,11 @@ SyslogIdentifier=porerefiner
 User=porerefiner
 Group=porerefiner
 WorkingDirectory=/home/porerefiner
-ExecStart=/usr/bin/env python3.7 -m porerefiner.porerefiner -v start --config $POREREFINER_CONFIG
+ExecStart=/usr/local/bin/porerefinerd -v start --config $POREREFINER_CONFIG
 ExecStop=/bin/kill -s QUIT $MAINPID
 Restart=on-failure
 Environment=PYTHONUNBUFFERED=1
-Environment=POREREFINER_CONFIG=$HOME/.porerefiner/config.yaml
+Environment=POREREFINER_CONFIG=/etc/porerefiner/config.yaml
 
 [Install]
 WantedBy=user.target
