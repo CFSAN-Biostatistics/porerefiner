@@ -79,7 +79,14 @@ To the end of the ``config.yaml`` (section ``submitters``) add:
           import_ready_recipients:
           - justin.payne@fda.hhs.gov
 
-This configures PoreRefiner for the FDA Raven integration.
+This configures PoreRefiner for the FDA Raven integration. Then you can start the porerefiner services:
+
+::
+
+    systemctl start porerefiner.service
+    systemctl start porerefiner.app.service
+
+If you wish to enable the PoreRefiner web interface, you should ensure that port 8844 is reachable from remote hosts.
 
 Using this software
 -------------------
