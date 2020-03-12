@@ -32,7 +32,7 @@ setup_requirements = [ ]
 
 test_requirements = [ 'hypothesis>=4.57.1',
                       'hypothesis-fspaths>=0.1',
-                      'asyncmock>=0.4.1',
+                      'Mock>=4.0.0',
                       'aiounittest>=1.3.0']
 
 setup(
@@ -63,8 +63,8 @@ setup(
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
-    url='https://github.com/crashfrog/porerefiner',
-    version='0.8.0',
+    url='https://github.com/CFSAN-Biostatistics/porerefiner',
+    version='0.8.2',
     zip_safe=False,
 )
 

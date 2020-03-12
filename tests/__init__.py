@@ -128,7 +128,7 @@ def runs(draw, sheet=True):
 Event = namedtuple('Event', ('src_path', 'is_directory'))
 
 @composite
-def fsevents(draw, min_deep=3):
+def fsevents(draw, min_deep=4):
     return draw(builds(Event,
                        src_path=paths(min_deep=min_deep, pathlib_only=True),
                        is_directory=booleans()))

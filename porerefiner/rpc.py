@@ -49,7 +49,7 @@ def make_run_msg(run):
         # flowcell_type=run.flowcell.consumable_type,
         # flowcell_id=run.flowcell.consumable_id,
         basecalling_model=run.basecalling_model,
-        sequencing_kit=run.sample_sheet.sequencing_kit,
+        sequencing_kit=run.sample_sheet.barcoding_kit,
         samples=[
             RunMessage.Sample(id=sample.pk,
                     name=sample.sample_id,

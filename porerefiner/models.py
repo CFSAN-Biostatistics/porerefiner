@@ -226,10 +226,12 @@ class JobFileJunction(BaseModel):
 class SampleSheet(PorerefinerModel):
     "A samplesheet is a particular file, eventually attached to a run"
 
-    BARCODES = [('SQK-16S024','16S Barcoding Kit 1-24'),
-                ('EXP-NBD104','Native Barcoding Expansion 1-12'),
+    BARCODES = [('SQK-16S024','16S Barcoding Kit 1-24 SQK-16S024'),
+                ('EXP-NBD104','Native Barcoding Expansion 1-12 EXP-NBD104'),
+                ('EXP-NBD114','Native Barcoding Expansion 13-24 EXP-NBD114'),
+                ('EXP-NBD104+EXP-NBD114','Native Barcoding Expansions 1-12 and 13-24 EXP-NBD104+EXP-NBD114'),
+                ('SQK-LSK109', 'Ligation Sequencing Kit, no barcodes SQK-LSK109'),
                 # ('EXP-NBD103',''),
-                # ('EXP-NBD114',''),
                 # ('EXP-PBC001',''),
                 # ('EXP-PBC096',''),
                 # ('SQK-LWB001',''),
@@ -241,15 +243,15 @@ class SampleSheet(PorerefinerModel):
                 # ('VSK-VMK001',''),
                 # ('VSK-VMK002',''),
                 # ('SQK-RLB001',''),
-                ('SQK-RBK004','Rapid Barcoding Kit'),
-                ('SQK-RPB004','Rapid PCR Barcoding Kit')]
+                ('SQK-RBK004','Rapid Barcoding Kit SQK-RBK004'),
+                ('SQK-RPB004','Rapid PCR Barcoding Kit SQK-RPB004')]
 
 
     pk = AutoField()
     # path = PathField(index=True)
     # run = ForeignKeyField(Run, backref='_sample_sheet', unique=True, null=True)
     date = DateField(null=True, default=datetime.datetime.now())
-    sequencing_kit = CharField(null=True)
+    # sequencing_kit = CharField(null=True)
     barcoding_kit = CharField(null=True, choices=BARCODES)
     library_id = CharField(null=True)
 
@@ -267,7 +269,7 @@ class SampleSheet(PorerefinerModel):
     @classmethod
     def new_sheet_from_message(cls, sheet, run=None, log=logging.getLogger('porerefiner.models')):
         ss = cls.create(date=sheet.date.ToDatetime(),
-                        sequencing_kit=sheet.sequencing_kit,
+                        barcoding_kit=sheet.sequencing_kit,
                         library_id=sheet.library_id)
         for sample in sheet.samples:
             Sample.create(sample_id=sample.sample_id,

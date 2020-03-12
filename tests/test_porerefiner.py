@@ -6,7 +6,7 @@
 from unittest import TestCase, skip
 from unittest.mock import Mock, patch
 #from unittest.mock import AsyncMock
-from asyncmock import AsyncMock
+from mock import AsyncMock
 from aiounittest import async_test
 
 from click.testing import CliRunner
@@ -23,7 +23,7 @@ from shutil import rmtree
 
 from os.path import split
 
-from tempfile import mkdtemp, mktemp
+from tempfile import mktemp, mkdtemp, mkstemp, TemporaryDirectory, NamedTemporaryFile
 
 from hypothesis import given
 import hypothesis.strategies as strat
@@ -52,8 +52,15 @@ class TestCoreFunctions(DBSetupTestCase):
     def setUp(self):
         super().setUp()
         # self.flow = flow = models.Flowcell.create(consumable_id="TEST|TEST|TEST", consumable_type="TEST|TEST|TEST", path="TEST/TEST/TEST")
-        self.run = models.Run.create(pk=RUN_PK, library_id='x', name=RUN_NAME, path="TEST/TEST/TEST")
-        self.file = models.File.create(run=self.run, path='TEST/TEST/TEST/TEST', last_modified=datetime.now() - timedelta(hours=2))
+        self._tempdir = t = TemporaryDirectory()
+        self._testdir = t = pathlib.Path(t.name)
+        self.run = r = models.Run.create(pk=RUN_PK, library_id='x', name=RUN_NAME, path=t)
+        _, t = mkstemp(dir=t)
+        self.file = f = models.File.create(run=r, path=pathlib.Path(t), last_modified=datetime.now() - timedelta(hours=2))
+
+    def tearDown(self):
+        self._tempdir.cleanup()
+
 
 
     def test_get_run(self):

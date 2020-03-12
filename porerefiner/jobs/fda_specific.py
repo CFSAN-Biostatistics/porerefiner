@@ -39,6 +39,7 @@ class FdaRunJob(RunJob):
     "Boutique class to handle our own in-house nanopore integration."
 
     command: str
+    platform: str
     closure_status_recipients: List[str] = field(default_factory=list)
     import_ready_recipients: List[str] = field(default_factory=list)
 
@@ -46,10 +47,11 @@ class FdaRunJob(RunJob):
     def setup(self, run, datadir, remotedir):
         samplesh = dict(porerefiner_ver="1.0.0",
                         library_id=run.samplesheet.library_id,
-                        dna_kit=None,
-                        sequencing_kit=run.samplesheet.sequencing_kit,
+                        barcode_kit=run.samplesheet.barcoding_kit[0].split('+'),
+                        sequencing_kit=run.samplesheet.barcoding_kit[1],
                         flowcell=run.flowcell.consumable_id,
                         sequencer=os.environ['HOSTNAME'],
+                        sequencer_type=self.platform,
                         relative_location=run.path,
                         run_month=run.started.month,
                         run_year=run.started.year,
@@ -62,7 +64,8 @@ class FdaRunJob(RunJob):
                                       organism=sample.organism,
                                       extraction_kit=sample.extraction_kit,
                                       comment=sample.comment,
-                                      user=sample.user) for sample in run.samples])
+                                      user=sample.user) for sample in run.samples],
+                        )
         ss_dir = datadir / "samplesheet.json"
         with open(ss_dir, 'w') as ss_json:
             json.dump(samplesh, ss_json)

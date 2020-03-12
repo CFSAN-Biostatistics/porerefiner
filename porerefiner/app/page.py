@@ -37,7 +37,7 @@ def view_run(run_id):
 @app.route('/template')
 def template():
     return """porerefiner_ver,1.0.0
-library_id,
+pool_id,
 sequencing_kit,
 sample_id,accession,barcode_id,organism,extraction_kit,comment,user
 """, 200, {'Content-Type':'text/csv'}

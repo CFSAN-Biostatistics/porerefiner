@@ -1,4 +1,5 @@
 import yaml
+from collections import defaultdict
 from pathlib import Path
 from os import environ, makedirs
 import logging
@@ -85,7 +86,7 @@ class Config:
 
         porerefiner_dir = Path(config_file).parent
 
-        from collections import defaultdict
+
         tree = lambda: defaultdict(tree) #this is a trick for defining a recursive defaultdict
         defaults = tree()
 

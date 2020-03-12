@@ -74,6 +74,7 @@ To the end of the ``config.yaml`` (section ``submitters``) add:
       - class: FdaRunJob
         config:
           command: module load nanopore-lims/0.1.0 && nanopore_HPC {remote_json} &
+          platform: GridION sequence
           closure_status_recipients:
           - justin.payne@fda.hhs.gov
           import_ready_recipients:

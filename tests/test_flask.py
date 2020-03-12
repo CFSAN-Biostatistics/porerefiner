@@ -1,6 +1,6 @@
 from unittest import TestCase, skip
 from unittest.mock import patch, Mock, MagicMock
-from asyncmock import AsyncMock
+from mock import AsyncMock
 
 from tests import paths, with_database, TestBase
 
