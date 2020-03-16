@@ -16,9 +16,11 @@ from porerefiner.protocols.porerefiner.rpc.porerefiner_pb2 import RunRequest, Ru
 def default_config():
     path = Path(os.environ.get('POREREFINER_CONFIG', Path.home() / '.porerefiner' / 'config.yaml'))
     if not path.exists():
-        from porerefiner.config import Config
-        socket_path = click.prompt('path to porerefiner server socket?', default=Path('/etc/porerefiner/porerefiner.sock'), show_default=True)
-        Config.new_config_file(path, client_only=True, socket_path=socket_path)
+        path = Path("/etc/porerefiner/config.yaml")
+        if not path.exists():
+            from porerefiner.config import Config
+            socket_path = click.prompt('path to porerefiner server socket?', default=Path('/etc/porerefiner/porerefiner.sock'), show_default=True)
+            Config.new_config_file(path, client_only=True, socket_path=socket_path)
     return path
 
 
