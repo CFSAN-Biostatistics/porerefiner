@@ -104,3 +104,6 @@ Pipfile
 *.lock
 config.yml
 config.yaml
+docs
+debian
+config.yaml

@@ -1,10 +1,10 @@
 
-
+from dataclasses import dataclass
 from porerefiner.jobs.submitters import Submitter
 from asyncio import subprocess
 
 
-
+@dataclass
 class LocalSubmitter(Submitter):
 
     async def test_noop(self):

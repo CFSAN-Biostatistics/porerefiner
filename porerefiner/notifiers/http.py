@@ -1,14 +1,16 @@
 import asyncio
 import aiohttp
 import logging
+from dataclasses import dataclass
 
 log = logging.getLogger('porerefiner.http_notifier')
 
 from porerefiner.notifiers import Notifier
 
+@dataclass
 class HttpCallbackNotifier(Notifier):
 
-    sample_name = "http://sample.url/api/"
+    sample_name: str = "http://sample.url/api/"
 
 
     async def notify(self, run, state, message): #TODO
