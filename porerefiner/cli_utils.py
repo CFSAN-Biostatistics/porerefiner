@@ -7,8 +7,11 @@ import json
 import sys
 from pathlib import Path
 from contextlib import contextmanager
+from collections import defaultdict
+from dataclasses import MISSING
 from functools import wraps, partial
 from io import TextIOWrapper
+from typing import List
 
 
 from grpclib.client import Channel, GRPCError
@@ -261,3 +264,47 @@ def load_from_excel(file) -> SampleSheet:
 
     return ss
 
+class Email:
+    pass
+
+class Url:
+    pass
+
+class PathStr:
+    pass
+
+
+def render_dataclass(the_class):
+    "Inspect dataclass fields and print some helpful text"
+    sample_values = defaultdict(lambda: "<some_value>")
+    sample_values.update({str:'"some string"',
+                          int:"123",
+                          float:"123.45",
+                          dict:"{key1:val1, key2:val2}",
+                          Email:"eee@mail.net",
+                          Url:"http://server.serv/path",
+                          PathStr:"path/to/some/file",
+                          List[str]:"[<string>,...]",
+                          List[Email]:"[aaa@mail.net, bbb@mail.net, ...]",
+                          List[int]:"[<integer>,...]",
+                          List[Url]:"[http://server.co, http://serv.cc, ...]",
+                          List[PathStr]:"[path/aaa, path/bbb, ...]"})
+    nw = max([len(field.name) for field in the_class.__dataclass_fields__.values()])
+    tw = max([len(str(field.type)) for field in the_class.__dataclass_fields__.values() if field.name is not 'submitter'])
+    options = f"{'param_name':<{nw}}\t{'type':<{tw}}\texample"
+    for field in the_class.__dataclass_fields__.values():
+        if field.name is not 'submitter':
+            name = f"{field.name:<{nw}}"
+            _type = f"{str(field.type):<{tw}}"
+            example = (str(field.default), sample_values[field.type])[type(field.default) is not MISSING]
+            options += f"\n\t{name}\t{_type}\t{example}"
+    # options += "\n\t".join([f"{field.name:<{nw}}\t{str(field.type):<{tw}}\t{sample_values[field.type]}" for field in the_class.__dataclass_fields__.values() if field.name is not 'submitter'])
+    return f"""
+classname: {the_class.__name__}
+
+{the_class.__doc__}
+
+configurable options:
+
+\t{options}
+"""

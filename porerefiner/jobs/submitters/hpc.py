@@ -4,13 +4,14 @@ from pathlib import Path
 from typing import Union
 
 
-from porerefiner.jobs.submitters import Submitter
+from porerefiner.jobs.submitters import Submitter, Url, Email, Path
 
 import asyncio
 import subprocess
 
 @dataclass
 class HpcSubmitter(Submitter):
+    "Job submitter for interfacing with HPC resources."
 
     login_host: str
     username: str

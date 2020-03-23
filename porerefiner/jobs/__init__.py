@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from .submitters import Submitter
 from porerefiner.models import Job, File, Run
+from porerefiner.cli_utils import render_dataclass, Email, Url, PathStr
 from pathlib import Path
 from typing import Union, Tuple
 
@@ -67,6 +68,11 @@ class RegisteringABCMeta(ABCMeta, _MetaRegistry):
 @dataclass
 class AbstractJob(metaclass=RegisteringABCMeta):
     submitter: Submitter
+
+    @classmethod
+    def get_configurable_options(cls):
+        "Enumerate configurable options and value type as a guide to configuration."
+        return render_dataclass(cls)
 
 
 class FileJob(AbstractJob):

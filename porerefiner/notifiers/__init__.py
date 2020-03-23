@@ -2,6 +2,11 @@ import asyncio
 import pkgutil
 # from ..models import PorerefinerModel
 
+from porerefiner.models import Run
+from porerefiner.cli_utils import render_dataclass, Email, Url, PathStr
+
+from typing import Any
+
 # states = PorerefinerModel.statuses
 
 REGISTRY = {}
@@ -25,14 +30,19 @@ class _MetaRegistry(type):
 
 
 class Notifier(metaclass=_MetaRegistry):
-    "Abstract base class for notifiers"
+    "Abstract, non-configurable base class for notifiers"
 
     def __init__(self, name, *args, **kwargs):
         super().__init__()
         self.name = name
 
-    async def notify(self, run, state, message):
+    async def notify(self, run: Run, state: Any, message: str):
         raise NotImplementedError('Notifier not implemented.')
+
+    @classmethod
+    def get_configurable_options(cls):
+        "Enumerate configurable options and value type as a guide to configuration."
+        return render_dataclass(cls)
 
 
 
