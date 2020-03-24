@@ -89,6 +89,56 @@ This configures PoreRefiner for the FDA Raven integration. Then you can start th
 
 If you wish to enable the PoreRefiner web interface, you should ensure that port 8844 is reachable from remote hosts.
 
+Writing Plugins
+---------------
+
+PoreRefiner has a plugin architecture; pip-installable Python packages can make themselves known to PoreRefiner using entry_points in ``setup.py``. The easiest way to write your own plugin notifiers, jobs, and submitters for PoreRefiner is to use the cookiecutter template:
+
+::
+
+    $ cookiecutter https://github.com/CFSAN-Biostatistics/new-porerefiner-plugin
+    project_name [My Porerefiner Plugin]:
+    project_slug [my_porerefiner_plugin]:
+    project_short_description [This is a plugin for Porerefiner, a tool for managining Nanopore sequencing.]:
+
+See the Cookiecutter docs: https://cookiecutter.readthedocs.io/en/1.7.0/
+
+Cookiecutter will create a full project repo and stub classes for your plugin. Open ``<project_slug>/<project_slug>/<project_slug>.py`` and you can fill in the method code blocks to implement the various functions of the necessary interfaces.
+
+Notifiers
+=========
+
+Notifiers are "fire and forget" handlers for "end-of-run" events; when an hour has elapsed since the last modification of a file in a run (or whatever idle time is configured in ``config.yaml``, the configured notifiers will be fired off with the run event. Out of the box, PoreRefiner comes with three notifiers - a notifier to send OS-based popup "toast" notifications (if ``pynotifier`` is installed), a notifier to make an HTTP request to a defined endpoint, and a notifier to send a message into an Amazon Web Services Simple Queue Service (SQS) queue. Notifiers differ from jobs in that they're assumed to run quickly/instantly and therefore they're executed synchronously. As a result a long-running notifier can hang the software. For tasks that can't execute quickly (copying files, etc), use a job.
+
+Jobs
+====
+
+Jobs are processes that are assumed to take longer to execute and thus should execute asynchronously. As a result the job handler interface is more complex, and jobs require submitters to execute to (described below.) Jobs can be triggered either on the idle timeout of an individual file, or of the entire run, simply by extending the appropriate superclass - `FileJob` and `RunJob`. The PoreRefiner software will dispatch the correct configured job type, collect any type of process or job ID that is returned, and periodically poll the job's submitter for completion status. A run's in-progress jobs can be viewed through the ``prfr`` tool.
+
+Submitters
+==========
+
+Submitters are the interface between jobs and the execution system. For instance, the ``HpcSubmitter`` knows how to use SSH to execute commands on a typical HPC using ``qsub``. PoreRefiner has an additional ``LocalSubmitter`` which simply runs commands locally, in a subprocess.
+
+Here's an example of a simple post-run workflow configuration using the generic file job and the local submitter:
+
+::
+    submitters:
+    - class: LocalSubmitter
+      jobs:
+      - class: GenericFileJob
+        config:
+          command: cp {file.path} /network/output/{run.name}/{file.name}
+
+More examples to come in the Porerefiner Config Cookbook:
+
+https://github.com/crashfrog/porerefiner-config-cookbook
+
+If you develop a useful or interesting config, please consider contributing it to the cookbook using a pull request.
+
+
+
+
 Using this software
 -------------------
 
