@@ -28,6 +28,11 @@ Introduction
 
 PoreRefiner is a software tool to watch Nanopore runs in progress and attach sample information to them, as well as provide an interface for integration with LIMS services and other online systems. It supports both push and pull modalities for data exchange with those systems - push, via a series of configurable notifiers, and pull, via a simple Flask webservice and a Protobuf RPC service. It also includes a command-line interface for working with the run database.
 
+What is it?
+-----------
+
+You install it on your GridION. It watches the data output directory and notes the creation and modification of sequencing output files. You can attach sample sheets to runs, for instance when you're multiplexing samples - the MinKnow software is agnostic to sample membership in libraries, so maybe you want something to keep track of that. Then when the run completes (is idle for a period of time) a series of configurable events are triggered. That's often pretty useful for, let's say, sending data to your LIMS or through some kind of biosurveillance pipeline.
+
 Installation
 ------------
 
