@@ -37,6 +37,14 @@ PoreRefiner is available as a Python package:
 
     pip install porerefiner
 
+Porerefiner can be started as a simple UNIX daemon:
+
+::
+
+    porerefinerd start --daemonize
+
+but also includes service unit files for administration via ``systemctl``.
+
 Copy the files ``porerefiner.service`` and ``porerefiner.app.service`` from the package to systemd:
 
 ::
@@ -57,30 +65,7 @@ Once the package is installed, ``porerefinerd`` and ``prfr`` should be on your p
     nanopore data output location?: /data
     export POREREFINER_CONFIG="/etc/porerefiner/config.yaml"
 
-To the end of the ``config.yaml`` (section ``submitters``) add:
-
-::
-
-    submitters:
-    - class: HpcSubmitter
-      config:
-        login_host: login1-raven2.fda.gov
-        username: nanopore
-        private_key_path: /root/.ssh/nanopore
-        known_hosts_path: /root/.ssh/known_hosts
-        scheduler: uge
-        queue: service.q
-      jobs:
-      - class: FdaRunJob
-        config:
-          command: module load nanopore-lims/0.1.0 && nanopore_HPC {remote_json} &
-          platform: GridION sequence
-          closure_status_recipients:
-          - justin.payne@fda.hhs.gov
-          import_ready_recipients:
-          - justin.payne@fda.hhs.gov
-
-This configures PoreRefiner for the FDA Raven integration. Then you can start the porerefiner services:
+Then you can start the porerefiner services:
 
 ::
 
@@ -162,11 +147,13 @@ Using this software
     template  Write a sample sheet template to STDOUT.
     untag     Remove one or more tags from a run.
 
+If the web service is enabled, users can also upload and attach sample sheets using the web interface.
+
 
 Administration
 --------------
 
-When the PoreRefiner service is stopped, it has a number of administrative functions:
+When the PoreRefiner service ``porerefinerd`` is stopped, it has a number of administrative functions:
 
 ::
 
