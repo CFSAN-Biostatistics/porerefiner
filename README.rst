@@ -54,8 +54,8 @@ Copy the files ``porerefiner.service`` and ``porerefiner.app.service`` from the 
 
 ::
 
-    cp /usr/local/lib/python3.7/dist-packages/porerefiner.service /lib/systemd/system
-    cp /usr/local/lib/python3.7/dist-packages/porerefiner.app.service /lib/systemd/system
+    cp /usr/local/lib/python3.7/dist-packages/porerefiner/porerefiner.service /lib/systemd/system
+    cp /usr/local/lib/python3.7/dist-packages/porerefiner/porerefiner.app.service /lib/systemd/system
     systemctl enable porerefiner.service
     systemctl enable porerefiner.app.service
 
