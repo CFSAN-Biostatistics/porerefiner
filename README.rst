@@ -108,6 +108,7 @@ Submitters are the interface between jobs and the execution system. For instance
 Here's an example of a simple post-run workflow configuration using the generic file job and the local submitter:
 
 ::
+
     submitters:
     - class: LocalSubmitter
       jobs:
