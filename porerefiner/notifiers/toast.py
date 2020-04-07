@@ -1,10 +1,12 @@
 import asyncio
 import logging
+from dataclasses import dataclass
 
 from porerefiner.notifiers import Notifier
 
 log = logging.getLogger('porerefiner.toast_notifier')
 
+@dataclass
 class ToastNotifier(Notifier): #TODO
     "Notifier that throws up an OS 'toast' on Windows, Ubuntu, and CentOS"
 

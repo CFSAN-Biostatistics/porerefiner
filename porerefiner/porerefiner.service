@@ -4,11 +4,11 @@ After=network.target
 
 [Service]
 Type=simple
-SyslogIdentifier=porerefiner
+SyslogIdentifier=porerefinerd
 # Another Type: forking
-User=porerefiner
-Group=porerefiner
-WorkingDirectory=/home/porerefiner
+# User=porerefiner
+# Group=porerefiner
+WorkingDirectory=/etc/porerefiner
 ExecStart=/usr/local/bin/porerefinerd -v start --config $POREREFINER_CONFIG
 ExecStop=/bin/kill -s QUIT $MAINPID
 Restart=on-failure

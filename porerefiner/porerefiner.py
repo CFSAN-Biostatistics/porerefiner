@@ -23,6 +23,16 @@ from porerefiner.fsevents import start_fs_watchdog, start_run_end_polling, start
 
 log = logging.getLogger('porerefiner.service')
 
+# Load plugins, if any
+
+import pkg_resources
+
+discovered_plugins = {
+    entry_point.name: entry_point.load()
+    for entry_point
+    in pkg_resources.iter_entry_points('porerefiner.plugins')
+}
+
 
 async def serve(config_file, db_path=None, db_pragmas=None, wdog_settings=None, server_settings=None, system_settings=None):
     "Initialize and gather coroutines"
@@ -99,6 +109,57 @@ def start(config, demonize=False):
         log.info("Starting server, ctl-C to stop.")
         run(serve(config))
     return 0
+
+
+@cli.group()
+def info():
+    "Get info about configurable event handlers - notifiers, submitters, and jobs."
+    pass
+
+@info.command()
+@click.argument('notifier', default=None, required=False)
+def notifiers(notifier=None):
+    "Notifiers that are installed and can be configured."
+    from porerefiner.notifiers import REGISTRY, Notifier
+    if not notifier:
+        for name, notifier in REGISTRY.items():
+            if notifier is not Notifier:
+                click.echo(name)
+    else:
+        try:
+            click.echo(REGISTRY[notifier].get_configurable_options())
+        except KeyError:
+            click.echo(f"Notifier '{notifier}'' not installed.", err=True)
+
+@info.command()
+@click.argument('submitter', default=None, required=False)
+def submitters(submitter=None):
+    "Job submitters that are installed and can be configured."
+    from porerefiner.jobs.submitters import REGISTRY, Submitter
+    if not submitter:
+        for name, submitter in REGISTRY.items():
+            if submitter is not Submitter:
+                click.echo(name)
+    else:
+        try:
+            click.echo(REGISTRY[submitter].get_configurable_options())
+        except KeyError:
+            click.echo(f"Notifier '{submitter}'' not installed.", err=True)
+
+@info.command()
+@click.argument('job', default=None, required=False)
+def jobs(job=None):
+    "Jobs that are installed and can be configured."
+    from porerefiner.jobs import REGISTRY, FileJob, RunJob, AbstractJob
+    if not job:
+        for name, job in REGISTRY.items():
+            if job is not FileJob and job is not RunJob and job is not AbstractJob:
+                print(name)
+    else:
+        try:
+            click.echo(REGISTRY[job].get_configurable_options())
+        except KeyError:
+            click.echo(f"Notifier '{job}'' not installed.", err=True)
 
 @cli.group()
 def reset():

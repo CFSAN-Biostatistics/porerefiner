@@ -28,6 +28,11 @@ Introduction
 
 PoreRefiner is a software tool to watch Nanopore runs in progress and attach sample information to them, as well as provide an interface for integration with LIMS services and other online systems. It supports both push and pull modalities for data exchange with those systems - push, via a series of configurable notifiers, and pull, via a simple Flask webservice and a Protobuf RPC service. It also includes a command-line interface for working with the run database.
 
+What is it?
+-----------
+
+You install it on your GridION. It watches the data output directory and notes the creation and modification of sequencing output files. You can attach sample sheets to runs, for instance when you're multiplexing samples - the MinKnow software is agnostic to sample membership in libraries, so maybe you want something to keep track of that. Then when the run completes (is idle for a period of time) a series of configurable events are triggered. That's often pretty useful for, let's say, sending data to your LIMS or through some kind of biosurveillance pipeline.
+
 Installation
 ------------
 
@@ -37,12 +42,20 @@ PoreRefiner is available as a Python package:
 
     pip install porerefiner
 
+Porerefiner can be started as a simple UNIX daemon:
+
+::
+
+    porerefinerd start --daemonize
+
+but also includes service unit files for administration via ``systemctl``.
+
 Copy the files ``porerefiner.service`` and ``porerefiner.app.service`` from the package to systemd:
 
 ::
 
-    cp /usr/local/lib/python3.7/dist-packages/porerefiner.service /lib/systemd/system
-    cp /usr/local/lib/python3.7/dist-packages/porerefiner.app.service /lib/systemd/system
+    cp /usr/local/lib/python3.7/dist-packages/porerefiner/porerefiner.service /lib/systemd/system
+    cp /usr/local/lib/python3.7/dist-packages/porerefiner/porerefiner.app.service /lib/systemd/system
     systemctl enable porerefiner.service
     systemctl enable porerefiner.app.service
 
@@ -57,30 +70,7 @@ Once the package is installed, ``porerefinerd`` and ``prfr`` should be on your p
     nanopore data output location?: /data
     export POREREFINER_CONFIG="/etc/porerefiner/config.yaml"
 
-To the end of the ``config.yaml`` (section ``submitters``) add:
-
-::
-
-    submitters:
-    - class: HpcSubmitter
-      config:
-        login_host: login1-raven2.fda.gov
-        username: nanopore
-        private_key_path: /root/.ssh/nanopore
-        known_hosts_path: /root/.ssh/known_hosts
-        scheduler: uge
-        queue: service.q
-      jobs:
-      - class: FdaRunJob
-        config:
-          command: module load nanopore-lims/0.1.0 && nanopore_HPC {remote_json} &
-          platform: GridION sequence
-          closure_status_recipients:
-          - justin.payne@fda.hhs.gov
-          import_ready_recipients:
-          - justin.payne@fda.hhs.gov
-
-This configures PoreRefiner for the FDA Raven integration. Then you can start the porerefiner services:
+Then you can start the porerefiner services:
 
 ::
 
@@ -88,6 +78,57 @@ This configures PoreRefiner for the FDA Raven integration. Then you can start th
     systemctl start porerefiner.app.service
 
 If you wish to enable the PoreRefiner web interface, you should ensure that port 8844 is reachable from remote hosts.
+
+Writing Plugins
+---------------
+
+PoreRefiner has a plugin architecture; pip-installable Python packages can make themselves known to PoreRefiner using entry_points in ``setup.py``. The easiest way to write your own plugin notifiers, jobs, and submitters for PoreRefiner is to use the cookiecutter template:
+
+::
+
+    $ cookiecutter https://github.com/CFSAN-Biostatistics/new-porerefiner-plugin
+    project_name [My Porerefiner Plugin]:
+    project_slug [my_porerefiner_plugin]:
+    project_short_description [This is a plugin for Porerefiner, a tool for managining Nanopore sequencing.]:
+
+See the Cookiecutter docs: https://cookiecutter.readthedocs.io/en/1.7.0/
+
+Cookiecutter will create a full project repo and stub classes for your plugin. Open ``<project_slug>/<project_slug>/<project_slug>.py`` and you can fill in the method code blocks to implement the various functions of the necessary interfaces.
+
+Notifiers
+=========
+
+Notifiers are "fire and forget" handlers for "end-of-run" events; when an hour has elapsed since the last modification of a file in a run (or whatever idle time is configured in ``config.yaml``, the configured notifiers will be fired off with the run event. Out of the box, PoreRefiner comes with three notifiers - a notifier to send OS-based popup "toast" notifications (if ``pynotifier`` is installed), a notifier to make an HTTP request to a defined endpoint, and a notifier to send a message into an Amazon Web Services Simple Queue Service (SQS) queue. Notifiers differ from jobs in that they're assumed to run quickly/instantly and therefore they're executed synchronously. As a result a long-running notifier can hang the software. For tasks that can't execute quickly (copying files, etc), use a job.
+
+Jobs
+====
+
+Jobs are processes that are assumed to take longer to execute and thus should execute asynchronously. As a result the job handler interface is more complex, and jobs require submitters to execute to (described below.) Jobs can be triggered either on the idle timeout of an individual file, or of the entire run, simply by extending the appropriate superclass - `FileJob` and `RunJob`. The PoreRefiner software will dispatch the correct configured job type, collect any type of process or job ID that is returned, and periodically poll the job's submitter for completion status. A run's in-progress jobs can be viewed through the ``prfr`` tool.
+
+Submitters
+==========
+
+Submitters are the interface between jobs and the execution system. For instance, the ``HpcSubmitter`` knows how to use SSH to execute commands on a typical HPC using ``qsub``. PoreRefiner has an additional ``LocalSubmitter`` which simply runs commands locally, in a subprocess.
+
+Here's an example of a simple post-run workflow configuration using the generic file job and the local submitter:
+
+::
+
+    submitters:
+    - class: LocalSubmitter
+      jobs:
+      - class: GenericFileJob
+        config:
+          command: cp {file.path} /network/output/{run.name}/{file.name}
+
+More examples to come in the Porerefiner Config Cookbook:
+
+https://github.com/crashfrog/porerefiner-config-cookbook
+
+If you develop a useful or interesting config, please consider contributing it to the cookbook using a pull request.
+
+
+
 
 Using this software
 -------------------
@@ -112,11 +153,13 @@ Using this software
     template  Write a sample sheet template to STDOUT.
     untag     Remove one or more tags from a run.
 
+If the web service is enabled, users can also upload and attach sample sheets using the web interface.
+
 
 Administration
 --------------
 
-When the PoreRefiner service is stopped, it has a number of administrative functions:
+When the PoreRefiner service ``porerefinerd`` is stopped, it has a number of administrative functions:
 
 ::
 
