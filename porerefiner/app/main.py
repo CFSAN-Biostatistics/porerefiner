@@ -5,7 +5,8 @@ from google.protobuf.json_format import MessageToJson
 import json
 
 
-from porerefiner.cli_utils import server, load_from_csv
+from porerefiner.cli_utils import server
+from porerefiner.samplesheets import load_from_csv
 from porerefiner.protocols.porerefiner.rpc.porerefiner_pb2 import RunRequest, RunListRequest, RunAttachRequest, RunRsyncRequest
 
 from porerefiner.app import app

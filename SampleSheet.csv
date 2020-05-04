@@ -1,4 +1,5 @@
-﻿porerefiner_ver,1.0.0,,,,,
-library_id,,,,,,
-sequencing_kit,,,,,,
+﻿porerefiner_ver,1.0.0
+library_id,
+sequencing_kit,
+barcode_kit,
 sample_id,accession,barcode_id,organism,extraction_kit,comment,user

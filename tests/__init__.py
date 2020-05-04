@@ -74,15 +74,17 @@ def samples(draw):
 
 @composite
 def samplesheets(draw):
-    ver = just('1.0.0')
+    ver = just('1.0.1')
     dat = datetimes()
     lib = text(min_size=12, max_size=12)
     seq = text(min_size=12, max_size=12)
+    bar = text(min_size=12, max_size=12)
     sam = lists(samples(), min_size=1, max_size=12)
     ss = draw(builds(messages.SampleSheet,
                      porerefiner_ver=ver,
                      library_id=lib,
                      sequencing_kit=seq,
+                     barcode_kit=bar,
                      samples=sam))
     ss.date.FromDatetime(draw(dat))
     return ss

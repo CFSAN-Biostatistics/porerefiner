@@ -8,7 +8,8 @@ from asyncio import run
 from pathlib import Path
 from functools import wraps
 
-from porerefiner.cli_utils import VALID_RUN_ID, server, hr_formatter, json_formatter, xml_formatter, handle_connection_errors, load_from_csv, load_from_excel
+from porerefiner.cli_utils import VALID_RUN_ID, server, hr_formatter, json_formatter, xml_formatter, handle_connection_errors
+from porerefiner.samplesheets import load_from_csv, load_from_excel
 from porerefiner.protocols.porerefiner.rpc.porerefiner_pb2 import RunRequest, RunListRequest, RunAttachRequest, RunRsyncRequest, TagRequest
 
 # default_config = lambda: os.environ.get('POREREFINER_CONFIG', Path.home() / '.porerefiner' / 'config.yaml')
@@ -84,9 +85,10 @@ async def info(output_format, run_id, config=default_config()):
 @cli.command()
 def template():
     "Write a sample sheet template to STDOUT."
-    click.echo("""porerefiner_ver,1.0.0
+    click.echo("""porerefiner_ver,1.0.1
 library_id,
 sequencing_kit,
+barcode_kits,
 sample_id,accession,barcode_id,organism,extraction_kit,comment,user
 """)
 
