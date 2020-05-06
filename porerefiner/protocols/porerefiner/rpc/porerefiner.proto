@@ -20,6 +20,8 @@ message Run {
     google.protobuf.Timestamp started = 11;
     google.protobuf.Duration elapsed = 12;
 
+    repeated string barcode_kit = 13;
+
     message File {
         string name = 1;
         string path = 2;
@@ -128,6 +130,8 @@ message SampleSheet {
     string library_id = 2;
     string sequencing_kit = 3;
     google.protobuf.Timestamp date = 4;
+
+    repeated string barcode_kit = 5;
 
     message Sample {
         string sample_id = 1;

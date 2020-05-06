@@ -86,3 +86,6 @@ dist: clean ## builds source and wheel package
 
 install: clean ## install the package to the active Python's site-packages
 	python setup.py install
+
+proto: ## recompile the protobuf files
+	python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. porerefiner/protocols/porerefiner/rpc/*proto

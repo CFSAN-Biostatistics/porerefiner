@@ -251,7 +251,7 @@ class SampleSheet(PorerefinerModel):
     # path = PathField(index=True)
     # run = ForeignKeyField(Run, backref='_sample_sheet', unique=True, null=True)
     date = DateField(null=True, default=datetime.datetime.now())
-    # sequencing_kit = CharField(null=True)
+    sequencing_kit = CharField(null=True)
     barcoding_kit = CharField(null=True, choices=BARCODES)
     library_id = CharField(null=True)
 
@@ -292,13 +292,13 @@ class Sample(PorerefinerModel):
 
     pk = AutoField()
     sample_id = CharField(null=False)
-    accession = CharField()
+    accession = CharField(default="")
     barcode_id = IntegerField()
     #barcode_seq = CharField() #maybe set this when we load a sheet
-    organism = CharField()
-    extraction_kit = CharField()
-    comment = CharField()
-    user = CharField()
+    organism = CharField(default="")
+    extraction_kit = CharField(default="")
+    comment = CharField(default="")
+    user = CharField(null=True)
 
 
 
