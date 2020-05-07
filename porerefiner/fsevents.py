@@ -144,8 +144,8 @@ async def end_file(file):
 class PoreRefinerFSEventHandler(AIOEventHandler):
     "Eventhandler for file system events via Hachiko/Watchdog"
 
-    def __init__(self, path):
-        super().__init__()
+    def __init__(self, path, *a, **k):
+        super().__init__(*a, **k)
         self.path = path
 
 
@@ -207,7 +207,9 @@ class PoreRefinerFSEventHandler(AIOEventHandler):
     async def on_modified(self, event):
         if not event.is_directory: #we don't care about directory modifications
             fi = File.get_or_none(File.path == r(event.src_path))
-            if fi:
+            if not fi:
+                await self.on_created(event)
+            else:
                 fi.last_modified = datetime.now()
                 fi.save()
 
@@ -223,7 +225,7 @@ async def start_fs_watchdog(path, *a, **k):
     "Coroutine to bring up the filesystem watchdog"
     watcher = AIOWatchdog(
         path,
-        event_handler=PoreRefinerFSEventHandler(path)
+        event_handler=PoreRefinerFSEventHandler(path, *a, **k)
         )
     watcher.start()
     log.critical(f"Filesystem events being watched in {path}...")

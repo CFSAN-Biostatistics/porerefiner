@@ -239,10 +239,10 @@ def render_dataclass(the_class):
                           List[Url]:"[http://server.co, http://serv.cc, ...]",
                           List[PathStr]:"[path/aaa, path/bbb, ...]"})
     nw = max([len(field.name) for field in the_class.__dataclass_fields__.values()])
-    tw = max([len(str(field.type)) for field in the_class.__dataclass_fields__.values() if field.name is not 'submitter'])
+    tw = max([len(str(field.type)) for field in the_class.__dataclass_fields__.values() if field.name != 'submitter'])
     options = f"{'param_name':<{nw}}\t{'type':<{tw}}\texample"
     for field in the_class.__dataclass_fields__.values():
-        if field.name is not 'submitter':
+        if field.name != 'submitter':
             name = f"{field.name:<{nw}}"
             _type = f"{str(field.type):<{tw}}"
             example = (str(field.default), sample_values[field.type])[type(field.default) is not MISSING]
