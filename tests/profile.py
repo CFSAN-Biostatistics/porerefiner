@@ -24,7 +24,7 @@ def start_pr(path):
 
 
     def l(loop):
-        # logging.basicConfig(stream=open('/dev/null', 'w'))
+        logging.basicConfig(stream=open('/dev/null', 'w'))
         db = SqliteDatabase(":memory:", pragmas={'foreign_keys':1}, autoconnect=False)
         db.bind(models.REGISTRY, bind_refs=False, bind_backrefs=False)
         db.connect()
