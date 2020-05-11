@@ -66,10 +66,13 @@ def main(n, trials=5):
         path = Path(t) / "EXPERIMENTEXPERIMENT" / "SAMPLESAMPLE" /"RUNRUNRUN"
 
         makedirs(path)
+
+        for sub in ['fastq_pass', 'fastq_fail']:
+            makedirs(path / sub)
     
         def fs_spray(n):
             print(f"opening {n} files")
-            fps = [open(path / (str(uuid4()) + '.bin'), 'wb', buffering=0) for _ in range(n)]
+            fps = [open(path / choice(['fastq_pass', 'fastq_fail', '']) / (str(uuid4()) + '.bin'), 'wb', buffering=0) for _ in range(n)]
             print(f"100,000 {len(bytes(str(uuid4()), 'utf-8'))}-byte writes to {n} files")
             for _ in range(100000):
                 choice(fps).write(bytes(str(uuid4()), 'utf-8'))
