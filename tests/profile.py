@@ -24,7 +24,7 @@ def start_pr(path):
 
 
     def l(loop):
-        logging.basicConfig(stream=open('/dev/null', 'w'))
+        # logging.basicConfig(stream=open('/dev/null', 'w'))
         db = SqliteDatabase(":memory:", pragmas={'foreign_keys':1}, autoconnect=False)
         db.bind(models.REGISTRY, bind_refs=False, bind_backrefs=False)
         db.connect()
@@ -63,16 +63,15 @@ def main(n, trials=5):
 
     with TemporaryDirectory() as t:
 
-        path = Path(t) / "EXPERIMENTEXPERIMENT" / "SAMPLESAMPLE" /"RUNRUNRUN"
+        path = Path(t) / "EXPERIMENTEXPERIMENT" / "SAMPLESAMPLE"
 
-        makedirs(path)
-
-        for sub in ['fastq_pass', 'fastq_fail']:
-            makedirs(path / sub)
+        for run in ['RUN_1_RUN', 'RUN_2_RUN']:
+            for sub in ['fastq_pass', 'fastq_fail']:
+                makedirs(path / run / sub)
     
         def fs_spray(n):
             print(f"opening {n} files")
-            fps = [open(path / choice(['fastq_pass', 'fastq_fail', '']) / (str(uuid4()) + '.bin'), 'wb', buffering=0) for _ in range(n)]
+            fps = [open(path / choice(['RUN_1_RUN', 'RUN_2_RUN']) / choice(['fastq_pass', 'fastq_fail', '']) / (str(uuid4()) + '.bin'), 'wb', buffering=0) for _ in range(n)]
             print(f"100,000 {len(bytes(str(uuid4()), 'utf-8'))}-byte writes to {n} files")
             for _ in range(100000):
                 choice(fps).write(bytes(str(uuid4()), 'utf-8'))

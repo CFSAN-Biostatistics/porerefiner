@@ -192,9 +192,9 @@ class PoreRefinerFSEventHandler(AIOEventHandler):
                         run.tag(st)
                         run.tag(dev_id)
                         run.tag(prot_id)
-                        run.save()
                     except ValueError:
                         pass
+                    run.save()
             if len(rel.parts) >=4 and not event.is_directory: #there's a file
                 log.critical(f"Registering new file {path} in {run.name}")
                 f = File.create(run=run, path=path)
