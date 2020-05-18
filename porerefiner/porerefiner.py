@@ -47,11 +47,13 @@ async def serve(config_file, db_path=None, db_pragmas=None, wdog_settings=None, 
     models._db.init(db_path, db_pragmas)
     [cls.create_table(safe=True) for cls in models.REGISTRY]
     try:
-        results = await gather(start_server(**server_settings),
-                    start_fs_watchdog(**wdog_settings),
-                    start_run_end_polling(**system_settings),
-                    start_job_polling(**system_settings),
-                    in_progress_run_update())
+        results = await gather(
+                            start_server(**server_settings),
+                            start_fs_watchdog(**wdog_settings),
+                            start_run_end_polling(**system_settings),
+                            start_job_polling(**system_settings),
+                            in_progress_run_update()
+                        )
     finally:
         log.critical("Shutting down...")
 

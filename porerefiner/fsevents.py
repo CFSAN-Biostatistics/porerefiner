@@ -221,7 +221,7 @@ class PoreRefinerFSEventHandler(AIOEventHandler):
     #         File.delete().where(File.path == r(event.src_path)).execute()
 
 
-async def start_fs_watchdog(path, *a, **k):
+async def start_fs_watchdog(path, api=None, *a, **k):
     "Coroutine to bring up the filesystem watchdog"
     watcher = AIOWatchdog(
         path,
