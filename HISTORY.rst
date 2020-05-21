@@ -2,6 +2,21 @@
 History
 =======
 
+0.8.7 (2020-05-21)
+------------------
+
+* Fixed a bug in ``porerefinerd verify``
+
+0.8.6 (2020-05-18)
+------------------
+
+* Fixed a bug that would prevent the watchdog from starting
+
+0.8.5 (2020-04-15)
+------------------
+
+* Samplesheet and data model now distinguish between sequencing and barcoding kits
+
 0.8.4 (2020-03-23)
 ------------------
 

@@ -107,3 +107,4 @@ config.yaml
 docs
 debian
 config.yaml
+.DS_Store

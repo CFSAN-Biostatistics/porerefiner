@@ -119,8 +119,8 @@ def info():
     pass
 
 @info.command()
-@click.argument('notifier', default=None, required=False)
-def notifiers(notifier=None):
+@click.argument('notifiers', default=None, required=False)
+def _notifiers(notifier=None):
     "Notifiers that are installed and can be configured."
     from porerefiner.notifiers import REGISTRY, Notifier
     if not notifier:
@@ -134,8 +134,8 @@ def notifiers(notifier=None):
             click.echo(f"Notifier '{notifier}'' not installed.", err=True)
 
 @info.command()
-@click.argument('submitter', default=None, required=False)
-def submitters(submitter=None):
+@click.argument('submitters', default=None, required=False)
+def _submitters(submitter=None):
     "Job submitters that are installed and can be configured."
     from porerefiner.jobs.submitters import REGISTRY, Submitter
     if not submitter:
@@ -150,7 +150,7 @@ def submitters(submitter=None):
 
 @info.command()
 @click.argument('job', default=None, required=False)
-def jobs(job=None):
+def _jobs(job=None):
     "Jobs that are installed and can be configured."
     from porerefiner.jobs import REGISTRY, FileJob, RunJob, AbstractJob
     if not job:
@@ -170,7 +170,7 @@ def reset():
 
 @reset.command()
 @click.argument('status', default="QUEUED", type=click.Choice([v for v, _ in Job.statuses], case_sensitive=True))
-def jobs(status):
+def _jobs(status):
     "Reset all jobs to a particular status."
     if click.confirm(f"This will set all jobs to {status} status. Are you sure?"):
         Job.update(status=status).execute()
@@ -262,8 +262,8 @@ def _submitters():
             await submitter.test_noop()
     run(test_all())
 
-@verify.command()
-def notifiers():
+@verify.command(name='notifiers')
+def _notifiers():
     "Verify notifiers by sending notifications."
     from porerefiner.notifiers import NOTIFIERS
     async def test_all():
