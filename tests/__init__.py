@@ -156,6 +156,11 @@ def jobs(draw, subclass_of=jobs.RunJob, classdef=dict(setup=lambda *a, **k: None
     return draw(builds(random_name_subclass(of=subclass_of, **classdef),
                        submitter=submitters()))
 
+@composite
+def job_records(draw, state=jobs()):
+    return draw(builds(models.Job,
+                       job_state=state))
+
 class TestBase(TestCase):
 
     def setUp(self):

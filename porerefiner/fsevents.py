@@ -255,7 +255,10 @@ async def start_run_end_polling(run_polling_interval, *a, **k):
 async def start_job_polling(job_polling_interval, *a, **k):
     log.critical(f'Starting job polling...')
     async def run_job_polling():
-        po, su, co = await poll_jobs()
+        po, su, co = await poll_jobs(
+            Job.select().where(Job.status == 'READY'),
+            Job.select().where(Job.status == 'RUNNING')
+        )
         log.info(f'{po} jobs polled, {su} submitted, {co} collected.')
         await asyncio.sleep(job_polling_interval) #poll every 30 minutes
         return asyncio.ensure_future(run_job_polling())

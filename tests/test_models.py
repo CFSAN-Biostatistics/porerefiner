@@ -40,13 +40,13 @@ class TestModels(TestCase):
     def test_models_registered(self):
         self.assertEqual(len(models.REGISTRY), 8)
 
-    @skip('broken')
+    # @skip('broken')
     @given(tag=strat.text().filter(lambda x: x))
     @with_database
     def test_tags(self, tag):
-        flow = models.Flowcell.create(consumable_id='TEST|TEST|TEST', consumable_type='TEST|TEST|TEST', path='TEST/TEST/TEST')
+        flow = models.SampleSheet.create()
         tag, _ = models.Tag.get_or_create(name=tag)
-        tag_j = models.TagJunction.create(flowcell=flow, tag=tag)
+        tag_j = models.TagJunction.create(samplesheet=flow, tag=tag)
         self.assertIn(tag, flow.tags)
 
     @with_database

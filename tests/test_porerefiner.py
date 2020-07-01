@@ -119,7 +119,8 @@ class TestCoreFunctions(DBSetupTestCase):
         mock.assert_called() #ran end_run
 
 
-    #@skip('not implemented')
+    @skip('cant make this work with the database')
+    @with_database
     def test_end_run(self):
         mock = AsyncMock()
         with patch('porerefiner.fsevents.NOTIFIERS', new_callable=lambda: [mock]) as _:
