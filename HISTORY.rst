@@ -2,6 +2,11 @@
 History
 =======
 
+0.8.8 (2020-07-01)
+------------------
+
+* Improved behavior on job creation; buxfixes in job submit step
+
 0.8.7 (2020-05-21)
 ------------------
 
