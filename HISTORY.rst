@@ -2,6 +2,11 @@
 History
 =======
 
+0.8.9 (2020-07-13)
+------------------
+
+* Bugfixes in ``prfr load``, sample sheet handling for v1.0.1 samplesheets (barcode kit id's)
+
 0.8.8 (2020-07-01)
 ------------------
 

@@ -19,6 +19,7 @@ class HpcSubmitter(Submitter):
     known_hosts_path: str
     scheduler: str = "uge"
     queue: str = "long.q"
+    remote_root: str = "~"
 
     async def send(self, cmd):
         async with connect(self.login_host,
