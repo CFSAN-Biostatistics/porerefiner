@@ -264,6 +264,7 @@ class TestServerStart(TestCase):
 
     #@skip('no test')
     @async_test
+    @with_database
     async def test_start_run_end_polling(self):
         with patch('porerefiner.fsevents.poll_active_run') as mock:
             task = await pr_fsevents.start_run_end_polling(0)

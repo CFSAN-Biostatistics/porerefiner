@@ -189,7 +189,7 @@ class PoreRefinerFSEventHandler(AIOEventHandler):
                     try:
                         st, dev_id, fc_id, prot_id = rel_run_path.split('_')
                         run.flowcell = fc_id
-                        run.tag(st)
+                        # run.tag(st)
                         run.tag(dev_id)
                         run.tag(prot_id)
                     except ValueError:
