@@ -22,7 +22,7 @@ def load_from_csv(file, delimiter=b',') -> SampleSheet:
         for sample_id, accession, barcode_id, organism, extraction_kit, comment, user, *_ in csv.reader(TextIOWrapper(file), delimiter=delimiter, dialect='excel'):
             ss.samples.add(sample_id=sample_id,
                            accession=accession,
-                           barcode_id=int(barcode_id),
+                           barcode_id=barcode_id,
                            organism=organism,
                            extraction_kit=extraction_kit,
                            comment=comment,
@@ -39,7 +39,7 @@ def load_from_csv(file, delimiter=b',') -> SampleSheet:
         for sample_id, accession, barcode_id, organism, extraction_kit, comment, user, *_ in csv.reader(TextIOWrapper(file), delimiter=delimiter, dialect='excel'):
             ss.samples.add(sample_id=sample_id,
                            accession=accession,
-                           barcode_id=int(barcode_id),
+                           barcode_id=barcode_id,
                            organism=organism,
                            extraction_kit=extraction_kit,
                            comment=comment,
