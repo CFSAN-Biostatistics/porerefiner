@@ -1,8 +1,10 @@
 import asyncio
+import aiofile
 import aiohttp
 import click
 import daemon
 import datetime
+import hashlib
 import json
 import logging
 import subprocess
@@ -122,15 +124,22 @@ async def end_run(run):
 async def end_file(file):
     "Put file in closed state"
     log.info(f"No recent modifications to {file.path}, scheduling analysis.")
-    try:
-        proc = await asyncio.create_subprocess_shell(f'md5sum {file.path}', stdout=subprocess.PIPE)
-        await proc.wait()
-        return_val = await proc.stdout.readline()
-        hash_val = return_val.split(b' ')[0]
-        file.hash = hash_val
-        file.save()
-    except (subprocess.CalledProcessError, ValueError) as e:
-        log.error(e)
+    # try:
+    #     proc = await asyncio.create_subprocess_shell(f'md5sum {file.path}', stdout=subprocess.PIPE)
+    #     await proc.wait()
+    #     return_val = await proc.stdout.readline()
+    #     hash_val = return_val.split(b' ')[0]
+    #     file.hash = hash_val
+    #     file.save()
+    # except (subprocess.CalledProcessError, ValueError) as e:
+    #     log.error(e)
+    async with aiofile.AIOFile(file.path, 'rb') as afile:
+        ha = hashlib.md5()
+        rdr = aiofile.Reader(afile, chunk_size=1024 * 1024)
+        async for chunk in rdr:
+            ha.update(chunk)
+    file.hash = ha.hexdigest()
+    file.save()
     for job in JOBS.FILES:
         log.info(f"Scheduling job {type(job).__name__} on {file.path}")
         file.spawn(job)

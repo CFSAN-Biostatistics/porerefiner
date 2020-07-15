@@ -2,6 +2,11 @@
 History
 =======
 
+0.8.11 (2020-07-15)
+-------------------
+
+* More platform-universal MD5 hashing of files on completion
+
 0.8.10 (2020-07-15)
 -------------------
 

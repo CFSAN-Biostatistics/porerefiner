@@ -1,8 +1,8 @@
 from tests import _run, fsevents, files, with_database
 
 from unittest import TestCase, skip
-from unittest.mock import Mock, patch
-from mock import AsyncMock
+from unittest.mock import Mock, patch, AsyncMock
+# from mock import AsyncMock
 from tempfile import NamedTemporaryFile
 
 from porerefiner.fsevents import PoreRefinerFSEventHandler as Handler, end_file, end_run, register_new_run
@@ -34,7 +34,7 @@ class TestPoreRefinerFSEventsHandler(TestCase):
 
     # @skip("can't debug test")
     # @patch('porerefiner.fsevents.Flowcell')
-    @given(event=fsevents().filter(lambda e: not e.is_directory and len(e.src_path.parts) > 3))
+    @given(event=fsevents().filter(lambda e: not e.is_directory and len(e.src_path.parts) > 4))
     @with_database
     def test_on_created_file(self, event):
         with patch('porerefiner.fsevents.Run') as run:
