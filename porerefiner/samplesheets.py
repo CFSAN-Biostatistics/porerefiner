@@ -18,10 +18,11 @@ def load_from_csv(file, delimiter=b',') -> SampleSheet:
         _, ss.library_id, *_ = file.readline().strip().split(delimiter)
         _, ss.sequencing_kit, *_ = file.readline().strip().split(delimiter)
         delimiter = delimiter.decode()
+        file.readline() #ditch the header
         for sample_id, accession, barcode_id, organism, extraction_kit, comment, user, *_ in csv.reader(TextIOWrapper(file), delimiter=delimiter, dialect='excel'):
             ss.samples.add(sample_id=sample_id,
                            accession=accession,
-                           barcode_id=str(barcode_id),
+                           barcode_id=int(barcode_id),
                            organism=organism,
                            extraction_kit=extraction_kit,
                            comment=comment,
@@ -34,10 +35,11 @@ def load_from_csv(file, delimiter=b',') -> SampleSheet:
         _, *barcodes = file.readline().strip().split(delimiter)
         [ss.barcode_kit.append(barcode) for barcode in barcodes if barcode]
         delimiter = delimiter.decode()
+        file.readline() # ditch the header
         for sample_id, accession, barcode_id, organism, extraction_kit, comment, user, *_ in csv.reader(TextIOWrapper(file), delimiter=delimiter, dialect='excel'):
             ss.samples.add(sample_id=sample_id,
                            accession=accession,
-                           barcode_id=str(barcode_id),
+                           barcode_id=int(barcode_id),
                            organism=organism,
                            extraction_kit=extraction_kit,
                            comment=comment,

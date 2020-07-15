@@ -293,7 +293,7 @@ class Sample(PorerefinerModel):
     pk = AutoField()
     sample_id = CharField(null=False)
     accession = CharField(default="")
-    barcode_id = IntegerField()
+    barcode_id = CharField(null=False)
     #barcode_seq = CharField() #maybe set this when we load a sheet
     organism = CharField(default="")
     extraction_kit = CharField(default="")
