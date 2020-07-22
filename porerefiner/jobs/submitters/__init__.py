@@ -47,7 +47,7 @@ class Submitter(metaclass=RegisteringABCMeta):
         "Submitters should translate paths to execution environment"
         pass
 
-    def _submit(self, job):
+    async def _submit(self, job):
         "Create datadir, delegate job setup, then call subclass method to submit job"
         from porerefiner.jobs import FileJob, RunJob
         run = job.run
@@ -66,7 +66,7 @@ class Submitter(metaclass=RegisteringABCMeta):
         cmd = " ".join(cmd.split()) # turn tabs and returns into spaces
         logg.getChild('cmd').critical(cmd)
         try:
-            job.job_id = self.begin_job(cmd, datadir)
+            job.job_id = await self.begin_job(cmd, datadir)
             job.status = 'QUEUED'
         except Exception as e:
             logg.error(e)

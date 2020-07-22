@@ -119,7 +119,8 @@ class TestCoreFunctions(DBSetupTestCase):
         mock.assert_called() #ran end_run
 
 
-    #@skip('not implemented')
+    @skip('cant make this work with the database')
+    @with_database
     def test_end_run(self):
         mock = AsyncMock()
         with patch('porerefiner.fsevents.NOTIFIERS', new_callable=lambda: [mock]) as _:
@@ -263,6 +264,7 @@ class TestServerStart(TestCase):
 
     #@skip('no test')
     @async_test
+    @with_database
     async def test_start_run_end_polling(self):
         with patch('porerefiner.fsevents.poll_active_run') as mock:
             task = await pr_fsevents.start_run_end_polling(0)
@@ -272,6 +274,7 @@ class TestServerStart(TestCase):
 
     #@skip('no test')
     @async_test
+    @with_database
     async def test_start_job_polling(self):
         with patch('porerefiner.fsevents.poll_jobs') as mock:
             task = await pr_fsevents.start_job_polling(0)

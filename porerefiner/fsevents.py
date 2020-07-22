@@ -1,7 +1,9 @@
 import asyncio
+import aiofile
 import aiohttp
 import click
 import datetime
+import hashlib
 import json
 import logging
 import subprocess
@@ -121,15 +123,22 @@ async def end_run(run):
 async def end_file(file):
     "Put file in closed state"
     log.info(f"No recent modifications to {file.path}, scheduling analysis.")
-    try:
-        proc = await asyncio.create_subprocess_shell(f'md5sum {file.path}', stdout=subprocess.PIPE)
-        await proc.wait()
-        return_val = await proc.stdout.readline()
-        hash_val = return_val.split(b' ')[0]
-        file.hash = hash_val
-        file.save()
-    except (subprocess.CalledProcessError, ValueError) as e:
-        log.error(e)
+    # try:
+    #     proc = await asyncio.create_subprocess_shell(f'md5sum {file.path}', stdout=subprocess.PIPE)
+    #     await proc.wait()
+    #     return_val = await proc.stdout.readline()
+    #     hash_val = return_val.split(b' ')[0]
+    #     file.hash = hash_val
+    #     file.save()
+    # except (subprocess.CalledProcessError, ValueError) as e:
+    #     log.error(e)
+    async with aiofile.AIOFile(file.path, 'rb') as afile:
+        ha = hashlib.md5()
+        rdr = aiofile.Reader(afile, chunk_size=1024 * 1024)
+        async for chunk in rdr:
+            ha.update(chunk)
+    file.hash = ha.hexdigest()
+    file.save()
     for job in JOBS.FILES:
         log.info(f"Scheduling job {type(job).__name__} on {file.path}")
         file.spawn(job)
@@ -188,12 +197,12 @@ class PoreRefinerFSEventHandler(AIOEventHandler):
                     try:
                         st, dev_id, fc_id, prot_id = rel_run_path.split('_')
                         run.flowcell = fc_id
-                        run.tag(st)
+                        # run.tag(st)
                         run.tag(dev_id)
                         run.tag(prot_id)
-                        run.save()
                     except ValueError:
                         pass
+                    run.save()
             if len(rel.parts) >=4 and not event.is_directory: #there's a file
                 log.critical(f"Registering new file {path} in {run.name}")
                 f = File.create(run=run, path=path)
@@ -220,7 +229,7 @@ class PoreRefinerFSEventHandler(AIOEventHandler):
     #         File.delete().where(File.path == r(event.src_path)).execute()
 
 
-async def start_fs_watchdog(path, *a, **k):
+async def start_fs_watchdog(path, api=None, *a, **k):
     "Coroutine to bring up the filesystem watchdog"
     watcher = AIOWatchdog(
         path,
@@ -254,7 +263,10 @@ async def start_run_end_polling(run_polling_interval, *a, **k):
 async def start_job_polling(job_polling_interval, *a, **k):
     log.critical(f'Starting job polling...')
     async def run_job_polling():
-        po, su, co = await poll_jobs()
+        po, su, co = await poll_jobs(
+            Job.select().where(Job.status == 'READY'),
+            Job.select().where(Job.status == 'RUNNING')
+        )
         log.info(f'{po} jobs polled, {su} submitted, {co} collected.')
         await asyncio.sleep(job_polling_interval) #poll every 30 minutes
         return asyncio.ensure_future(run_job_polling())

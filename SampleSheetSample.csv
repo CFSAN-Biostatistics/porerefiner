@@ -1,7 +1,7 @@
-﻿porerefiner_ver,1.0.0
+﻿porerefiner_ver,1.0.1
 library_id,TEST_TEST
 sequencing_kit,TEST_KIT
-barcode_kit,TEST_BC_KIT
+barcode_kit,TEST_BC_KIT,TEST_BC_KIT_2
 sample_id,accession,barcode_id,organism,extraction_kit,comment,user
 CFSAN000123,SAL0826,1,Salmonella enterica,TEST_KIT_KIT,"a comment, with a comma in it",justin.payne@fda.hhs.gov
 TEST02,ACC_TEST_02,2,Escherichia enteriditis,TEST_KIT_KIT,,justin.payne@fda.hhs.gov

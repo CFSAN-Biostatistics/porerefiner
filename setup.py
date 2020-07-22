@@ -18,6 +18,7 @@ requirements = ['Click>=7.0',
                 'watchdog>=0.9.0',
                 'hachiko>=0.2.0',
                 'aiohttp>=3.6.1',
+                'aiofile>=3.0.0',
                 'namesgenerator>=0.3',
                 'python-daemon>=2.2.3',
                 'protobuf>=3.10.0',
@@ -65,7 +66,7 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/CFSAN-Biostatistics/porerefiner',
-    version='0.8.5',
+    version='0.8.11',
     zip_safe=False,
 )
 

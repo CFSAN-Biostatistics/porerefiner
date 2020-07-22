@@ -10,7 +10,7 @@ import namesgenerator
 import sys
 import tempfile
 
-from copy import deepcopy
+from copy import copy, deepcopy
 from itertools import chain
 
 
@@ -293,7 +293,7 @@ class Sample(PorerefinerModel):
     pk = AutoField()
     sample_id = CharField(null=False)
     accession = CharField(default="")
-    barcode_id = IntegerField()
+    barcode_id = CharField(null=False)
     #barcode_seq = CharField() #maybe set this when we load a sheet
     organism = CharField(default="")
     extraction_kit = CharField(default="")
@@ -344,7 +344,7 @@ class File(PorerefinerModel):
                    .where(File.pk == self.pk))
 
     def spawn(self, job):
-        job = Job.create(job_state=deepcopy(job), status='READY', datadir=pathlib.Path(tempfile.mkdtemp()), file=self)
+        job = Job.create(job_state=copy(job), status='READY', datadir=pathlib.Path(tempfile.mkdtemp()), file=self)
         JobFileJunction.create(job=job, file=self)
         return job
 

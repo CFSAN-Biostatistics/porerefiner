@@ -38,7 +38,7 @@ message Run {
         int32 id = 1;
         string name = 2;
         string accession = 3;
-        int32 barcode_id = 4;
+        string barcode_id = 4;
         string barcode_seq = 5;
         string organism = 6;
         string extraction_kit = 7;

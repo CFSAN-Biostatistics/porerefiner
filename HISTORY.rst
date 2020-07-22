@@ -2,6 +2,41 @@
 History
 =======
 
+0.8.11 (2020-07-15)
+-------------------
+
+* More platform-universal MD5 hashing of files on completion
+
+0.8.10 (2020-07-15)
+-------------------
+
+* Bugfixes in model, barcode_id type
+
+0.8.9 (2020-07-13)
+------------------
+
+* Bugfixes in ``prfr load``, sample sheet handling for v1.0.1 samplesheets (barcode kit id's)
+
+0.8.8 (2020-07-01)
+------------------
+
+* Improved behavior on job creation; buxfixes in job submit step
+
+0.8.7 (2020-05-21)
+------------------
+
+* Fixed a bug in ``porerefinerd verify``
+
+0.8.6 (2020-05-18)
+------------------
+
+* Fixed a bug that would prevent the watchdog from starting
+
+0.8.5 (2020-04-15)
+------------------
+
+* Samplesheet and data model now distinguish between sequencing and barcoding kits
+
 0.8.4 (2020-03-23)
 ------------------
 

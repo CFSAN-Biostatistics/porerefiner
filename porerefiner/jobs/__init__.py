@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod, ABC
+from asyncio import gather
 from collections import namedtuple
 from dataclasses import dataclass
 
@@ -11,31 +12,40 @@ from typing import Union, Tuple
 import logging
 import pkgutil
 
-log = logging.getLogger('porerefiner.job.registry')
+log = logging.getLogger('porerefiner.job')
 
 async def poll_active_job(job):
-    await job.job_state.submitter._poll(job)
+    logg = log.getChild(f"{type(job.job_state.submitter).__name__}.{type(job.job_state).__name__}")
+    try:
+        await job.job_state.submitter._poll(job)
+    except Exception as e:
+        logg.error(e)
     return 1
 
 async def submit_job(job):
-    job.job_state.submitter._submit(job)
+    logg = log.getChild(f"{type(job.job_state.submitter).__name__}.{type(job.job_state).__name__}")
+    try:
+        await job.job_state.submitter._submit(job)
+    except Exception as e:
+        logg.error(e)
     return 1
 
 async def complete_job(job):
     job.job_state.submitter._close(job)
     return 1
 
-async def poll_jobs():
-    jobs_polled = 0
-    jobs_submitted = 0
-    jobs_collected = 0
-    for job in Job.select().where(Job.status == 'READY'):
-        jobs_submitted += await submit_job(job)
-        jobs_polled += 1
-    for job in Job.select().where(Job.status == 'RUNNING'):
-        jobs_collected += await poll_active_job(job)
-        jobs_polled += 1
-    return jobs_polled, jobs_submitted, jobs_collected
+async def poll_jobs(ready_jobs, running_jobs):
+    # jobs_submitted = 0
+    # jobs_collected = 0
+    # for job in Job.select().where(Job.status == 'READY'):
+    #     jobs_submitted += await submit_job(job)
+    #     jobs_polled += 1
+    jobs_submitted = sum(await gather(*[submit_job(job) for job in ready_jobs]))
+    # for job in Job.select().where(Job.status == 'RUNNING'):
+    #     jobs_collected += await poll_active_job(job)
+    #     jobs_polled += 1
+    jobs_collected = sum(await gather(*[poll_active_job(job) for job in running_jobs]))
+    return jobs_submitted + jobs_collected, jobs_submitted, jobs_collected
 
 JOBS = namedtuple('JOBS', ('FILES', 'RUNS'), defaults=([], []))() #configured (reified) job instances
 
