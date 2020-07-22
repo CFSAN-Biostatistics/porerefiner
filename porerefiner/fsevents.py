@@ -1,7 +1,6 @@
 import asyncio
 import aiohttp
 import click
-import daemon
 import datetime
 import json
 import logging

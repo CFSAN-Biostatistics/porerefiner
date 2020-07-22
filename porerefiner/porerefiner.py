@@ -3,7 +3,7 @@
 """Main module."""
 
 import click
-import daemon
+
 import datetime
 import json
 import logging
@@ -20,6 +20,8 @@ from pathlib import Path
 
 from porerefiner.rpc import start_server
 from porerefiner.fsevents import start_fs_watchdog, start_run_end_polling, start_job_polling, in_progress_run_update
+
+from porerefiner.daemon import daemon
 
 log = logging.getLogger('porerefiner.service')
 
