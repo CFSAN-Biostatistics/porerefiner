@@ -2,6 +2,11 @@
 History
 =======
 
+0.8.13 (2020-07-28)
+-------------------
+
+* changing log levels for some events; DEBUG now no longer jammed up by SQL spam
+
 0.8.12 (2020-07-24)
 -------------------
 
