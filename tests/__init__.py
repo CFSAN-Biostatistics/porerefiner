@@ -8,6 +8,8 @@
 
 import asyncio
 import tempfile
+import logging
+import sys
 
 from unittest import TestCase
 
@@ -26,6 +28,11 @@ from porerefiner.protocols.porerefiner.rpc import porerefiner_pb2 as messages
 
 the_present = datetime.now()
 
+logging.basicConfig(stream=sys.stdout,
+                    style='{',
+                    format="{levelname} {name}:{message}",
+                    level=logging.ERROR)
+
 # SQLite can't accept a 32-bit integer
 sql_ints = lambda: integers(min_value=-2**16, max_value=2**16)
 
@@ -34,10 +41,16 @@ def _run(task):
     return loop.run_until_complete(task)
 
 @composite
-def paths(draw, under="", min_deep=2, pathlib_only=False):
+def paths(draw, under="", min_deep=2, max_deep=None, pathlib_only=False):
+    if max_deep and max_deep < min_deep:
+        raise ValueError("max_deep must be greater than min_deep")
     r = [just(under)]
     for _ in range(min_deep):
-        r.append(text(min_size=1, max_size=255))
+        r.append(text(min_size=3, max_size=255))
+    if max_deep:
+        import random
+        for _ in range(random.randint(0, max_deep-min_deep)):
+            r.append(text(min_size=3, max_size=255))
     p = builds(Path, *r)
     if pathlib_only:
         return draw(p)
@@ -46,7 +59,7 @@ def paths(draw, under="", min_deep=2, pathlib_only=False):
 @composite
 def files(draw, real=False):
     if real:
-        path = builds(Path, builds(lambda: tempfile.NamedTemporaryFile().name))
+        path = builds(Path, builds(lambda *a, **k: tempfile.NamedTemporaryFile().name))
     else:
         path = paths(pathlib_only=True)
     return draw(builds(models.File,
@@ -78,7 +91,7 @@ def samplesheets(draw):
     dat = datetimes()
     lib = text(min_size=12, max_size=12)
     seq = text(min_size=12, max_size=12)
-    bar = text(min_size=12, max_size=12)
+    bar = lists(text(min_size=12, max_size=12), min_size=0, max_size=3)
     sam = lists(samples(), min_size=1, max_size=12)
     ss = draw(builds(messages.SampleSheet,
                      porerefiner_ver=ver,
@@ -130,10 +143,14 @@ def runs(draw, sheet=True):
 Event = namedtuple('Event', ('src_path', 'is_directory'))
 
 @composite
-def fsevents(draw, min_deep=4):
+def fsevents(draw, min_deep=4, isDirectory=None):
+    if isDirectory is None:
+        is_dir = booleans()
+    else:
+        is_dir = just(bool(isDirectory))
     return draw(builds(Event,
                        src_path=paths(min_deep=min_deep, pathlib_only=True),
-                       is_directory=booleans()))
+                       is_directory=is_dir))
 
 def random_name_subclass(of=object, **classdef):
     classdef['__module__'] = __name__
@@ -144,15 +161,21 @@ def random_name_subclass(of=object, **classdef):
 
 @composite
 def submitters(draw, subclass_of=jobs.submitters.Submitter):
+    async def fake_noop(*a, **k):
+        return None
+    async def fake_begin(*a, **k):
+        return "fake started"
+    async def fake_poll(*a, **k):
+        return "fake status"
     return draw(builds(random_name_subclass(of=subclass_of,
-                                            test_noop=lambda: None,
-                                            reroot_path=lambda: None,
-                                            begin_job=lambda: "",
-                                            poll_job=lambda: "",
-                                            closeout_job=lambda: None)))
+                                            test_noop=fake_noop,
+                                            reroot_path=lambda *a, **k: Path(),
+                                            begin_job=fake_begin,
+                                            poll_job=fake_poll,
+                                            closeout_job=lambda *a, **k: None)))
 
 @composite
-def jobs(draw, subclass_of=jobs.RunJob, classdef=dict(setup=lambda *a, **k: None, collect=lambda *a, **k: None)):
+def jobs(draw, subclass_of=jobs.RunJob, classdef=dict(setup=lambda *a, **k: "fake setup", collect=lambda *a, **k: None)):
     return draw(builds(random_name_subclass(of=subclass_of, **classdef),
                        submitter=submitters()))
 

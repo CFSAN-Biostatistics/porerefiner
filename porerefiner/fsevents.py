@@ -49,7 +49,7 @@ async def register_new_flowcell(flow, nanopore_api=None):
 
 async def register_new_run(run, nanopore_api=None):
     "Hook for new runs"
-    log.critical(f"Registering run {run.name}")
+    log.info(f"Registering run {run.name}")
     if nanopore_api:
         pass
 
@@ -113,7 +113,7 @@ async def end_run(run):
     run.status = 'DONE'
     run.save()
     run.tag('finished')
-    log.critical(f"Run {run.alt_name} ended, no file modifications in the past hour")
+    log.info(f"Run {run.alt_name} ended, no file modifications in the past hour")
     for notifier in NOTIFIERS:
         log.info(f"Firing notifier {notifier.name}")
         await notifier.notify(run, None, "Run finished")
@@ -205,7 +205,7 @@ class PoreRefinerFSEventHandler(AIOEventHandler):
                         pass
                     run.save()
             if len(rel.parts) >=4 and not event.is_directory: #there's a file
-                log.critical(f"Registering new file {path} in {run.name}")
+                log.info(f"Registering new file {path} in {run.name}")
                 f = File.create(run=run, path=path)
                 f.tag(rel.parent.name)
                 f.save()
@@ -237,14 +237,14 @@ async def start_fs_watchdog(path, api=None, *a, **k):
         event_handler=PoreRefinerFSEventHandler(path, *a, **k)
         )
     watcher.start()
-    log.critical(f"Filesystem events being watched in {path}...")
+    log.info(f"Filesystem events being watched in {path}...")
     # watcher.wait_closed()
     # log.info(f"Filesystem event watcher shutting down.")
 
 async def in_progress_run_update(*args, **kwargs):
     "On server start, update all in-progress run files with last modified date."
     for run in Run.select().where(Run.status == 'RUNNING'):
-        log.critical(f"Checking in-progress run {run.name} for modifications")
+        log.info(f"Checking in-progress run {run.name} for modifications")
         for file in run.all_files:
             file.last_modified = datetime.fromtimestamp(getmtime(a(file.path)))
             file.save()
@@ -253,7 +253,7 @@ async def in_progress_run_update(*args, **kwargs):
 
 async def start_run_end_polling(run_polling_interval, *a, **k):
     "Coro to bring up the run termination polling"
-    log.critical(f"Starting run polling...")
+    log.info(f"Starting run polling...")
     async def run_end_polling():
         run_num = await poll_active_run()
         log.info(f"{run_num} runs polled.")
@@ -262,7 +262,7 @@ async def start_run_end_polling(run_polling_interval, *a, **k):
     return asyncio.ensure_future(run_end_polling())
 
 async def start_job_polling(job_polling_interval, *a, **k):
-    log.critical(f'Starting job polling...')
+    log.info(f'Starting job polling...')
     async def run_job_polling():
         po, su, co = await poll_jobs(
             Job.select().where(Job.status == 'READY'),

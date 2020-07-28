@@ -19,15 +19,21 @@ def run(task):
 
 class TestJobSubmission(TestCase):
 
+    @patch('porerefiner.jobs.submitters.logging')
     @given(job=job_records())
-    def test_submit_job(self, job):
+    @with_database
+    def test_submit_job(self, log, job):
         assert run(submit_job(job))
 
+    @patch('porerefiner.jobs.logging')
     @given(job=job_records())
-    def test_poll_active_job(self, job):
+    @with_database
+    def test_poll_active_job(self, log, job):
         assert run(poll_active_job(job))
 
+    @patch('porerefiner.jobs.logging')
     @given(jobs=lists(job_records()))
-    def test_poll_jobs(self, jobs):
+    @with_database
+    def test_poll_jobs(self, log, jobs):
         result, _, _ = run(poll_jobs(jobs, jobs))
-        self.assertEquals(result, len(jobs) * 2)
+        self.assertEqual(result, len(jobs) * 2)

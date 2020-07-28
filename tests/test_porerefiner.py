@@ -25,7 +25,7 @@ from os.path import split
 
 from tempfile import mktemp, mkdtemp, mkstemp, TemporaryDirectory, NamedTemporaryFile
 
-from hypothesis import given
+from hypothesis import given, settings, HealthCheck
 import hypothesis.strategies as strat
 #from hypothesis_fspaths import fspaths
 
@@ -134,9 +134,12 @@ class TestCoreFunctions(DBSetupTestCase):
     #     assert False
 
     @patch('porerefiner.fsevents.SampleSheet')
-    def test_register_new_run(self, mock):
+    @patch('porerefiner.fsevents.logging')
+    def test_register_new_run(self, log, mock):
         mock_run = Mock()
-        mock.get_unused_sheets.return_value = (None, ) #just need one value
+        mock.get_unused_sheets.return_value = [None, ] #just need one value
+        self.assertGreater(len(mock.get_unused_sheets()), 0)
+        self.assertIs(pr_fsevents.SampleSheet, mock)
         _run(pr_fsevents.register_new_run(mock_run))
         mock_run.save.assert_called()
 
@@ -227,6 +230,7 @@ class TestPoreDispatchServer(TestCase):
     #     models.TagJunction.create(tag=tag, run=self.run)
 
     # @skip('no test')
+    @settings(deadline=500, suppress_health_check=(HealthCheck.all()))
     @given(ss=samplesheets())
     @with_database
     def test_attach_sheet_run_no_run(self, ss):
@@ -236,6 +240,7 @@ class TestPoreDispatchServer(TestCase):
         _run(ut.AttachSheetToRun(strm))
         strm.send_message.assert_called_once()
 
+    @settings(deadline=500, suppress_health_check=(HealthCheck.all()))
     @given(ss=samplesheets())
     @with_database
     def test_attach_sheet_to_run(self, ss):
@@ -264,9 +269,11 @@ class TestServerStart(TestCase):
 
     #@skip('no test')
     @async_test
+    @patch('porerefiner.fsevents.logging')
     @with_database
-    async def test_start_run_end_polling(self):
+    async def test_start_run_end_polling(self, log):
         with patch('porerefiner.fsevents.poll_active_run') as mock:
+            mock.return_value = 1
             task = await pr_fsevents.start_run_end_polling(0)
             await asyncio.sleep(5)
             task.cancel()

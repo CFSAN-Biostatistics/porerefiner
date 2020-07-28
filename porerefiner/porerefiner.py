@@ -55,7 +55,7 @@ async def serve(config_file, db_path=None, db_pragmas=None, wdog_settings=None, 
                             in_progress_run_update()
                         )
     finally:
-        log.critical("Shutting down...")
+        log.warn("Shutting down...")
 
 # bit of complexity here to handle different defaults for privileged vs normal users
 
@@ -76,7 +76,7 @@ def cli(verbose):
     logging.basicConfig(stream=sys.stdout,
                         style='{',
                         format="{levelname} {module}:{message}",
-                        level=(logging.ERROR, logging.INFO)[verbose])
+                        level=(logging.DEBUG, logging.INFO)[verbose])
 
 @cli.command()
 @config
