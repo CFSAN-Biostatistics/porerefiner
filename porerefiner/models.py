@@ -72,7 +72,9 @@ class PathField(Field):
         return value
 
     def python_value(self, value):
-        return pathlib.Path(value)
+        if value:
+            return pathlib.Path(value)
+        return None
 
 
 class JobField(Field):

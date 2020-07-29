@@ -55,7 +55,7 @@ async def serve(config_file, db_path=None, db_pragmas=None, wdog_settings=None, 
                             in_progress_run_update()
                         )
     finally:
-        log.warn("Shutting down...")
+        log.warning("Shutting down...")
 
 # bit of complexity here to handle different defaults for privileged vs normal users
 
