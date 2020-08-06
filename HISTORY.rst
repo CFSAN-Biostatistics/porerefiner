@@ -2,6 +2,11 @@
 History
 =======
 
+0.8.15 (2020-08-06)
+-------------------
+
+* fixed bug where plugins wouldn't be imported
+
 0.8.14 (2020-07-29)
 -------------------
 
