@@ -6,7 +6,7 @@ from tests import paths, with_database, TestBase, sql_ints, samples, samplesheet
 
 from porerefiner import models, jobs
 
-from hypothesis import given, strategies as strat, example, seed, settings
+from hypothesis import given, strategies as strat, example, seed, settings, HealthCheck
 #from hypothesis_fspaths import fspaths, _PathLike
 
 from datetime import datetime
@@ -83,7 +83,7 @@ class TestRun(TestCase):
                                            path='TEST/TEST')
         assert models.Run.create(flowcell=self.flow, **kwargs).run_duration
 
-    @settings(deadline=500)
+    @settings(deadline=None, suppress_health_check=(HealthCheck.all()))
     @given(run=runs(),
            job=_jobs())
     @with_database

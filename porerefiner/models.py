@@ -1,3 +1,4 @@
+import peewee
 from peewee import *
 #from porerefiner.config import config
 
@@ -12,6 +13,11 @@ import tempfile
 
 from copy import copy, deepcopy
 from itertools import chain
+
+logging.addLevelName(logging.DEBUG - 5, 'TRACE')
+
+#slightly demote the Peewee debug logging
+peewee.logger.debug = lambda msg, *a, **k: peewee.logger.log(logging.DEBUG - 5, msg, *a, **k)
 
 
 _db = SqliteDatabase(None)
@@ -66,7 +72,9 @@ class PathField(Field):
         return value
 
     def python_value(self, value):
-        return pathlib.Path(value)
+        if value:
+            return pathlib.Path(value)
+        return None
 
 
 class JobField(Field):

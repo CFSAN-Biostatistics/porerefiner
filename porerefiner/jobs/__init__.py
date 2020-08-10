@@ -78,6 +78,9 @@ class RegisteringABCMeta(ABCMeta, _MetaRegistry):
 @dataclass
 class AbstractJob(metaclass=RegisteringABCMeta):
     submitter: Submitter
+    
+    def __post_init__(self):
+        self.attempts = 0
 
     @classmethod
     def get_configurable_options(cls):

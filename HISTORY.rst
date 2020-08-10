@@ -2,6 +2,26 @@
 History
 =======
 
+0.8.15 (2020-08-06)
+-------------------
+
+* fixed bug where plugins wouldn't be imported
+
+0.8.14 (2020-07-29)
+-------------------
+
+* fixed bug in job spawn/db fields of Path type
+
+0.8.13 (2020-07-28)
+-------------------
+
+* changing log levels for some events; DEBUG now no longer jammed up by SQL spam
+
+0.8.12 (2020-07-24)
+-------------------
+
+* bugfixes in sample sheet loading
+
 0.8.11 (2020-07-15)
 -------------------
 

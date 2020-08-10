@@ -159,8 +159,8 @@ async def start_server(socket, *a, **k):
     server = Server([PoreRefinerDispatchServer()])
     with graceful_exit([server]):
         await server.start(path=str(socket))
-        log.critical(f"RPC server listening on {socket}...")
+        log.info(f"RPC server listening on {socket}...")
         await server.wait_closed()
-        log.critical(f"RPC server shutting down.")
+        log.warning(f"RPC server shutting down.")
 
 

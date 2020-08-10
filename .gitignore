@@ -108,3 +108,4 @@ docs
 debian
 config.yaml
 .DS_Store
+.vscode

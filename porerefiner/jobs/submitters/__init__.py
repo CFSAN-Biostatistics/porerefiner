@@ -63,10 +63,12 @@ class Submitter(metaclass=RegisteringABCMeta):
             cmd = job.job_state.setup(file, file.run, datadir)
         if isinstance(cmd, tuple): #some jobs return a string plus execution hints
             cmd, hints = cmd
+        if not isinstance(cmd, str): #has to be a string
+            raise RuntimeError("job setup method needs to return a string, or a string and dictionary")
         cmd = " ".join(cmd.split()) # turn tabs and returns into spaces
-        logg.getChild('cmd').critical(cmd)
+        logg.getChild('cmd').debug(cmd)
         try:
-            job.job_id = await self.begin_job(cmd, datadir)
+            job.job_id = await self.begin_job(cmd, datadir, remotedir, environment_hints=hints)
             job.status = 'QUEUED'
         except Exception as e:
             logg.error(e)
@@ -84,11 +86,11 @@ class Submitter(metaclass=RegisteringABCMeta):
         "Semantics of scheduling a job"
         pass
 
-    def _poll(self, job):
+    async def _poll(self, job):
         logg = log.getChild(type(self).__name__)
         try:
-            job.status = status = self.poll_job(job)
-            logg.getChild(type(job.job_state).__name__).getChild(job.job_id).critical(status)
+            job.status = status = await self.poll_job(job)
+            logg.getChild(type(job.job_state).__name__).getChild(job.job_id).info(status)
         except Exception as e:
             job.status = 'FAILED'
             logg.getChild(type(job.job_state).__name__).getChild(job.job_id).error(e)
@@ -103,7 +105,7 @@ class Submitter(metaclass=RegisteringABCMeta):
 
     def _close(self, job):
         logg = log.getChild(type(self).__name__)
-        self.closeout_job
+        return self.closeout_job(job, job.datadir, job.remotedir)
 
     @abstractmethod
     def closeout_job(self, job, datadir, remotedir) -> None:
