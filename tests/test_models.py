@@ -118,9 +118,17 @@ class TestJob(TestCase):
     def test_job(self, **kwargs):
         assert models.Job.create(**kwargs)
 
-    @skip('no test yet')
-    def test_job_files(self):
-        assert False
+    # @skip('no test yet')
+    @given(job=_jobs(),
+           path=paths(pathlib_only=True))
+    @with_database
+    def test_job_files(self, job, path):
+        job.save()
+        file = models.File(path=path)
+        file.save()
+        job.files.add(file)
+        job.save()
+        self.assertIn(file, job.files)
 
 class TestSampleSheet(TestCase):
 

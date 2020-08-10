@@ -214,22 +214,22 @@ class Job(PorerefinerModel):
     def __str__(self):
         return f"{self.pk} ({self.job_state.__class__.__name__}) ({dict(self.statuses)[self.status]})"
 
-    @property
-    def files(self):
-        return (File.select()
-                    .join(JobFileJunction)
-                    .join(Job)
-                    .where(Job.pk == self.pk))
+    # @property
+    # def files(self):
+    #     return (File.select()
+    #                 .join(JobFileJunction)
+    #                 .join(Job)
+    #                 .where(Job.pk == self.pk))
 
     def tag(self, tag):
         ta, _ = Tag.get_or_create(name=tag)
         tj, _ = TagJunction.get_or_create(tag=ta, job=self)
         return ta
 
-class JobFileJunction(BaseModel):
-    pk = AutoField()
-    job = ForeignKeyField(Job, backref='jobs')
-    file = DeferredForeignKey('File', backref='files')
+# class JobFileJunction(BaseModel):
+#     pk = AutoField()
+#     job = ForeignKeyField(Job, backref='jobs')
+#     file = DeferredForeignKey('File', backref='files')
 
 class SampleSheet(PorerefinerModel):
     "A samplesheet is a particular file, eventually attached to a run"
@@ -340,16 +340,18 @@ class File(PorerefinerModel):
     last_modified = DateTimeField(default=datetime.datetime.now)
     exported = IntegerField(default=0)
 
+    jobs = ManyToManyField(Job, backref='files')
+
     @property
     def name(self):
         return self.path.name
 
-    @property
-    def jobs(self):
-        return (Job.select()
-                   .join(JobFileJunction)
-                   .join(File)
-                   .where(File.pk == self.pk))
+    # @property
+    # def jobs(self):
+    #     return (Job.select()
+    #                .join(JobFileJunction)
+    #                .join(File)
+    #                .where(File.pk == self.pk))
 
     def spawn(self, job):
         job = Job.create(job_state=copy(job), status='READY', datadir=pathlib.Path(tempfile.mkdtemp()), file=self)
