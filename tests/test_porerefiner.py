@@ -17,7 +17,7 @@ from porerefiner import models
 from porerefiner import config
 from porerefiner.cli_utils import absolutize_path as ap, relativize_path as rp
 from porerefiner.protocols.porerefiner.rpc import porerefiner_pb2 as messages
-from tests import paths, with_database, TestBase as DBSetupTestCase, samplesheets, samples, runs, fsevents
+from tests import paths, with_database, TestBase as DBSetupTestCase, fsevents, Model
 
 from shutil import rmtree
 
@@ -231,7 +231,7 @@ class TestPoreDispatchServer(TestCase):
 
     # @skip('no test')
     @settings(deadline=500, suppress_health_check=(HealthCheck.all()))
-    @given(ss=samplesheets())
+    @given(ss=Model.Samplesheets())
     @with_database
     def test_attach_sheet_run_no_run(self, ss):
         ut = rpc.PoreRefinerDispatchServer()
@@ -241,7 +241,7 @@ class TestPoreDispatchServer(TestCase):
         strm.send_message.assert_called_once()
 
     @settings(deadline=500, suppress_health_check=(HealthCheck.all()))
-    @given(ss=samplesheets())
+    @given(ss=Model.Samplesheets())
     @with_database
     def test_attach_sheet_to_run(self, ss):
         # self.flow = flow = models.Flowcell.create(consumable_id="TEST|TEST|TEST", consumable_type="TEST|TEST|TEST", path="TEST/TEST/TEST")
@@ -262,15 +262,15 @@ class TestServerStart(TestCase):
     @patch('porerefiner.rpc.Server')
     def test_start_server(self, mock, _):
         mock.return_value = coro = AsyncMock()
-        _run(porerefiner.start_server(None))
+        _run(rpc.start_server(None))
         mock.assert_called()
         coro.start.assert_called()
         coro.wait_closed.assert_called()
 
     #@skip('no test')
+    @with_database
     @async_test
     @patch('porerefiner.fsevents.logging')
-    @with_database
     async def test_start_run_end_polling(self, log):
         with patch('porerefiner.fsevents.poll_active_run') as mock:
             mock.return_value = 1
@@ -280,8 +280,8 @@ class TestServerStart(TestCase):
             mock.assert_called()
 
     #@skip('no test')
-    @async_test
     @with_database
+    @async_test
     async def test_start_job_polling(self):
         with patch('porerefiner.fsevents.poll_jobs') as mock:
             task = await pr_fsevents.start_job_polling(0)

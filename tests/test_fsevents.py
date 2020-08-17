@@ -1,4 +1,4 @@
-from tests import _run, fsevents, files, with_database
+from tests import _run, fsevents, with_database
 
 from unittest import TestCase, skip
 from unittest.mock import Mock, patch, AsyncMock

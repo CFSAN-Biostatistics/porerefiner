@@ -77,18 +77,18 @@ class PathField(Field):
         return None
 
 
-class JobField(Field):
+# class JobField(Field):
 
-    field_type = 'blob'
+#     field_type = 'blob'
 
-    def db_value(self, value):
-        from porerefiner.jobs import AbstractJob
-        if not isinstance(value, AbstractJob):
-            raise ValueError(f"value of type {type(value)} can't be stored in this field.")
-        return pickle.dumps(value)
+#     def db_value(self, value):
+#         from porerefiner.jobs import AbstractJob
+#         if not isinstance(value, AbstractJob):
+#             raise ValueError(f"value of type {type(value)} can't be stored in this field.")
+#         return pickle.dumps(value)
 
-    def python_value(self, value):
-        return pickle.loads(value)
+#     def python_value(self, value):
+#         return pickle.loads(value)
 
 def StatusField(*args, default=PorerefinerModel.statuses[0][0], **kwargs):
     return CharField(*args, choices=PorerefinerModel.statuses, default=default, **kwargs)
@@ -178,8 +178,8 @@ class Run(PorerefinerModel):
                    .join(TagJunction)
                    .where(TagJunction.run == self))
 
-    def spawn(self, job):
-        job = Job.create(job_state=deepcopy(job), status='READY', datadir=pathlib.Path(tempfile.mkdtemp()), run=self)
+    def spawn(self, job_config):
+        job = Job.create(status='READY', job_class=job_config.__class__.__name__, datadir=pathlib.Path(tempfile.mkdtemp()), run=self)
         # JobRunJunction.create(job=job, run=self)
         # for file in self.files:
         #     JobFileJunction.create(job=job, file=file)
@@ -202,17 +202,18 @@ class Qa(PorerefinerModel):
 class Job(PorerefinerModel):
     "A job is a scheduled HPC job, pre or post submission"
     pk = AutoField()
-    job_id = TextField(null=True)
-    job_state = JobField(null=True)
+    job_id = CharField(null=True)
+    # job_state = JobField(null=True)
+    job_class = TextField(null=False)
     status = StatusField(default='QUEUED')
     datadir = PathField(null=False)
     outputdir = PathField(null=True)
     run = ForeignKeyField(Run, null=True, backref='jobs')
-    file = DeferredForeignKey('File', null=True, backref='jobs')
+    file = DeferredForeignKey('File', null=True)
 
 
     def __str__(self):
-        return f"{self.pk} ({self.job_state.__class__.__name__}) ({dict(self.statuses)[self.status]})"
+        return f"{self.pk} ({self.job_class}) ({dict(self.statuses)[self.status]})"
 
     # @property
     # def files(self):
@@ -220,6 +221,11 @@ class Job(PorerefinerModel):
     #                 .join(JobFileJunction)
     #                 .join(Job)
     #                 .where(Job.pk == self.pk))
+
+    @property
+    def job_state(self):
+        import porerefiner.jobs
+        return porerefiner.jobs.REGISTRY[self.job_class]()
 
     def tag(self, tag):
         ta, _ = Tag.get_or_create(name=tag)
@@ -339,7 +345,6 @@ class File(PorerefinerModel):
     checksum = CharField(index=True, null=True)
     last_modified = DateTimeField(default=datetime.datetime.now)
     exported = IntegerField(default=0)
-
     jobs = ManyToManyField(Job, backref='files')
 
     @property
@@ -381,5 +386,7 @@ class TagJunction(BaseModel):
     #         if ref_cls is targ_cls:
     #             return cls.create
 
+JobFileJunction = File.jobs.get_through_model()
 
-REGISTRY = [Tag, Run, Qa, Job, SampleSheet, Sample, File, TagJunction]
+
+REGISTRY = [Tag, Run, Qa, Job, SampleSheet, Sample, File, TagJunction, JobFileJunction]

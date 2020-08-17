@@ -13,7 +13,7 @@ with open('HISTORY.rst') as history_file:
 
 requirements = ['Click>=7.0',
                 'flask>=1.1.1',
-                'peewee>=3.11.2',
+                'peewee>=3.13.3',
                 'gunicorn>=19.9.0',
                 'watchdog>=0.9.0',
                 'hachiko>=0.2.0',
@@ -66,7 +66,7 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/CFSAN-Biostatistics/porerefiner',
-    version='0.8.15',
+    version='0.8.16',
     zip_safe=False,
 )
 

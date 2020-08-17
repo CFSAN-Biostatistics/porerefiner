@@ -90,10 +90,8 @@ class Submitter(metaclass=RegisteringABCMeta):
         logg = log.getChild(type(self).__name__)
         try:
             job.status = status = await self.poll_job(job)
-            logg.getChild(type(job.job_state).__name__).getChild(job.job_id).info(status)
         except Exception as e:
             job.status = 'FAILED'
-            logg.getChild(type(job.job_state).__name__).getChild(job.job_id).error(e)
             raise
         finally:
             job.save()

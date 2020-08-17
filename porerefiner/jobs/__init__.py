@@ -11,23 +11,30 @@ from typing import Union, Tuple
 
 import logging
 import pkgutil
+import traceback
 
 log = logging.getLogger('porerefiner.job')
 
 async def poll_active_job(job):
-    logg = log.getChild(f"{type(job.job_state.submitter).__name__}.{type(job.job_state).__name__}")
+    logg = log.getChild(f"poll")
     try:
         await job.job_state.submitter._poll(job)
     except Exception as e:
-        logg.error(e)
+        logg.error(f"error in {type(job.job_state.submitter).__name__} {type(job.job_state).__name__} ")
+        # logg.error(e)
+        # traceback.print_exc()
+        raise
     return 1
 
 async def submit_job(job):
-    logg = log.getChild(f"{type(job.job_state.submitter).__name__}.{type(job.job_state).__name__}")
+    logg = log.getChild(f"submit")
     try:
         await job.job_state.submitter._submit(job)
     except Exception as e:
-        logg.error(e)
+        logg.error(f"error in {type(job.job_state.submitter).__name__} {type(job.job_state).__name__} ")
+        # logg.error(e)
+        # traceback.print_exc()
+        raise
     return 1
 
 async def complete_job(job):
@@ -54,33 +61,56 @@ REGISTRY = {} # available job classes
 class _MetaRegistry(type):
 
     def __new__(meta, name, bases, class_dict):
+        "Register new CLASSES of job"
         cls = type.__new__(meta, name, bases, class_dict)
         if cls not in REGISTRY:
             REGISTRY[name] = cls
         return cls
 
-    def __call__(cls, *args, **kwargs):
-        try:
-            the_instance = super().__call__(*args, **kwargs)
-        except TypeError as e:
-            raise TypeError(f"Bad config: {cls.__name__}: {e} ({args}, {kwargs})") from e
-        if isinstance(the_instance, FileJob):
-            JOBS.FILES.append(the_instance)
-            log.getChild('files').debug(cls.__name__)
-        if isinstance(the_instance, RunJob):
-            JOBS.RUNS.append(the_instance)
-            log.getChild('runs').debug(cls.__name__)
-        return the_instance
+    # def __call__(cls, *args, **kwargs):
+    #     try:
+    #         the_instance = super().__call__(*args, **kwargs)
+    #     except TypeError as e:
+    #         raise TypeError(f"Bad config: {cls.__name__}: {e} ({args}, {kwargs})") from e
+    #     if isinstance(the_instance, FileJob):
+    #         JOBS.FILES.append(the_instance)
+    #         log.getChild('files').debug(cls.__name__)
+    #     if isinstance(the_instance, RunJob):
+    #         JOBS.RUNS.append(the_instance)
+    #         log.getChild('runs').debug(cls.__name__)
+    #     return the_instance
 
 class RegisteringABCMeta(ABCMeta, _MetaRegistry):
+
     pass
 
-@dataclass
+
+
 class AbstractJob(metaclass=RegisteringABCMeta):
-    submitter: Submitter
+
+    _the_instance = None
+
+    def __new__(cls, *args, **kwargs):
+        "Register and make singletons new INSTANCES of jobs"
+        if not cls._the_instance:
+            try:
+                cls._the_instance = the_instance = super(AbstractJob, cls).__new__(cls)
+            except TypeError as e:
+                raise TypeError(f"Bad config: {cls.__name__}: {e} ({args}, {kwargs})") from e
+            except:
+                raise
+            if isinstance(the_instance, FileJob):
+                JOBS.FILES.append(the_instance)
+                log.getChild('files').debug(cls.__name__)
+            if isinstance(the_instance, RunJob):
+                JOBS.RUNS.append(the_instance)
+                log.getChild('runs').debug(cls.__name__)
+        assert cls._the_instance
+        return cls._the_instance
     
-    def __post_init__(self):
-        self.attempts = 0
+    def __init__(self, submitter):
+        self.submitter = submitter
+        self.__class__.__init__ = lambda *a, **k: None # only run init once
 
     @classmethod
     def get_configurable_options(cls):
