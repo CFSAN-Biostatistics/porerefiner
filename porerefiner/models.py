@@ -225,7 +225,7 @@ class Job(PorerefinerModel):
     @property
     def job_state(self):
         import porerefiner.jobs
-        return porerefiner.jobs.REGISTRY[self.job_class]()
+        return porerefiner.jobs.CONFIGURED_JOB_REGISTRY[self.job_class]
 
     def tag(self, tag):
         ta, _ = Tag.get_or_create(name=tag)

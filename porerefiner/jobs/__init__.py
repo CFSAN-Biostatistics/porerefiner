@@ -56,15 +56,18 @@ async def poll_jobs(ready_jobs, running_jobs):
 
 JOBS = namedtuple('JOBS', ('FILES', 'RUNS'), defaults=([], []))() #configured (reified) job instances
 
-REGISTRY = {} # available job classes
+CLASS_REGISTRY = {} # available job classes
+
+CONFIGURED_JOB_REGISTRY = {}
+
 
 class _MetaRegistry(type):
 
     def __new__(meta, name, bases, class_dict):
         "Register new CLASSES of job"
         cls = type.__new__(meta, name, bases, class_dict)
-        if cls not in REGISTRY:
-            REGISTRY[name] = cls
+        if cls not in CLASS_REGISTRY:
+            CLASS_REGISTRY[name] = cls
         return cls
 
     # def __call__(cls, *args, **kwargs):
@@ -79,38 +82,33 @@ class _MetaRegistry(type):
     #         JOBS.RUNS.append(the_instance)
     #         log.getChild('runs').debug(cls.__name__)
     #     return the_instance
+    def __call__(cls, *args, **kwargs):
+        "Register new INSTANCES of jobs"
+        try:
+            the_instance = super().__call__(*args, **kwargs)
+        except TypeError as e:
+            raise TypeError(f"Bad config: {cls.__name__}: {e} ({args}, {kwargs})") from e
+        except:
+            raise
+        if isinstance(the_instance, FileJob):
+            JOBS.FILES.append(the_instance)
+            log.getChild('files').debug(cls.__name__)
+        if isinstance(the_instance, RunJob):
+            JOBS.RUNS.append(the_instance)
+            log.getChild('runs').debug(cls.__name__)
+        CONFIGURED_JOB_REGISTRY[cls.__name__] = the_instance
+        assert the_instance
+        return the_instance
 
 class RegisteringABCMeta(ABCMeta, _MetaRegistry):
 
     pass
 
 
-
+@dataclass
 class AbstractJob(metaclass=RegisteringABCMeta):
 
-    _the_instance = None
-
-    def __new__(cls, *args, **kwargs):
-        "Register and make singletons new INSTANCES of jobs"
-        if not cls._the_instance:
-            try:
-                cls._the_instance = the_instance = super(AbstractJob, cls).__new__(cls)
-            except TypeError as e:
-                raise TypeError(f"Bad config: {cls.__name__}: {e} ({args}, {kwargs})") from e
-            except:
-                raise
-            if isinstance(the_instance, FileJob):
-                JOBS.FILES.append(the_instance)
-                log.getChild('files').debug(cls.__name__)
-            if isinstance(the_instance, RunJob):
-                JOBS.RUNS.append(the_instance)
-                log.getChild('runs').debug(cls.__name__)
-        assert cls._the_instance
-        return cls._the_instance
-    
-    def __init__(self, submitter):
-        self.submitter = submitter
-        self.__class__.__init__ = lambda *a, **k: None # only run init once
+    submitter: Submitter
 
     @classmethod
     def get_configurable_options(cls):
