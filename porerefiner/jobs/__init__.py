@@ -13,14 +13,22 @@ import logging
 import pkgutil
 import traceback
 
+JOBS = namedtuple('JOBS', ('FILES', 'RUNS'), defaults=([], []))() #configured (reified) job instances
+
+CLASS_REGISTRY = {} # available job classes
+
+CONFIGURED_JOB_REGISTRY = {}
+
 log = logging.getLogger('porerefiner.job')
 
 async def poll_active_job(job):
     logg = log.getChild(f"poll")
+    configured_job = CONFIGURED_JOB_REGISTRY[job.job_class]
+    submitter = configured_job.submitter
     try:
-        await job.job_state.submitter._poll(job)
+        await submitter._poll(job)
     except Exception as e:
-        logg.error(f"error in {type(job.job_state.submitter).__name__} {type(job.job_state).__name__} ")
+        logg.error(f"error in {type(submitter).__name__} {type(configured_job).__name__} ")
         # logg.error(e)
         # traceback.print_exc()
         raise
@@ -28,10 +36,12 @@ async def poll_active_job(job):
 
 async def submit_job(job):
     logg = log.getChild(f"submit")
+    configured_job = CONFIGURED_JOB_REGISTRY[job.job_class]
+    submitter = configured_job.submitter
     try:
-        await job.job_state.submitter._submit(job)
+        await submitter._submit(job)
     except Exception as e:
-        logg.error(f"error in {type(job.job_state.submitter).__name__} {type(job.job_state).__name__} ")
+        logg.error(f"error in {type(submitter).__name__} {type(configured_job).__name__} ")
         # logg.error(e)
         # traceback.print_exc()
         raise
@@ -54,11 +64,7 @@ async def poll_jobs(ready_jobs, running_jobs):
     jobs_collected = sum(await gather(*[poll_active_job(job) for job in running_jobs]))
     return jobs_submitted + jobs_collected, jobs_submitted, jobs_collected
 
-JOBS = namedtuple('JOBS', ('FILES', 'RUNS'), defaults=([], []))() #configured (reified) job instances
 
-CLASS_REGISTRY = {} # available job classes
-
-CONFIGURED_JOB_REGISTRY = {}
 
 
 class _MetaRegistry(type):

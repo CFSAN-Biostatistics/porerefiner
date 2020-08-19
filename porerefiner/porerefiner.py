@@ -5,6 +5,7 @@
 import click
 
 import datetime
+import hashlib
 import json
 import logging
 import setproctitle
@@ -12,8 +13,8 @@ import sys, os
 import yaml
 
 from asyncio import run, gather, wait
-from porerefiner import models
-from porerefiner.models import Job, Run
+from porerefiner import models, samplesheets, jobs
+from porerefiner.models import Job, Run, SampleSheet
 import porerefiner.cli_utils as cli_utils
 import porerefiner.jobs.submitters as submitters
 from pathlib import Path
@@ -61,9 +62,11 @@ async def serve(config_file, db_path=None, db_pragmas=None, wdog_settings=None, 
 
 # bit of complexity here to handle different defaults for privileged vs normal users
 
+path_if_root = Path('/etc/porerefiner/config.yaml')
+
 default_config = lambda: os.environ.get('POREREFINER_CONFIG',
                                         lambda: (Path.home() / '.porerefiner' / 'config.yaml',
-                                                Path('/etc/porerefiner/config.yaml'))[os.geteuid == 0])
+                                                path_if_root)[os.geteuid == 0 or path_if_root.exists()])
 
 config = click.option('--config',
                       prompt=('path to config file', False)['POREREFINER_CONFIG' in os.environ],
@@ -120,8 +123,8 @@ def info():
     "Get info about configurable event handlers - notifiers, submitters, and jobs."
     pass
 
-@info.command()
-@click.argument('notifiers', default=None, required=False)
+@info.command(name='notifiers')
+@click.argument('notifier', default=None, required=False)
 def _notifiers(notifier=None):
     "Notifiers that are installed and can be configured."
     from porerefiner.notifiers import REGISTRY, Notifier
@@ -135,8 +138,8 @@ def _notifiers(notifier=None):
         except KeyError:
             click.echo(f"Notifier '{notifier}'' not installed.", err=True)
 
-@info.command()
-@click.argument('submitters', default=None, required=False)
+@info.command(name='submitters')
+@click.argument('submitter', default=None, required=False)
 def _submitters(submitter=None):
     "Job submitters that are installed and can be configured."
     from porerefiner.jobs.submitters import REGISTRY, Submitter
@@ -150,18 +153,18 @@ def _submitters(submitter=None):
         except KeyError:
             click.echo(f"Notifier '{submitter}'' not installed.", err=True)
 
-@info.command()
+@info.command(name='jobs')
 @click.argument('job', default=None, required=False)
 def _jobs(job=None):
     "Jobs that are installed and can be configured."
-    from porerefiner.jobs import REGISTRY, FileJob, RunJob, AbstractJob
+    from porerefiner.jobs import CLASS_REGISTRY, FileJob, RunJob, AbstractJob
     if not job:
-        for name, job in REGISTRY.items():
+        for name, job in CLASS_REGISTRY.items():
             if job is not FileJob and job is not RunJob and job is not AbstractJob:
                 print(name)
     else:
         try:
-            click.echo(REGISTRY[job].get_configurable_options())
+            click.echo(CLASS_REGISTRY[job].get_configurable_options())
         except KeyError:
             click.echo(f"Notifier '{job}'' not installed.", err=True)
 
@@ -204,10 +207,18 @@ def database(config):
     "Reset database to empty state."
     if click.confirm("This will delete the porerefiner database. Are you sure?"):
         import porerefiner.config
-        Path(porerefiner.config.Config(config).config['database']['path']).unlink()
+        config = porerefiner.config.Config(config).config
+        db_path=config['database']['path']
+        db_pragmas=config['database']['pragmas']
+        if Path(db_path).exists():
+            Path(db_path).unlink()
+        models._db.init(db_path, db_pragmas)
+        models._db.connect()
+        models._db.create_tables(models.REGISTRY)
 
-@reset.command()
-def samplesheets(): #TODO
+
+@reset.command(name='samplesheets')
+def _samplesheets(): #TODO
     "Clear samplesheets that aren't attached to any run."
     click.echo("clear sheets")
 
@@ -226,7 +237,7 @@ def _jobs():
     "List the configurable, configured, and spawned jobs."
     import porerefiner.jobs
     click.echo("Installed job modules:")
-    click.echo(yaml.dump(list(porerefiner.jobs.REGISTRY.keys())))
+    click.echo(yaml.dump(list(porerefiner.jobs.CLASS_REGISTRY.keys())))
     click.echo("Configured jobs:")
     click.echo(yaml.dump(porerefiner.jobs.JOBS))
     click.echo("Spawned jobs:")
@@ -251,9 +262,67 @@ def notifiers():
     click.echo(yaml.dump(porerefiner.notifiers.NOTIFIERS))
 
 @cli.group()
-def verify():
+@config
+def verify(config):
     "Run various checks."
-    pass
+    from porerefiner.config import Config
+    config = Config(config).config
+
+@verify.command(name='jobs')
+@click.argument('sample_sheet', type=cli_utils.PathPath())
+@click.argument('data_file', type=cli_utils.PathPath())
+def _jobs(sample_sheet, data_file):
+    "Verify job configuration by actually running them on sample data, through their submitter."
+    # create an in-mem database
+    from peewee import SqliteDatabase
+    db = SqliteDatabase(":memory:", pragmas={'foreign_keys':1}, autoconnect=False)
+    db.bind(models.REGISTRY, bind_refs=True, bind_backrefs=True)
+    db.connect()
+    db.create_tables(models.REGISTRY)
+
+    # create a run
+    ru = Run.create(name=data_file.parent.name,
+                     ended=datetime.datetime.now(),
+                     status='DONE',
+                     path=data_file.parent)
+
+    # load the sample sheet
+    # save the sample to the run
+    with open(sample_sheet, 'rb') as sheet:
+        ss = SampleSheet.new_sheet_from_message(
+            sheet=(samplesheets.load_from_csv,
+                   samplesheets.load_from_excel)['xslx' in sample_sheet.name](sheet),
+            run=ru
+        )
+
+    with open(data_file, 'rb') as data:
+        hash = hashlib.md5()
+        hash.update(data.read())
+    md5 = hash.hexdigest()
+
+    # create a file and add it to the run
+    fi = models.File.create(path=data_file,
+                            run=ru,
+                            checksum=md5,
+                            )
+
+    async def fileJob(job):
+        j = fi.spawn(job)
+        await jobs.submit_job(j)
+        while j.status not in ('DONE', 'FAILED'):
+            await jobs.poll_active_job(j)
+
+    async def runJob(job):
+        j = ru.spawn(job)
+        await jobs.submit_job(j)
+        while j.status not in ('DONE', 'FAILED'):
+            await jobs.poll_active_job(j)
+
+    async def task():
+        await gather(*[fileJob(job) for job in jobs.JOBS.FILES] +
+                      [runJob(job) for job in jobs.JOBS.RUNS])
+
+    run(task())
 
 @verify.command(name='submitters')
 def _submitters():

@@ -179,3 +179,17 @@ class TestFile(TestCase):
     @with_database
     def test_file(self, **k):
         assert models.File.create(**k)
+
+    @given(pk=sql_ints(),
+           path=paths(),
+           checksum=strat.text(),
+           last_modified=strat.datetimes(),
+           exported=strat.booleans(),
+           job=Model.Jobs())
+    @with_database
+    def test_job_spawn(self, job, **k):
+        fi = models.File.create(**k)
+        assert fi.spawn(job)
+
+
+    

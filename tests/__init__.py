@@ -323,7 +323,7 @@ def with_database(func):
     @wraps(func)
     def wrapped_test_function(*a, **k):
         db = SqliteDatabase(":memory:", pragmas={'foreign_keys':1}, autoconnect=False)
-        db.bind(models.REGISTRY, bind_refs=False, bind_backrefs=False)
+        db.bind(models.REGISTRY, bind_refs=True, bind_backrefs=True)
         db.connect()
         db.create_tables(models.REGISTRY)
         try:

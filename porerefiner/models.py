@@ -209,7 +209,7 @@ class Job(PorerefinerModel):
     datadir = PathField(null=False)
     outputdir = PathField(null=True)
     run = ForeignKeyField(Run, null=True, backref='jobs')
-    file = DeferredForeignKey('File', null=True)
+    file = DeferredForeignKey('File', backref='_jobs_with_this_file_as_primary', null=True)
 
 
     def __str__(self):
@@ -345,7 +345,7 @@ class File(PorerefinerModel):
     checksum = CharField(index=True, null=True)
     last_modified = DateTimeField(default=datetime.datetime.now)
     exported = IntegerField(default=0)
-    jobs = ManyToManyField(Job, backref='files')
+    _jobs = ManyToManyField(Job, backref='files')
 
     @property
     def name(self):
@@ -358,15 +358,20 @@ class File(PorerefinerModel):
     #                .join(File)
     #                .where(File.pk == self.pk))
 
-    def spawn(self, job):
-        job = Job.create(job_state=copy(job), status='READY', datadir=pathlib.Path(tempfile.mkdtemp()), file=self)
-        JobFileJunction.create(job=job, file=self)
+    def spawn(self, job_config):
+        job = Job.create(status='READY', job_class=job_config.__class__.__name__, datadir=pathlib.Path(tempfile.mkdtemp()), file=self)
+        self._jobs.add(job)
         return job
 
     def tag(self, tag):
         ta, _ = Tag.get_or_create(name=tag)
         tj, _ = TagJunction.get_or_create(tag=ta, file=self)
         return ta
+
+    @property
+    def jobs(self):
+        yield from self._jobs_with_this_file_as_primary
+        yield from self._jobs
 
 
 class TagJunction(BaseModel):
@@ -386,7 +391,7 @@ class TagJunction(BaseModel):
     #         if ref_cls is targ_cls:
     #             return cls.create
 
-JobFileJunction = File.jobs.get_through_model()
+JobFileJunction = File._jobs.get_through_model()
 
 
 REGISTRY = [Tag, Run, Qa, Job, SampleSheet, Sample, File, TagJunction, JobFileJunction]
