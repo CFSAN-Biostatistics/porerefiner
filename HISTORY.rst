@@ -2,6 +2,11 @@
 History
 =======
 
+0.8.19 (2020-08-20)
+-------------------
+
+* more convenient access of config from plugins
+
 0.8.18 (2020-08-18)
 -------------------
 
