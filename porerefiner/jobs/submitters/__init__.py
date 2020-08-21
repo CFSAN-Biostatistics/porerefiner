@@ -49,7 +49,7 @@ class Submitter(metaclass=RegisteringABCMeta):
 
     async def _submit(self, job):
         "Create datadir, delegate job setup, then call subclass method to submit job"
-        from porerefiner.jobs import FileJob, RunJob
+        from porerefiner.jobs import FileJob, RunJob, CONFIGURED_JOB_REGISTRY
         run = job.run
         file = job.file
         logg = log.getChild(type(self).__name__)
@@ -57,10 +57,11 @@ class Submitter(metaclass=RegisteringABCMeta):
         datadir = job.datadir = Path(mkdtemp())
         remotedir = job.remotedir = self.reroot_path(datadir)
         job.save()
-        if isinstance(job.job_state, RunJob):
-            cmd = job.job_state.setup(run, datadir)
-        elif isinstance(job, FileJob):
-            cmd = job.job_state.setup(file, file.run, datadir)
+        configured_job = CONFIGURED_JOB_REGISTRY[job.job_class]
+        if isinstance(configured_job, RunJob):
+            cmd = configured_job.setup(run=run, datadir=datadir, remotedir=remotedir)
+        elif isinstance(configured_job, FileJob):
+            cmd = configured_job.setup(file=file, run=file.run, datadir=datadir, remotedir=remotedir)
         if isinstance(cmd, tuple): #some jobs return a string plus execution hints
             cmd, hints = cmd
         if not isinstance(cmd, str): #has to be a string
@@ -90,10 +91,8 @@ class Submitter(metaclass=RegisteringABCMeta):
         logg = log.getChild(type(self).__name__)
         try:
             job.status = status = await self.poll_job(job)
-            logg.getChild(type(job.job_state).__name__).getChild(job.job_id).info(status)
         except Exception as e:
             job.status = 'FAILED'
-            logg.getChild(type(job.job_state).__name__).getChild(job.job_id).error(e)
             raise
         finally:
             job.save()

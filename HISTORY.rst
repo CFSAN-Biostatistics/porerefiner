@@ -2,6 +2,21 @@
 History
 =======
 
+0.8.18 (2020-08-18)
+-------------------
+
+* new command to run jobs on sample data
+
+0.8.17 (2020-08-17)
+-------------------
+
+* bugfixes for the bugfixes and more tests
+
+0.8.16 (2020-08-17)
+-------------------
+
+* bunch of bug fixes in job system
+
 0.8.15 (2020-08-06)
 -------------------
 

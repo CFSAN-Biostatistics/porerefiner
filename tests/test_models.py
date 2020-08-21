@@ -2,7 +2,7 @@
 from unittest import TestCase, skip
 from unittest.mock import Mock, patch
 
-from tests import paths, with_database, TestBase, sql_ints, samples, samplesheets, runs, jobs as _jobs
+from tests import paths, with_database, TestBase, sql_ints, Model, jobs as _jobs
 
 from porerefiner import models, jobs
 
@@ -32,13 +32,13 @@ class TestModels(TestCase):
         fld = models.PathField()
         self.assertEqual(fld.python_value(fld.db_value(path)), pa)
 
-    @given(job=_jobs())
-    def test_job_field(self, job):
-        fld = models.JobField()
-        self.assertEqual(type(fld.python_value(fld.db_value(job))), type(job))
+    # @given(job=_jobs())
+    # def test_job_field(self, job):
+    #     fld = models.JobField()
+    #     self.assertEqual(type(fld.python_value(fld.db_value(job))), type(job))
 
     def test_models_registered(self):
-        self.assertEqual(len(models.REGISTRY), 8)
+        self.assertEqual(len(models.REGISTRY), 9)
 
     # @skip('broken')
     @given(tag=strat.text().filter(lambda x: x))
@@ -84,7 +84,7 @@ class TestRun(TestCase):
         assert models.Run.create(flowcell=self.flow, **kwargs).run_duration
 
     @settings(deadline=None, suppress_health_check=(HealthCheck.all()))
-    @given(run=runs(),
+    @given(run=Model.Runs(),
            job=_jobs())
     @with_database
     def test_job_spawn(self, run, job):
@@ -92,9 +92,7 @@ class TestRun(TestCase):
         run.save()
         self.assertIsNotNone(run.pk)
         jobb = run.spawn(job)
-        #test that a deepcopy of the job state object was made
-        self.assertIsNot(job, jobb.job_state)
-        self.assertIsNot(job.submitter, jobb.job_state.submitter)
+        self.assertIs(job, jobb.job_state)
 
 class TestQa(TestCase):
 
@@ -109,23 +107,20 @@ class TestQa(TestCase):
 
 class TestJob(TestCase):
 
-    @given(pk=sql_ints(),
-           job_id=strat.text(),
-           job_state=strat.just(TestJobDefinition(submitter=None)),
-           status=strat.one_of(*[strat.just(val) for val, _ in models.Job.statuses]),
-           datadir=paths())
+    @given(job=Model.Jobs())
     @with_database
-    def test_job(self, **kwargs):
-        assert models.Job.create(**kwargs)
+    def test_job(self, job):
+        assert job.save()
 
     # @skip('no test yet')
-    @given(job=_jobs(),
+    @given(job=Model.Jobs(),
            path=paths(pathlib_only=True))
     @with_database
     def test_job_files(self, job, path):
         job.save()
-        file = models.File(path=path)
-        file.save()
+        # file = models.File(path=path)
+        # file.save()
+        file = models.File.create(path=path)
         job.files.add(file)
         job.save()
         self.assertIn(file, job.files)
@@ -151,7 +146,7 @@ class TestSampleSheet(TestCase):
 
     @skip('broken')
     @seed(5249283748837843916514315999694345497)
-    @given(ss=samplesheets())
+    @given(ss=Model.Samplesheets())
     @with_database
     def test_new_sheet_from_message(self, ss):
         flow = models.Flowcell.create(consumable_id="TEST|TEST|TEST", consumable_type="TEST|TEST|TEST", path="TEST/TEST/TEST")
@@ -184,3 +179,17 @@ class TestFile(TestCase):
     @with_database
     def test_file(self, **k):
         assert models.File.create(**k)
+
+    @given(pk=sql_ints(),
+           path=paths(),
+           checksum=strat.text(),
+           last_modified=strat.datetimes(),
+           exported=strat.booleans(),
+           job=Model.Jobs())
+    @with_database
+    def test_job_spawn(self, job, **k):
+        fi = models.File.create(**k)
+        assert fi.spawn(job)
+
+
+    

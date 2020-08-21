@@ -3,8 +3,8 @@ import asyncio
 from unittest import TestCase, skip
 from unittest.mock import Mock, patch
 
-import porerefiner.jobs as jobs
-import porerefiner.jobs.submitters as submitters
+import porerefiner.jobs
+import porerefiner.jobs.submitters
 
 from porerefiner.jobs import submit_job, poll_active_job, poll_jobs
 
@@ -20,19 +20,21 @@ def run(task):
 class TestJobSubmission(TestCase):
 
     @patch('porerefiner.jobs.submitters.logging')
-    @given(job=job_records())
+    @given(job=Model.Jobs())
     @with_database
     def test_submit_job(self, log, job):
+        job.save()
         assert run(submit_job(job))
 
     @patch('porerefiner.jobs.logging')
-    @given(job=job_records())
+    @given(job=Model.Jobs())
     @with_database
     def test_poll_active_job(self, log, job):
+        job.save()
         assert run(poll_active_job(job))
 
     @patch('porerefiner.jobs.logging')
-    @given(jobs=lists(job_records()))
+    @given(jobs=lists(Model.Jobs()))
     @with_database
     def test_poll_jobs(self, log, jobs):
         result, _, _ = run(poll_jobs(jobs, jobs))
