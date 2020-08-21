@@ -297,3 +297,8 @@ class TestConfig(TestCase):
         self.assertTrue(c.config)
         os.unlink(f)
 
+    def test_config_dictlike_access(self):
+        f = mktemp()
+        c = config.Config(f)
+        assert config.Config['server']['socket']
+

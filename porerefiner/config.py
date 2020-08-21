@@ -20,22 +20,23 @@ def c(d):
     else:
         return d
 
+class DictLikeClass(type):
 
-class Config:
+    def __getitem__(cls, key):
+        return cls.the_config.config[key]
+
+    def __call__(cls, *args, **kwargs):
+        if not cls.the_config:
+            cls.the_config = super().__call__(*args, **kwargs)
+        return cls.the_config
+
+
+class Config(metaclass=DictLikeClass):
 
     the_config = None
 
     # config_file = Path(environ.get('POREREFINER_CONFIG', '/Users/justin.payne/.porerefiner/config.yml'))
-
-    @classmethod
-    def __get__(cls, key):
-        return cls.the_config[key]
-
-    @classmethod
-    def __call__(cls, *args, **kwargs):
-        if not cls.the_config:
-            cls.the_config = super().__call__(cls, *args, **kwargs)
-        return cls.the_config
+    
 
     def __init__(self, config_file, client_only=False):
 
