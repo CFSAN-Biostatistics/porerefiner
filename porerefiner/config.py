@@ -28,6 +28,10 @@ class Config:
     # config_file = Path(environ.get('POREREFINER_CONFIG', '/Users/justin.payne/.porerefiner/config.yml'))
 
     @classmethod
+    def __get__(cls, key):
+        return cls.the_config[key]
+
+    @classmethod
     def __call__(cls, *args, **kwargs):
         if not cls.the_config:
             cls.the_config = super().__call__(cls, *args, **kwargs)
