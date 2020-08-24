@@ -2,6 +2,11 @@
 History
 =======
 
+0.8.21 (2020-08-24)
+-------------------
+
+* Bugfix for remote directory rerooting, new tests
+
 0.8.20 (2020-08-20)
 -------------------
 

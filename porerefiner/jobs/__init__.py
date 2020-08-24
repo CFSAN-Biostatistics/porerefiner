@@ -25,6 +25,7 @@ async def poll_active_job(job):
     logg = log.getChild(f"poll")
     configured_job = CONFIGURED_JOB_REGISTRY[job.job_class]
     submitter = configured_job.submitter
+    assert isinstance(job, Job)
     try:
         await submitter._poll(job)
     except Exception as e:
@@ -38,6 +39,7 @@ async def submit_job(job):
     logg = log.getChild(f"submit")
     configured_job = CONFIGURED_JOB_REGISTRY[job.job_class]
     submitter = configured_job.submitter
+    assert isinstance(job, Job)
     try:
         await submitter._submit(job)
     except Exception as e:

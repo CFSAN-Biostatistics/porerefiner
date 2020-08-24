@@ -209,13 +209,7 @@ def jobs(draw):
 
 class Model:
 
-    @staticmethod
-    @composite
-    def Jobs(draw, state=jobs()):
-        TestJob(TestSubmitter())
-        return draw(builds(models.Job,
-                       job_class=just(TestJob.__name__),
-                       datadir=just("/dev/null")))
+    
 
     @staticmethod
     @composite
@@ -237,6 +231,14 @@ class Model:
                         status=sampled_from([status[0] for status in models.Run.statuses]),
                         path=just(path),
                         basecalling_model=sampled_from([model[0] for model in models.Run.basecallers])))
+
+    @staticmethod
+    @composite
+    def Jobs(draw, state=jobs()):
+        TestJob(TestSubmitter())
+        return draw(builds(models.Job,
+                       job_class=just(TestJob.__name__),
+                       datadir=just("/dev/null")))
 
     @staticmethod
     @composite

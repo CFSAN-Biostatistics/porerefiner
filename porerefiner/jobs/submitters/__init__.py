@@ -8,6 +8,7 @@ import logging
 import pkgutil
 
 from porerefiner.cli_utils import render_dataclass, Email, Url, PathStr
+from porerefiner.models import Job
 
 SUBMITTERS = [] # configured (reified) submitters
 
@@ -50,17 +51,20 @@ class Submitter(metaclass=RegisteringABCMeta):
     async def _submit(self, job):
         "Create datadir, delegate job setup, then call subclass method to submit job"
         from porerefiner.jobs import FileJob, RunJob, CONFIGURED_JOB_REGISTRY
+        assert isinstance(job, Job)
         run = job.run
         file = job.file
+        assert run or file
         logg = log.getChild(type(self).__name__)
         hints = {}
         datadir = job.datadir = Path(mkdtemp())
-        remotedir = job.remotedir = self.reroot_path(datadir)
         job.save()
         configured_job = CONFIGURED_JOB_REGISTRY[job.job_class]
         if isinstance(configured_job, RunJob):
+            remotedir = job.remotedir = self.reroot_path(run.path)
             cmd = configured_job.setup(run=run, datadir=datadir, remotedir=remotedir)
         elif isinstance(configured_job, FileJob):
+            remotedir = job.remotedir = self.reroot_path(file.path.parent)
             cmd = configured_job.setup(file=file, run=file.run, datadir=datadir, remotedir=remotedir)
         if isinstance(cmd, tuple): #some jobs return a string plus execution hints
             cmd, hints = cmd

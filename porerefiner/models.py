@@ -213,7 +213,7 @@ class Job(PorerefinerModel):
 
 
     def __str__(self):
-        return f"{self.pk} ({self.job_class}) ({dict(self.statuses)[self.status]})"
+        return f"{self.pk} ({self.job_class} for {self.purpose}) ({dict(self.statuses)[self.status]})"
 
     # @property
     # def files(self):
@@ -221,6 +221,13 @@ class Job(PorerefinerModel):
     #                 .join(JobFileJunction)
     #                 .join(Job)
     #                 .where(Job.pk == self.pk))
+
+    @property
+    def purpose(self):
+        if self.run:
+            return self.run.alt_name
+        if self.file:
+            return self.file.path
 
     @property
     def job_state(self):
