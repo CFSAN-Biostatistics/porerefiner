@@ -68,8 +68,7 @@ class PathPath(click.Path):
 
     def convert(self, value, param, ctx):
         val = super().convert(value, param, ctx)
-        return Path(val)
-
+        return Path(val).resolve()
 
 def handle_connection_errors(func):
     @wraps(func)
