@@ -77,8 +77,8 @@ class Submitter(metaclass=RegisteringABCMeta):
             job.status = 'QUEUED'
         except Exception as e:
             logg.error(e)
-            job.job_state.attempts += 1
-            if job.job_state.attempts > 3:
+            job.attempts += 1
+            if job.attempts > 3:
                 job.status = 'FAILED'
                 raise
         finally:

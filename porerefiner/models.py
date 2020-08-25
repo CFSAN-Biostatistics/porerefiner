@@ -210,6 +210,7 @@ class Job(PorerefinerModel):
     outputdir = PathField(null=True)
     run = ForeignKeyField(Run, null=True, backref='jobs')
     file = DeferredForeignKey('File', backref='_jobs_with_this_file_as_primary', null=True)
+    attempts = IntegerField(default=0)
 
 
     def __str__(self):
