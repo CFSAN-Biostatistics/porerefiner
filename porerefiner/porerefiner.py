@@ -280,6 +280,9 @@ def _jobs(sample_sheet, data_file):
     db.connect()
     db.create_tables(models.REGISTRY)
 
+    from porerefiner.config import Config
+    Config['nanopore']['path'] = data_file.parent
+
     # create a run
     ru = Run.create(name=data_file.parent.name,
                      ended=datetime.datetime.now(),
