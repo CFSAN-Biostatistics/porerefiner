@@ -79,6 +79,7 @@ Ready to contribute? Here's how to set up `porerefiner` for local development.
 5. When you're done making changes, check that your changes pass flake8 and the
    tests, including testing other Python versions with tox::
 
+    $ make test
     $ flake8 porerefiner tests
     $ python setup.py test or pytest
     $ tox
