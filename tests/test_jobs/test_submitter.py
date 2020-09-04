@@ -9,7 +9,7 @@ from hypothesis import given
 
 class TestSubmitters(TestCase):
 
-    @given(job_rec = Model.Jobs(),
+    @given(job_rec = Model.Duties(),
            job_code = jobs(),
            run = Model.Runs())
     @with_database

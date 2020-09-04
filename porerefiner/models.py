@@ -179,7 +179,7 @@ class Run(PorerefinerModel):
                    .where(TagJunction.run == self))
 
     def spawn(self, job_config):
-        job = Job.create(status='READY', job_class=job_config.__class__.__name__, datadir=pathlib.Path(tempfile.mkdtemp()), run=self)
+        job = Duty.create(status='READY', job_class=job_config.__class__.__name__, datadir=pathlib.Path(tempfile.mkdtemp()), run=self)
         # JobRunJunction.create(job=job, run=self)
         # for file in self.files:
         #     JobFileJunction.create(job=job, file=file)
@@ -199,7 +199,7 @@ class Qa(PorerefinerModel):
     quality = FloatField()
 
 
-class Job(PorerefinerModel):
+class Duty(PorerefinerModel):
     "A job is a scheduled HPC job, pre or post submission"
     pk = AutoField()
     job_id = CharField(null=True)
@@ -208,8 +208,8 @@ class Job(PorerefinerModel):
     status = StatusField(default='QUEUED')
     datadir = PathField(null=False)
     outputdir = PathField(null=True)
-    run = ForeignKeyField(Run, null=True, backref='jobs')
-    file = DeferredForeignKey('File', backref='_jobs_with_this_file_as_primary', null=True)
+    run = ForeignKeyField(Run, null=True, backref='duties')
+    file = DeferredForeignKey('File', backref='_duties_with_this_file_as_primary', null=True)
     attempts = IntegerField(default=0)
 
 
@@ -353,7 +353,7 @@ class File(PorerefinerModel):
     checksum = CharField(index=True, null=True)
     last_modified = DateTimeField(default=datetime.datetime.now)
     exported = IntegerField(default=0)
-    _jobs = ManyToManyField(Job, backref='files')
+    _duties = ManyToManyField(Duty, backref='files')
 
     @property
     def name(self):
@@ -367,8 +367,8 @@ class File(PorerefinerModel):
     #                .where(File.pk == self.pk))
 
     def spawn(self, job_config):
-        job = Job.create(status='READY', job_class=job_config.__class__.__name__, datadir=pathlib.Path(tempfile.mkdtemp()), file=self)
-        self._jobs.add(job)
+        job = Duty.create(status='READY', job_class=job_config.__class__.__name__, datadir=pathlib.Path(tempfile.mkdtemp()), file=self)
+        self._duties.add(job)
         return job
 
     def tag(self, tag):
@@ -377,9 +377,9 @@ class File(PorerefinerModel):
         return ta
 
     @property
-    def jobs(self):
-        yield from self._jobs_with_this_file_as_primary
-        yield from self._jobs
+    def duties(self):
+        yield from self._duties_with_this_file_as_primary
+        yield from self._duties
 
 
 class TagJunction(BaseModel):
@@ -387,7 +387,7 @@ class TagJunction(BaseModel):
     # flowcell = ForeignKeyField(Flowcell, null=True, backref='tag_junctions')
     run = ForeignKeyField(Run, null=True, backref='tag_junctions')
     qa = ForeignKeyField(Qa, null=True, backref='tag_junctions')
-    job = ForeignKeyField(Job, null=True, backref='tag_junctions')
+    duty = ForeignKeyField(Duty, null=True, backref='tag_junctions')
     samplesheet = ForeignKeyField(SampleSheet, null=True, backref='tag_junctions')
     sample = ForeignKeyField(Sample, null=True, backref='tag_junctions')
     file = ForeignKeyField(File, null=True, backref='tag_junctions')
@@ -399,7 +399,7 @@ class TagJunction(BaseModel):
     #         if ref_cls is targ_cls:
     #             return cls.create
 
-JobFileJunction = File._jobs.get_through_model()
+JobFileJunction = File._duties.get_through_model()
 
 
-REGISTRY = [Tag, Run, Qa, Job, SampleSheet, Sample, File, TagJunction, JobFileJunction]
+REGISTRY = [Tag, Run, Qa, Duty, SampleSheet, Sample, File, TagJunction, JobFileJunction]

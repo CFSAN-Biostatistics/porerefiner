@@ -107,13 +107,13 @@ class TestQa(TestCase):
 
 class TestJob(TestCase):
 
-    @given(job=Model.Jobs())
+    @given(job=Model.Duties())
     @with_database
     def test_job(self, job):
         assert job.save()
 
     # @skip('no test yet')
-    @given(job=Model.Jobs(),
+    @given(job=Model.Duties(),
            path=paths(pathlib_only=True))
     @with_database
     def test_job_files(self, job, path):
@@ -185,7 +185,7 @@ class TestFile(TestCase):
            checksum=strat.text(),
            last_modified=strat.datetimes(),
            exported=strat.booleans(),
-           job=Model.Jobs())
+           job=Model.Duties())
     @with_database
     def test_job_spawn(self, job, **k):
         fi = models.File.create(**k)

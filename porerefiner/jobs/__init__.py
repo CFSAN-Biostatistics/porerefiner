@@ -4,7 +4,7 @@ from collections import namedtuple
 from dataclasses import dataclass
 
 from .submitters import Submitter
-from porerefiner.models import Job, File, Run
+from porerefiner.models import Duty, File, Run
 from porerefiner.cli_utils import render_dataclass, Email, Url, PathStr
 from pathlib import Path
 from typing import Union, Tuple
@@ -25,7 +25,7 @@ async def poll_active_job(job):
     logg = log.getChild(f"poll")
     configured_job = CONFIGURED_JOB_REGISTRY[job.job_class]
     submitter = configured_job.submitter
-    assert isinstance(job, Job)
+    assert isinstance(job, Duty)
     try:
         await submitter._poll(job)
     except Exception as e:
@@ -39,7 +39,7 @@ async def submit_job(job):
     logg = log.getChild(f"submit")
     configured_job = CONFIGURED_JOB_REGISTRY[job.job_class]
     submitter = configured_job.submitter
-    assert isinstance(job, Job)
+    assert isinstance(job, Duty)
     try:
         await submitter._submit(job)
     except Exception as e:

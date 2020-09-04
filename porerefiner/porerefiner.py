@@ -14,7 +14,7 @@ import yaml
 
 from asyncio import run, gather, wait
 from porerefiner import models, samplesheets, jobs
-from porerefiner.models import Job, Run, SampleSheet
+from porerefiner.models import Duty, Run, SampleSheet
 import porerefiner.cli_utils as cli_utils
 import porerefiner.jobs.submitters as submitters
 from pathlib import Path
@@ -174,11 +174,11 @@ def reset():
     pass
 
 @reset.command()
-@click.argument('status', default="QUEUED", type=click.Choice([v for v, _ in Job.statuses], case_sensitive=True))
+@click.argument('status', default="QUEUED", type=click.Choice([v for v, _ in Duty.statuses], case_sensitive=True))
 def _jobs(status):
     "Reset all jobs to a particular status."
     if click.confirm(f"This will set all jobs to {status} status. Are you sure?"):
-        Job.update(status=status).execute()
+        Duty.update(status=status).execute()
         click.echo(f"Jobs set to {status}.")
 
 @reset.command()
@@ -241,7 +241,7 @@ def _jobs():
     click.echo("Configured jobs:")
     click.echo(yaml.dump(porerefiner.jobs.JOBS))
     click.echo("Spawned jobs:")
-    [click.echo(yaml.dump(job)) for job in Job.select().dicts()]
+    [click.echo(yaml.dump(job)) for job in Duty.select().dicts()]
 
 @_list.command(name='submitters')
 def _submitters():

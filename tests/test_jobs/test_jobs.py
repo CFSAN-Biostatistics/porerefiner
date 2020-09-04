@@ -21,7 +21,7 @@ def run(task):
 class TestJobSubmission(TestCase):
 
     @patch('porerefiner.jobs.submitters.logging')
-    @given(job=Model.Jobs(),
+    @given(job=Model.Duties(),
            runn=Model.Runs())
     @settings(suppress_health_check=(HealthCheck.too_slow,))
     @with_database
@@ -34,7 +34,7 @@ class TestJobSubmission(TestCase):
 
     
     @patch('porerefiner.jobs.logging')
-    @given(job=Model.Jobs(),
+    @given(job=Model.Duties(),
            runn=Model.Runs())
     @settings(suppress_health_check=(HealthCheck.too_slow,))
     @with_database
@@ -45,12 +45,12 @@ class TestJobSubmission(TestCase):
         assert job.pk
         #raise TypeError(type(job).__name__)
         assert job.run is not None
-        assert isinstance(job, models.Job)
+        assert isinstance(job, models.Duty)
         assert run(poll_active_job(job))
 
     
     @patch('porerefiner.jobs.logging')
-    @given(jobs=lists(Model.Jobs()),
+    @given(jobs=lists(Model.Duties()),
            runn=Model.Runs())
     @settings(suppress_health_check=(HealthCheck.too_slow,))
     @with_database

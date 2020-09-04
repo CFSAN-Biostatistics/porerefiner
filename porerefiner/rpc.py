@@ -15,7 +15,7 @@ from hachiko.hachiko import AIOEventHandler, AIOWatchdog
 from itertools import chain
 from peewee import JOIN
 from porerefiner import models
-from porerefiner.models import Run, Qa, File, Job, SampleSheet, Sample, Tag, TagJunction
+from porerefiner.models import Run, Qa, File, Duty, SampleSheet, Sample, Tag, TagJunction
 from porerefiner.cli_utils import relativize_path as r, absolutize_path as a, json_formatter
 from porerefiner.jobs import poll_jobs, CLASS_REGISTRY, JOBS
 from os.path import split, getmtime

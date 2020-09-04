@@ -18,7 +18,7 @@ from hachiko.hachiko import AIOEventHandler, AIOWatchdog
 from itertools import chain
 from peewee import JOIN
 from porerefiner import models
-from porerefiner.models import Run, Qa, File, Job, SampleSheet, Sample, Tag, TagJunction
+from porerefiner.models import Run, Qa, File, Duty, SampleSheet, Sample, Tag, TagJunction
 from porerefiner.cli_utils import relativize_path as r, absolutize_path as a, json_formatter
 from porerefiner.jobs import poll_jobs, CLASS_REGISTRY, JOBS
 from os.path import split, getmtime
@@ -264,8 +264,8 @@ async def start_job_polling(job_polling_interval, *a, **k):
     log.info(f'Starting job polling...')
     async def run_job_polling():
         po, su, co = await poll_jobs(
-            Job.select().where(Job.status == 'READY'),
-            Job.select().where(Job.status == 'RUNNING')
+            Duty.select().where(Duty.status == 'READY'),
+            Duty.select().where(Duty.status == 'RUNNING')
         )
         log.info(f'{po} jobs polled, {su} submitted, {co} collected.')
         await asyncio.sleep(job_polling_interval) #poll every 30 minutes

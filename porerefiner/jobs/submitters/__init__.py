@@ -8,7 +8,7 @@ import logging
 import pkgutil
 
 from porerefiner.cli_utils import render_dataclass, Email, Url, PathStr
-from porerefiner.models import Job
+from porerefiner.models import Duty
 
 SUBMITTERS = [] # configured (reified) submitters
 
@@ -51,7 +51,7 @@ class Submitter(metaclass=RegisteringABCMeta):
     async def _submit(self, job):
         "Create datadir, delegate job setup, then call subclass method to submit job"
         from porerefiner.jobs import FileJob, RunJob, CONFIGURED_JOB_REGISTRY
-        assert isinstance(job, Job)
+        assert isinstance(job, Duty)
         run = job.run
         file = job.file
         assert run or file

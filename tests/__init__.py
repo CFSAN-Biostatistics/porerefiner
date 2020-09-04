@@ -234,9 +234,9 @@ class Model:
 
     @staticmethod
     @composite
-    def Jobs(draw, state=jobs()):
+    def Duties(draw, state=jobs()):
         TestJob(TestSubmitter())
-        return draw(builds(models.Job,
+        return draw(builds(models.Duty,
                        job_class=just(TestJob.__name__),
                        datadir=just("/dev/null")))
 
