@@ -56,31 +56,52 @@ class Submitter(metaclass=RegisteringABCMeta):
         file = job.file
         assert run or file
         logg = log.getChild(type(self).__name__)
-        hints = {}
         datadir = job.datadir = Path(mkdtemp())
         job.save()
         configured_job = CONFIGURED_JOB_REGISTRY[job.job_class]
+
+        # if isinstance(configured_job, RunJob):
+        #     remotedir = job.remotedir = self.reroot_path(run.path)
+        #     cmd = configured_job.setup(run=run, datadir=datadir, remotedir=remotedir)
+        # elif isinstance(configured_job, FileJob):
+        #     remotedir = job.remotedir = self.reroot_path(file.path.parent)
+        #     cmd = configured_job.setup(file=file, run=file.run, datadir=datadir, remotedir=remotedir)
+        # if isinstance(cmd, tuple): #some jobs return a string plus execution hints
+        #     cmd, hints = cmd
+        # if not isinstance(cmd, str): #has to be a string
+        #     raise RuntimeError("job setup method needs to return a string, or a string and dictionary")
+        # cmd = " ".join(cmd.split()) # turn tabs and returns into spaces
+        # logg.getChild('cmd').debug(cmd)
+        # try:
+        #     job.job_id = await self.begin_job(cmd, datadir, remotedir, environment_hints=hints)
+        #     job.status = 'QUEUED'
+        # except Exception as e:
+        #     logg.error(e)
+        #     job.attempts += 1
+        #     if job.attempts > 3:
+        #         job.status = 'FAILED'
+        #         raise
         if isinstance(configured_job, RunJob):
             remotedir = job.remotedir = self.reroot_path(run.path)
-            cmd = configured_job.setup(run=run, datadir=datadir, remotedir=remotedir)
+            g = configured_job.run(run=run, datadir=datadir, remotedir=remotedir)
         elif isinstance(configured_job, FileJob):
             remotedir = job.remotedir = self.reroot_path(file.path.parent)
-            cmd = configured_job.setup(file=file, run=file.run, datadir=datadir, remotedir=remotedir)
-        if isinstance(cmd, tuple): #some jobs return a string plus execution hints
-            cmd, hints = cmd
-        if not isinstance(cmd, str): #has to be a string
-            raise RuntimeError("job setup method needs to return a string, or a string and dictionary")
-        cmd = " ".join(cmd.split()) # turn tabs and returns into spaces
-        logg.getChild('cmd').debug(cmd)
+            g = configured_job.run(run=file.run, file=file, datadir=datadir, remotedir=remotedir)
         try:
-            job.job_id = await self.begin_job(cmd, datadir, remotedir, environment_hints=hints)
-            job.status = 'QUEUED'
-        except Exception as e:
-            logg.error(e)
-            job.attempts += 1
-            if job.attempts > 3:
-                job.status = 'FAILED'
-                raise
+            cmd = next(g)
+            while True: # execute job until completion
+                if cmd:
+                    hints = {}
+                    if isinstance(cmd, tuple): #some jobs return a string plus execution hints
+                        cmd, hints = cmd
+                    cmd = " ".join(cmd.split())
+                    job_id = await self.begin_job(cmd, datadir, remotedir, environment_hints=hints)
+                    while status := await self.poll_job(job_id):
+                        pass
+                    result = await self.closeout_job(job_id)
+                cmd = g.send(result) 
+        except StopIteration:
+            pass
         finally:
             job.save()
 
@@ -100,6 +121,7 @@ class Submitter(metaclass=RegisteringABCMeta):
             raise
         finally:
             job.save()
+        return job.status == 'RUNNING'
 
 
     @abstractmethod
@@ -111,7 +133,7 @@ class Submitter(metaclass=RegisteringABCMeta):
         return self.closeout_job(job, job.datadir, job.remotedir)
 
     @abstractmethod
-    def closeout_job(self, job, datadir, remotedir) -> None:
+    async def closeout_job(self, job, datadir, remotedir) -> None:
         pass
 
     @classmethod

@@ -1,31 +1,28 @@
 
 from dataclasses import dataclass, field
 from os import environ
+from typing import List
 
 from porerefiner.jobs import FileJob, RunJob
 
 @dataclass
 class GenericFileJob(FileJob):
 
-    command: str
+    commands: List[str] = field(default_factory=list)
     hints: dict = field(default_factory=dict)
 
-    def setup(self, run, file, datadir, remotedir):
+    def run(self, run, file, datadir, remotedir):
         locals().update(environ)
-        return self.command.format(**locals())
-
-    def collect(*args, **kwargs):
-        pass
+        for command in self.commands:
+            yield command.format(**locals())
 
 @dataclass
 class GenericRunJob(RunJob):
 
-    command: str
+    commands: List[str] = field(default_factory=list)
     hints: dict = field(default_factory=dict)
 
-    def setup(self, run, datadir, remotedir):
+    def run(self, run, datadir, remotedir):
         locals().update(environ)
-        return self.command.format(**locals())
-
-    def collect(*args, **kwargs):
-        pass
+        for command in self.commands:
+            yield command.format(**locals())

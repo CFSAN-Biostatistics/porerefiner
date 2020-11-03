@@ -2,6 +2,15 @@
 History
 =======
 
+0.9.0 (2020-09-14)
+------------------
+
+* Job system re-work. Plugins will need to be updated for compatibility.
+
+* Jobs now expect generators (yield) instead of methods (return). This is to enable multi-step workflows.
+
+* Generic job now should be configured with a list of commands, rather than a single command. (it can be a single-item list.)
+ 
 0.8.21 (2020-08-24)
 -------------------
 

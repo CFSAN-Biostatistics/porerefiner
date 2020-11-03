@@ -135,22 +135,21 @@ class TestSampleSheet(TestCase):
     def test_samplesheet(self, **kwargs):
         assert models.SampleSheet.create(**kwargs)
 
-    @skip('broken')
+    # @skip('broken')
     @with_database
     def test_get_unused_sheets(self):
-        self.flow = flow = models.Flowcell.create(consumable_id="TEST|TEST|TEST", consumable_type="TEST|TEST|TEST", path="TEST/TEST/TEST")
-        self.run = models.Run.create(pk=100, library_id='x', name="TEST", flowcell=flow, path="TEST/TEST/TEST")
+        # self.flow = flow = models.Flowcell.create(consumable_id="TEST|TEST|TEST", consumable_type="TEST|TEST|TEST", path="TEST/TEST/TEST")
+        self.run = models.Run.create(pk=100, library_id='x', name="TEST", path="TEST/TEST/TEST")
         self.assertFalse(models.SampleSheet.get_unused_sheets().count())
         models.SampleSheet.create(path="TEST")
         self.assertEqual(models.SampleSheet.get_unused_sheets().count(), 1)
 
-    @skip('broken')
-    @seed(5249283748837843916514315999694345497)
+    # @skip('broken')
     @given(ss=Model.Samplesheets())
     @with_database
     def test_new_sheet_from_message(self, ss):
-        flow = models.Flowcell.create(consumable_id="TEST|TEST|TEST", consumable_type="TEST|TEST|TEST", path="TEST/TEST/TEST")
-        run = models.Run.create(pk=100, library_id='x', name="TEST", flowcell=flow, path="TEST/TEST/TEST")
+        # flow = models.Flowcell.create(consumable_id="TEST|TEST|TEST", consumable_type="TEST|TEST|TEST", path="TEST/TEST/TEST")
+        run = models.Run.create(pk=100, library_id='x', name="TEST", path="TEST/TEST/TEST")
         s = models.SampleSheet.new_sheet_from_message(ss, run)
         self.assertEqual(run.sample_sheet, s)
 

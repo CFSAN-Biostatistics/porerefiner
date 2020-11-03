@@ -7,7 +7,8 @@ from .submitters import Submitter
 from porerefiner.models import Duty, File, Run
 from porerefiner.cli_utils import render_dataclass, Email, Url, PathStr
 from pathlib import Path
-from typing import Union, Tuple
+from subprocess import CompletedProcess
+from typing import Union, Tuple, Generator
 
 import logging
 import pkgutil
@@ -126,22 +127,30 @@ class AbstractJob(metaclass=RegisteringABCMeta):
 
 class FileJob(AbstractJob):
 
-    @abstractmethod
-    def setup(self, run: Run, file: File, datadir: Path, remotedir: Path) -> Union[str, Tuple[str, dict]]:
-        pass
+    # @abstractmethod
+    # def setup(self, run: Run, file: File, datadir: Path, remotedir: Path) -> Union[str, Tuple[str, dict]]:
+    #     pass
+
+    # @abstractmethod
+    # def collect(self, run: Run, file: File, datadir: Path, pid: Union[str, int]) -> None:
+    #     pass
 
     @abstractmethod
-    def collect(self, run: Run, file: File, datadir: Path, pid: Union[str, int]) -> None:
+    def run(self, run: Run, file: File, datadir: Path, remotedir: Path) -> Generator[Union[str, Tuple[str, dict]], Union[CompletedProcess, int, str], None]:
         pass
 
 class RunJob(AbstractJob):
 
-    @abstractmethod
-    def setup(self, run: Run, datadir: Path, remotedir: Path) -> Union[str, Tuple[str, dict]]:
-        pass
+    # @abstractmethod
+    # def setup(self, run: Run, datadir: Path, remotedir: Path) -> Union[str, Tuple[str, dict]]:
+    #     pass
+
+    # @abstractmethod
+    # def collect(self, run: Run, datadir: Path, pid: Union[str, int]) -> None:
+    #     pass
 
     @abstractmethod
-    def collect(self, run: Run, datadir: Path, pid: Union[str, int]) -> None:
+    def run(self, run: Run, datadir: Path, remotedir: Path) -> Generator[Union[str, Tuple[str, dict]], Union[CompletedProcess, int, str], None]:
         pass
 
 

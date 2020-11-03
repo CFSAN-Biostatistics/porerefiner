@@ -18,10 +18,8 @@ class TestJobBaseClasses(TestCase):
         @dataclass
         class TestFileJob(jobs.FileJob):
             field: str
-            def setup(*a, **k):
-                pass
-            def collect(*a, **k):
-                pass
+            def run(*a, **k):
+                yield "",{}
         t = TestFileJob(submitter=TestSubmitter(), field="")
         assert t
 
@@ -30,10 +28,10 @@ class TestJobBaseClasses(TestCase):
         @dataclass
         class TestRunJob(jobs.RunJob):
             field: str
-            def setup(*a, **k):
-                pass
-            def collect(*a, **k):
-                pass
+            def run(*a, **k):
+                yield "",{}
+                val = yield None
+                print(val)
         t = TestRunJob(submitter=TestSubmitter(), field="")
         assert t
 

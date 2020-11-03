@@ -167,8 +167,8 @@ class TestSubmitter(jobs.submitters.Submitter):
     async def begin_job(*a, **k):
         return "fake started"
     async def poll_job(*a, **k):
-        return "fake status"
-    def closeout_job(*a, **k):
+        return False
+    async def closeout_job(*a, **k):
         return None
 
 @composite
@@ -189,10 +189,8 @@ def submitters(draw):
 
 class TestJob(jobs.RunJob):
 
-    def setup(*a, **k):
-        return "", {}
-    def collect(*a, **k):
-        return None
+    def run(*a, **k):
+        yield "", {}
 
 @composite
 def jobs(draw):
