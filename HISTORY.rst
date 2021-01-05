@@ -2,6 +2,15 @@
 History
 =======
 
+0.9.1 (2020-12-16)
+------------------
+
+* Added triple tags - namespace, name, value - to data model
+
+* Protobuf API now accepts triple-tags along with new samples
+
+* Added a way for plugins to define and register their own sample sheet parsers
+
 0.9.0 (2020-09-14)
 ------------------
 

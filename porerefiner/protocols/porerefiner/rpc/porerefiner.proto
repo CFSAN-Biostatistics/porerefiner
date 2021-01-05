@@ -5,6 +5,12 @@ package porerefiner.rpc;
 import public "google/protobuf/timestamp.proto";
 import public "google/protobuf/duration.proto";
 
+message TripleTag {
+    string namespace = 1;
+    string name = 2;
+    string value = 3;
+}
+
 
 message Run {
     int32 id = 1;
@@ -31,6 +37,7 @@ message Run {
         string hash = 12;
 
         repeated string tags = 30;
+        repeated TripleTag trip_tags = 35;
 }
 
     message Sample {
@@ -47,6 +54,7 @@ message Run {
 
         repeated File files = 20;
         repeated string tags = 30;
+        repeated TripleTag trip_tags = 40;
     }
 
     message Job {
@@ -58,6 +66,7 @@ message Run {
     repeated File files = 15;
     repeated Sample samples = 20;
     repeated string tags = 30;
+    repeated TripleTag trip_tags = 35;
     repeated Job jobs = 40;
 
 }
@@ -122,6 +131,12 @@ message TagRequest {
     uint32 id = 1;
     repeated string tags = 2;
     bool untag = 3;
+    string namespace = 4;
+}
+
+message TripleTagRequest {
+    uint32 id = 1;
+    repeated TripleTag trip_tags = 2;
 }
 
 message SampleSheet {
@@ -141,9 +156,12 @@ message SampleSheet {
         string extraction_kit = 5;
         string comment = 6;
         string user = 7;
+        repeated TripleTag trip_tags = 20;
     }
 
     repeated Sample samples = 10;
+    repeated string tags = 30;
+    repeated TripleTag trip_tags = 35;
 
 
 }

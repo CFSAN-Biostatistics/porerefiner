@@ -41,10 +41,14 @@ class PorerefinerModel(BaseModel):
     def tags(self):
         # query = Tag.select().join(TagJunction).join(Tag)
         # return [tag_j.tag for tag_j in self.tag_junctions]
-        return (Tag.select()
-                   .join(TagJunction)
-                   .join(type(self))
-                   .where(type(self).pk == self.pk))
+        return chain(Tag.select()
+                        .join(TagJunction)
+                        .join(type(self))
+                        .where(type(self).pk == self.pk),
+                     TripleTag.select()
+                        .join(TTagJunction)
+                        .join(type(self))
+                        .where(type(self).pk == self.pk))
 
     # def tag(self, *tags):
     #     for tag in tags:
@@ -59,6 +63,23 @@ class Tag(BaseModel):
 
     def __str__(self):
         return self.name
+
+class TripleTag(BaseModel):
+    "A triple tag extends tag with a namespace and value"
+
+    namespace = CharField(null=False, 
+                          constraints=[Check("namespace != '' "),], 
+                          default="Porerefiner")
+
+    name = CharField(null=False, constraints=[Check("name != '' "),])
+
+    value = BareField(null=False)
+
+    def __str__(self):
+        return f"{self.namespace}:{self.name}={self.value}"
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.namespace}, {self.name}, {self.value})"
 
 class PathField(Field):
 
@@ -172,11 +193,11 @@ class Run(PorerefinerModel):
         if ta:
             TagJunction.delete().where(TagJunction.run==self, TagJunction.tag==ta).execute()
 
-    @property
-    def tags(self):
-        return (Tag.select()
-                   .join(TagJunction)
-                   .where(TagJunction.run == self))
+    # @property
+    # def tags(self):
+    #     return (Tag.select()
+    #                .join(TagJunction)
+    #                .where(TagJunction.run == self))
 
     def spawn(self, job_config):
         job = Duty.create(status='READY', job_class=job_config.__class__.__name__, datadir=pathlib.Path(tempfile.mkdtemp()), run=self)
@@ -289,13 +310,17 @@ class SampleSheet(PorerefinerModel):
                    .where(Run.pk.is_null()))
 
     @classmethod
-    def new_sheet_from_message(cls, sheet, run=None, log=logging.getLogger('porerefiner.models')):
+    def new_sheet_from_message(cls, sheet, run=None, log=logging.getLogger('porerefiner.models'), sample_accession_prefix=None):
         ss = cls.create(date=sheet.date.ToDatetime(),
                         barcoding_kit=sheet.sequencing_kit,
                         library_id=sheet.library_id)
-        for sample in sheet.samples:
+        if not sample_accession_prefix:
+            sample_accession_prefix = "SAM"
+            if run:
+                sample_accession_prefix = run.alt_name
+        for num, sample in enumerate(sheet.samples):
             Sample.create(sample_id=sample.sample_id,
-                          accession=sample.accession,
+                          accession=sample.accession or f"{sample_accession_prefix}_{num:06}",
                           barcode_id=sample.barcode_id,
                           organism=sample.organism,
                           extraction_kit=sample.extraction_kit,
@@ -331,11 +356,11 @@ class Sample(PorerefinerModel):
     def barcode_seq(self):
         return self.samplesheet.barcode_kit_barcodes.get(self.barcode_id, "")
 
-    @property
-    def tags(self):
-        return (Tag.select()
-                   .join(TagJunction)
-                   .where(TagJunction.sample == self))
+    # @property
+    # def tags(self):
+    #     return (Tag.select()
+    #                .join(TagJunction)
+    #                .where(TagJunction.sample == self))
 
     def tag(self, tag):
         ta, _ = Tag.get_or_create(name=tag)
@@ -399,7 +424,16 @@ class TagJunction(BaseModel):
     #         if ref_cls is targ_cls:
     #             return cls.create
 
+class TTagJunction(BaseModel):
+    tag = ForeignKeyField(TripleTag, backref='junctions')
+    run = ForeignKeyField(Run, null=True, backref='tag_junctions')
+    qa = ForeignKeyField(Qa, null=True, backref='tag_junctions')
+    duty = ForeignKeyField(Duty, null=True, backref='tag_junctions')
+    samplesheet = ForeignKeyField(SampleSheet, null=True, backref='tag_junctions')
+    sample = ForeignKeyField(Sample, null=True, backref='tag_junctions')
+    file = ForeignKeyField(File, null=True, backref='tag_junctions')
+
 JobFileJunction = File._duties.get_through_model()
 
 
-REGISTRY = [Tag, Run, Qa, Duty, SampleSheet, Sample, File, TagJunction, JobFileJunction]
+REGISTRY = [Tag, Run, Qa, Duty, SampleSheet, Sample, File, TagJunction, JobFileJunction, TripleTag, TTagJunction]

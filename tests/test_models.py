@@ -38,7 +38,7 @@ class TestModels(TestCase):
     #     self.assertEqual(type(fld.python_value(fld.db_value(job))), type(job))
 
     def test_models_registered(self):
-        self.assertEqual(len(models.REGISTRY), 9)
+        self.assertEqual(len(models.REGISTRY), 11)
 
     # @skip('broken')
     @given(tag=strat.text().filter(lambda x: x))
