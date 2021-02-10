@@ -40,14 +40,37 @@ class TestModels(TestCase):
     def test_models_registered(self):
         self.assertEqual(len(models.REGISTRY), 11)
 
+    def test_taggable_models_are_taggable(self):
+        for cls in (models.Run, models.Qa, models.Duty, models.SampleSheet, models.Sample, models.File):
+            self.assertTrue(hasattr(cls, "tags"))
+            self.assertTrue(hasattr(cls, "tag"))
+            self.assertTrue(hasattr(cls, "untag"))
+            self.assertTrue(hasattr(cls, "ttag"))
+            self.assertTrue(hasattr(cls, "unttag"))
+
     # @skip('broken')
     @given(tag=strat.text().filter(lambda x: x))
     @with_database
     def test_tags(self, tag):
-        flow = models.SampleSheet.create()
-        tag, _ = models.Tag.get_or_create(name=tag)
-        tag_j = models.TagJunction.create(samplesheet=flow, tag=tag)
-        self.assertIn(tag, flow.tags)
+        import peewee
+        import logging
+        #peewee.logger.debug = lambda msg, *a, **k: peewee.logger.log(logging.ERROR, msg, *a, **k)
+        # flow = models.SampleSheet.create()
+        # tag, _ = models.Tag.get_or_create(name=tag)
+        # tag_j = models.TagJunction.create(samplesheet=flow, tag=tag)
+        # self.assertIn(tag, flow.tags)
+        ut = models.Run.create(name="TEST", path="TEST")
+        tag = ut.tag("TEST")
+        self.assertIn(tag, ut.tags)
+        ut.untag(tag.name)
+        ttag = ut.ttag("TEST", "TEST", "TEST")
+        self.assertIn(ttag, ut.tags)
+        ut.unttag(ttag.namespace, ttag.name)
+        self.assertNotIn(tag, ut.tags)
+        self.assertNotIn(ttag, ut.tags)
+        #peewee.logger.debug = lambda msg, *a, **k: peewee.logger.log(logging.DEBUG - 5, msg, *a, **k)
+
+
 
     @with_database
     def test_tag_failure(self):

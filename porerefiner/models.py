@@ -37,22 +37,6 @@ class PorerefinerModel(BaseModel):
                 ('DONE', 'Ended'),
                 ('FAILED', 'Ended with Failure')]
 
-    @property
-    def tags(self):
-        # query = Tag.select().join(TagJunction).join(Tag)
-        # return [tag_j.tag for tag_j in self.tag_junctions]
-        return chain(Tag.select()
-                        .join(TagJunction)
-                        .join(type(self))
-                        .where(type(self).pk == self.pk),
-                     TripleTag.select()
-                        .join(TTagJunction)
-                        .join(type(self))
-                        .where(type(self).pk == self.pk))
-
-    # def tag(self, *tags):
-    #     for tag in tags:
-    #         Tag.get_or_create(name=tag)
 
 
 
@@ -98,19 +82,6 @@ class PathField(Field):
         return None
 
 
-# class JobField(Field):
-
-#     field_type = 'blob'
-
-#     def db_value(self, value):
-#         from porerefiner.jobs import AbstractJob
-#         if not isinstance(value, AbstractJob):
-#             raise ValueError(f"value of type {type(value)} can't be stored in this field.")
-#         return pickle.dumps(value)
-
-#     def python_value(self, value):
-#         return pickle.loads(value)
-
 def StatusField(*args, default=PorerefinerModel.statuses[0][0], **kwargs):
     return CharField(*args, choices=PorerefinerModel.statuses, default=default, **kwargs)
 
@@ -119,16 +90,50 @@ def create_readable_name():
     "Docker-style random name from namesgenerator"
     return namesgenerator.get_random_name()
 
-# class Flowcell(PorerefinerModel):
-#     "A flowcell is the disposable part of the sequencer"
 
-#     pk = AutoField()
+def taggable(cls):
+    "Class decorator to insert the tag creation and deletion methods"
+    def make_closures(clsname):
 
-#     consumable_id = CharField(null=False)
-#     consumable_name = CharField(null=False)
-#     consumable_type = CharField(null=True)
-#     path = PathField(index=True)
+        @property
+        def tags(self):
+            # query = Tag.select().join(TagJunction).join(Tag)
+            # return [tag_j.tag for tag_j in self.tag_junctions]
+            return chain(Tag.select()
+                            .join(TagJunction)
+                            .join(type(self))
+                            .where(type(self).pk == self.pk),
+                        TripleTag.select()
+                            .join(TTagJunction)
+                            .join(type(self))
+                            .where(type(self).pk == self.pk))
 
+        def tag(self, tag):
+            ta, _ = Tag.get_or_create(name=tag)
+            _, _ = TagJunction.get_or_create(tag=ta, **{clsname:self})
+            return ta
+
+        def untag(self, tag):
+            ta = Tag.get_or_none(name=tag)
+            if ta:
+                TagJunction.delete().where(getattr(TagJunction, clsname)==self, TagJunction.tag==ta).execute()
+
+        def ttag(self, namespace, name, value):
+            ta, _ = TripleTag.get_or_create(namespace=namespace, name=name, value=value)
+            _, _ = TTagJunction.get_or_create(tag=ta, **{clsname:self})
+            return ta
+
+        def unttag(self, namespace, name):
+            ta = TripleTag.get_or_none(namespace=namespace, name=name)
+            if ta:
+                TTagJunction.delete().where(getattr(TTagJunction, clsname)==self, TTagJunction.tag==ta).execute()
+
+        return tags, tag, untag, ttag, unttag
+
+    cls.tags, cls.tag, cls.untag, cls.ttag, cls.unttag = make_closures(cls.__name__.lower())
+    return cls
+
+@taggable
 class Run(PorerefinerModel):
     "A run is an annotated collection of files being produced"
 
@@ -137,7 +142,6 @@ class Run(PorerefinerModel):
 
     pk = AutoField()
 
-    # flowcell = ForeignKeyField(Flowcell, backref='runs')
     flowcell = CharField(null=True)
     _sample_sheet = DeferredForeignKey('SampleSheet', null=True, backref='runs')
 
@@ -183,35 +187,12 @@ class Run(PorerefinerModel):
     def get_unannotated_runs(cls):
         return cls.select().where(cls._sample_sheet.is_null(), cls.status=='RUNNING')
 
-    def tag(self, tag):
-        ta, _ = Tag.get_or_create(name=tag)
-        tj, _ = TagJunction.get_or_create(tag=ta, run=self)
-        return ta
-
-    def untag(self, tag):
-        ta = Tag.get_or_none(name=tag)
-        if ta:
-            TagJunction.delete().where(TagJunction.run==self, TagJunction.tag==ta).execute()
-
-    # @property
-    # def tags(self):
-    #     return (Tag.select()
-    #                .join(TagJunction)
-    #                .where(TagJunction.run == self))
 
     def spawn(self, job_config):
-        job = Duty.create(status='READY', job_class=job_config.__class__.__name__, datadir=pathlib.Path(tempfile.mkdtemp()), run=self)
-        # JobRunJunction.create(job=job, run=self)
-        # for file in self.files:
-        #     JobFileJunction.create(job=job, file=file)
-        return job
-
-# class JobRunJunction(BaseModel):
-#     pk = AutoField()
-#     job = DeferredForeignKey('Job', backref='jobs')
-#     run = ForeignKeyField(Run, backref='runs')
+        return Duty.create(status='READY', job_class=job_config.__class__.__name__, datadir=pathlib.Path(tempfile.mkdtemp()), run=self)
 
 
+@taggable
 class Qa(PorerefinerModel):
     "A QA is a set of quality-control analysis metrics"
 
@@ -219,12 +200,11 @@ class Qa(PorerefinerModel):
     coverage = FloatField()
     quality = FloatField()
 
-
+@taggable
 class Duty(PorerefinerModel):
     "A job is a scheduled HPC job, pre or post submission"
     pk = AutoField()
     job_id = CharField(null=True)
-    # job_state = JobField(null=True)
     job_class = TextField(null=False)
     status = StatusField(default='QUEUED')
     datadir = PathField(null=False)
@@ -237,12 +217,6 @@ class Duty(PorerefinerModel):
     def __str__(self):
         return f"{self.pk} ({self.job_class} for {self.purpose}) ({dict(self.statuses)[self.status]})"
 
-    # @property
-    # def files(self):
-    #     return (File.select()
-    #                 .join(JobFileJunction)
-    #                 .join(Job)
-    #                 .where(Job.pk == self.pk))
 
     @property
     def purpose(self):
@@ -256,16 +230,8 @@ class Duty(PorerefinerModel):
         import porerefiner.jobs
         return porerefiner.jobs.CONFIGURED_JOB_REGISTRY[self.job_class]
 
-    def tag(self, tag):
-        ta, _ = Tag.get_or_create(name=tag)
-        tj, _ = TagJunction.get_or_create(tag=ta, job=self)
-        return ta
 
-# class JobFileJunction(BaseModel):
-#     pk = AutoField()
-#     job = ForeignKeyField(Job, backref='jobs')
-#     file = DeferredForeignKey('File', backref='files')
-
+@taggable
 class SampleSheet(PorerefinerModel):
     "A samplesheet is a particular file, eventually attached to a run"
 
@@ -291,16 +257,14 @@ class SampleSheet(PorerefinerModel):
 
 
     pk = AutoField()
-    # path = PathField(index=True)
-    # run = ForeignKeyField(Run, backref='_sample_sheet', unique=True, null=True)
     date = DateField(null=True, default=datetime.datetime.now())
     sequencing_kit = CharField(null=True)
     barcoding_kit = CharField(null=True, choices=BARCODES)
     library_id = CharField(null=True)
 
-    @property
-    def barcode_kit_barcodes(self):
-        return {} #TODO
+    # @property 
+    # def barcode_kit_barcodes(self): # I don't remember what this was supposed to do
+    #     return {} #TODO
 
     @classmethod
     def get_unused_sheets(cls):
@@ -332,6 +296,7 @@ class SampleSheet(PorerefinerModel):
             run.save()
         return ss
 
+@taggable
 class Sample(PorerefinerModel):
     "A sample is an entry originally from a sample sheet"
 
@@ -341,7 +306,6 @@ class Sample(PorerefinerModel):
     sample_id = CharField(null=False)
     accession = CharField(default="")
     barcode_id = CharField(null=False)
-    #barcode_seq = CharField() #maybe set this when we load a sheet
     organism = CharField(default="")
     extraction_kit = CharField(default="")
     comment = CharField(default="")
@@ -356,21 +320,12 @@ class Sample(PorerefinerModel):
     def barcode_seq(self):
         return self.samplesheet.barcode_kit_barcodes.get(self.barcode_id, "")
 
-    # @property
-    # def tags(self):
-    #     return (Tag.select()
-    #                .join(TagJunction)
-    #                .where(TagJunction.sample == self))
 
-    def tag(self, tag):
-        ta, _ = Tag.get_or_create(name=tag)
-        tj, _ = TagJunction.get_or_create(tag=ta, sample=self)
-        return ta
-
-
-
+@taggable
 class File(PorerefinerModel):
     "A file is a path on the filesystem"
+
+
     pk = AutoField()
     run = ForeignKeyField(Run, backref='files', null=True)
     sample = ForeignKeyField(Sample, backref='files', null=True)
@@ -384,22 +339,11 @@ class File(PorerefinerModel):
     def name(self):
         return self.path.name
 
-    # @property
-    # def jobs(self):
-    #     return (Job.select()
-    #                .join(JobFileJunction)
-    #                .join(File)
-    #                .where(File.pk == self.pk))
-
     def spawn(self, job_config):
         job = Duty.create(status='READY', job_class=job_config.__class__.__name__, datadir=pathlib.Path(tempfile.mkdtemp()), file=self)
         self._duties.add(job)
         return job
 
-    def tag(self, tag):
-        ta, _ = Tag.get_or_create(name=tag)
-        tj, _ = TagJunction.get_or_create(tag=ta, file=self)
-        return ta
 
     @property
     def duties(self):
@@ -409,7 +353,6 @@ class File(PorerefinerModel):
 
 class TagJunction(BaseModel):
     tag = ForeignKeyField(Tag, backref='junctions')
-    # flowcell = ForeignKeyField(Flowcell, null=True, backref='tag_junctions')
     run = ForeignKeyField(Run, null=True, backref='tag_junctions')
     qa = ForeignKeyField(Qa, null=True, backref='tag_junctions')
     duty = ForeignKeyField(Duty, null=True, backref='tag_junctions')
@@ -417,21 +360,15 @@ class TagJunction(BaseModel):
     sample = ForeignKeyField(Sample, null=True, backref='tag_junctions')
     file = ForeignKeyField(File, null=True, backref='tag_junctions')
 
-    # @classmethod
-    # def relate(cls, target, tag):
-    #     targ_cls = type(target)
-    #     for field, ref_cls, _ in cls._meta.model_graph(backrefs=False, depth_first=False):
-    #         if ref_cls is targ_cls:
-    #             return cls.create
 
 class TTagJunction(BaseModel):
     tag = ForeignKeyField(TripleTag, backref='junctions')
-    run = ForeignKeyField(Run, null=True, backref='tag_junctions')
-    qa = ForeignKeyField(Qa, null=True, backref='tag_junctions')
-    duty = ForeignKeyField(Duty, null=True, backref='tag_junctions')
-    samplesheet = ForeignKeyField(SampleSheet, null=True, backref='tag_junctions')
-    sample = ForeignKeyField(Sample, null=True, backref='tag_junctions')
-    file = ForeignKeyField(File, null=True, backref='tag_junctions')
+    run = ForeignKeyField(Run, null=True, backref='ttag_junctions')
+    qa = ForeignKeyField(Qa, null=True, backref='ttag_junctions')
+    duty = ForeignKeyField(Duty, null=True, backref='ttag_junctions')
+    samplesheet = ForeignKeyField(SampleSheet, null=True, backref='ttag_junctions')
+    sample = ForeignKeyField(Sample, null=True, backref='ttag_junctions')
+    file = ForeignKeyField(File, null=True, backref='ttag_junctions')
 
 JobFileJunction = File._duties.get_through_model()
 

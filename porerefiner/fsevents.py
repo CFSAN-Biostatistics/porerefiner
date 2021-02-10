@@ -191,15 +191,15 @@ class PoreRefinerFSEventHandler(AIOEventHandler):
                 run_path = self.path / Path(exp) / Path(sam) / Path(rel_run_path)
                 run, new = Run.get_or_create(path=r(run_path), name=rel_run_path)
                 if new:
-                    run.tag(exp)
-                    run.tag(sam)
+                    run.ttag("ONT", "experiment", exp)
+                    run.ttag("ONT", "sample", sam)
                     await register_new_run(run)
                     try:
                         st, dev_id, fc_id, prot_id = rel_run_path.split('_')
                         run.flowcell = fc_id
                         # run.tag(st)
-                        run.tag(dev_id)
-                        run.tag(prot_id)
+                        run.ttag("ONT", "device", dev_id)
+                        run.ttag("ONT", "protocol", prot_id)
                     except ValueError:
                         pass
                     run.save()
