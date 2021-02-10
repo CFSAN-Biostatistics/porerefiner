@@ -278,12 +278,16 @@ class SampleSheet(PorerefinerModel):
         ss = cls.create(date=sheet.date.ToDatetime(),
                         barcoding_kit=sheet.sequencing_kit,
                         library_id=sheet.library_id)
+        for tag in sheet.tags:
+            ss.tag(tag)
+        for ttag in sheet.trip_tags:
+            ss.ttag(ttag.namespace, ttag.name, ttag.value)
         if not sample_accession_prefix:
             sample_accession_prefix = "SAM"
             if run:
                 sample_accession_prefix = run.alt_name
         for num, sample in enumerate(sheet.samples):
-            Sample.create(sample_id=sample.sample_id,
+            s = Sample.create(sample_id=sample.sample_id,
                           accession=sample.accession or f"{sample_accession_prefix}_{num:06}",
                           barcode_id=sample.barcode_id,
                           organism=sample.organism,
@@ -291,6 +295,10 @@ class SampleSheet(PorerefinerModel):
                           comment=sample.comment,
                           user=sample.user,
                           samplesheet=ss)
+            for tag in sample.tags:
+                s.tag(tag)
+            for ttag in sample.trip_tags:
+                s.ttag(ttag.namespace, ttag.name, ttag.value)
         if run:
             run.sample_sheet = ss
             run.save()

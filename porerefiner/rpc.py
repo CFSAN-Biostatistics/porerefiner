@@ -23,7 +23,7 @@ from os import remove
 from pathlib import Path
 
 from porerefiner.protocols.minknow.rpc.manager_grpc import ManagerServiceStub
-from porerefiner.protocols.porerefiner.rpc.porerefiner_pb2 import Run as RunMessage, RunList, RunResponse, Error, GenericResponse, RunRsyncResponse, RunListResponse
+from porerefiner.protocols.porerefiner.rpc.porerefiner_pb2 import Run as RunMessage, RunList, RunResponse, Error, GenericResponse, RunRsyncResponse, RunListResponse, TripleTag
 from porerefiner.protocols.porerefiner.rpc.porerefiner_grpc import PoreRefinerBase
 from porerefiner.notifiers import NOTIFIERS
 
@@ -65,9 +65,19 @@ def make_run_msg(run):
                             size=file.path.stat().st_size,
                             ready=datetime.now() - file.last_modified > timedelta(hours=1),
                             hash=file.checksum,
-                            tags=[tag.name for tag in file.tags])
+                            tags=[tagjunction.tag.name for tagjunction in file.tag_junctions],
+                            trip_tags=[TripleTag(
+                                namespace=ttagj.tag.namespace,
+                                name=ttagj.tag.name,
+                                value=str(ttagj.tag.value)
+                            ) for ttagj in file.ttag_junctions])
                     for file in sample.files],
-                    tags=[tag.name for tag in sample.tags]
+                    tags=[tagjunction.tag.name for tagjunction in sample.tag_junctions],
+                    trip_tags=[TripleTag(
+                            namespace=ttagj.tag.namespace,
+                            name=ttagj.tag.name,
+                            value=str(ttagj.tag.value)
+                        ) for ttagj in sample.ttag_junctions]
                     ) for sample in run.samples
         ],
         files=[
@@ -76,9 +86,19 @@ def make_run_msg(run):
                 size=file.path.stat().st_size,
                 ready=datetime.now() - file.last_modified > timedelta(hours=1),
                 hash=file.checksum,
-                tags=[tag.name for tag in file.tags])
+                tags=[tagjunction.tag.name for tagjunction in file.tag_junctions],
+                trip_tags=[TripleTag(
+                                namespace=ttagj.tag.namespace,
+                                name=ttagj.tag.name,
+                                value=str(ttagj.tag.value)
+                            ) for ttagj in file.ttag_junctions])
         for file in run.files],
-        tags=[tag.name for tag in run.tags]
+        tags=[tagjunction.tag.name for tagjunction in run.tag_junctions],
+        trip_tags=[TripleTag(
+                namespace=ttagj.tag.namespace,
+                name=ttagj.tag.name,
+                value=str(ttagj.tag.value)
+            ) for ttagj in run.ttag_junctions]
         )
 
 async def get_run_info(run_id):
