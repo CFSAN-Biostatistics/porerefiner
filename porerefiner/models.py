@@ -295,8 +295,6 @@ class SampleSheet(PorerefinerModel):
                           comment=sample.comment,
                           user=sample.user,
                           samplesheet=ss)
-            for tag in sample.tags:
-                s.tag(tag)
             for ttag in sample.trip_tags:
                 s.ttag(ttag.namespace, ttag.name, ttag.value)
         if run:
