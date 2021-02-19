@@ -39,13 +39,13 @@ test_requirements = [ 'hypothesis>=4.57.1',
 setup(
     author="Justin Payne",
     author_email='justin.payne@fda.hhs.gov',
-    python_requires='>=3.7',
+    python_requires='>=3.8',
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
-        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
     ],
     description="To help you manage your pores",
     entry_points={
@@ -66,7 +66,7 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/CFSAN-Biostatistics/porerefiner',
-    version='0.9.1',
+    version='0.9.1b',
     zip_safe=False,
 )
 

@@ -2,6 +2,11 @@
 History
 =======
 
+0.9.1b (2021-02-19)
+-------------------
+
+* Bugfix - package properly requires Python 3.8 now.
+
 0.9.1 (2020-12-16)
 ------------------
 
