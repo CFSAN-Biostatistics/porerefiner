@@ -14,7 +14,7 @@ sequencing_kit
 sample_id	accession	barcode_id	organism	extraction_kit	comment user
 TEST	TEST	TEST	TEST	TEST	TEST	TEST"""
     note, ver, *_ = rows[0]
-    return note == 'porerefiner_ver' and ver == '1.0.0'
+    return 'porerefiner_ver' in note and '1.0.0' in ver
 
 @SnifferFor.csv
 @SnifferFor.xls
@@ -25,7 +25,7 @@ sequencing_kit
 sample_id	accession	barcode_id	organism	extraction_kit	comment user
 TEST	TEST	TEST	TEST	TEST	TEST	TEST"""
     note, ver, *_ = rows[0]
-    return note == 'porerefiner_ver' and ver == '1.0.0-fda'
+    return 'porerefiner_ver' in note and '1.0.0-fda' in ver
 
 @SnifferFor.csv
 @SnifferFor.xls
@@ -37,7 +37,7 @@ barcode_kit
 sample_id	accession	barcode_id	organism	extraction_kit	comment user
 TEST	TEST	TEST	TEST	TEST	TEST	TEST"""
     note, ver, *_ = rows[0]
-    return note == 'porerefiner_ver' and ver == '1.0.1'
+    return 'porerefiner_ver' in note and '1.0.1' in ver
 
 @ParserFor.ver_100
 @ParserFor.ver_101

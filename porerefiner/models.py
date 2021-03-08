@@ -262,9 +262,9 @@ class SampleSheet(PorerefinerModel):
     barcoding_kit = CharField(null=True, choices=BARCODES)
     library_id = CharField(null=True)
 
-    # @property 
-    # def barcode_kit_barcodes(self): # I don't remember what this was supposed to do
-    #     return {} #TODO
+    @property 
+    def barcode_kit_barcodes(self):
+        return {} #TODO
 
     @classmethod
     def get_unused_sheets(cls):

@@ -18,7 +18,7 @@ from hachiko.hachiko import AIOEventHandler, AIOWatchdog
 from itertools import chain
 from peewee import JOIN
 from porerefiner import models
-from porerefiner.models import Run, Qa, File, Duty, SampleSheet, Sample, Tag, TagJunction
+from porerefiner.models import Run, Qa, File, Duty, SampleSheet, Sample, Tag, TagJunction, TTagJunction
 from porerefiner.cli_utils import relativize_path as r, absolutize_path as a, json_formatter
 from porerefiner.jobs import poll_jobs, CLASS_REGISTRY, JOBS
 from os.path import split, getmtime
@@ -221,12 +221,15 @@ class PoreRefinerFSEventHandler(AIOEventHandler):
                 fi.last_modified = datetime.now()
                 fi.save()
 
-    # async def on_deleted(self, event): #TODO
-    #     "Update database if files are deleted."
-    #     if event.is_directory:
-    #         Run.delete().where(Run.path == r(event.src_path)).execute()
-    #     else:
-    #         File.delete().where(File.path == r(event.src_path)).execute()
+    async def on_deleted(self, event): #TODO
+        "Update database if files are deleted."
+        log.info(f"Filesystem event: {event.src_path} deleted")
+        if not event.is_directory:
+            fi = File.get_or_none(File.path == r(event.src_path))
+            if fi:
+                TagJunction.delete().where(file==fi).execute()
+                TTagJunction.delete().where(file==fi).execute()
+                fi.delete_instance()
 
 
 async def start_fs_watchdog(path, api=None, *a, **k):
@@ -245,8 +248,13 @@ async def in_progress_run_update(*args, **kwargs):
     for run in Run.select().where(Run.status == 'RUNNING'):
         log.info(f"Checking in-progress run {run.name} for modifications")
         for file in run.all_files:
-            file.last_modified = datetime.fromtimestamp(getmtime(a(file.path)))
-            file.save()
+            if file.path.exists():
+                file.last_modified = datetime.fromtimestamp(getmtime(a(file.path)))
+                file.save()
+            else:
+                TagJunction.delete().where(file==file).execute()
+                TTagJunction.delete().where(file==file).execute()
+                file.delete_instance()
             await asyncio.sleep(0)
 
 

@@ -129,10 +129,12 @@ class SnifferFor:
 
     @classmethod
     def sniff(cls, rows, type='csv'):
+        assert len(cls.sniffers)
         for sniffer in cls.sniffers.values():
             if type in sniffer.__formats__:
                 if sniffer(rows):
                     return ParserFor.parsers[sniffer]
+        raise ValueError(f"Couldn't determine the correct format.")
                 
 
 
@@ -140,6 +142,7 @@ class SnifferFor:
 
 ParserFor = SnifferFor.ParserFor()
 
+from . import sniffers
 
 def load_from_excel(file) -> SampleSheet:
     import openpyxl
@@ -147,7 +150,7 @@ def load_from_excel(file) -> SampleSheet:
     rows = (tuple(c.value for c in row) for row in book.worksheets[0].iter_rows())
     return SnifferFor.sniff(rows, type='xls')(rows)
 
-def load_from_csv(file, delimiter=b',') -> SampleSheet:
-    rows = [line.split(delimiter) for line in file]
+def load_from_csv(file, delimiter=',') -> SampleSheet:
+    rows = tuple(csv.reader(file, delimiter=delimiter, dialect='excel'))
     return SnifferFor.sniff(rows, type='csv')(rows)
 

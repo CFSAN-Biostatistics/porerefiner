@@ -92,7 +92,7 @@ def make_run_msg(run):
                                 name=ttagj.tag.name,
                                 value=str(ttagj.tag.value)
                             ) for ttagj in file.ttag_junctions])
-        for file in run.files],
+        for file in run.files if file.path.exists()],
         tags=[tagjunction.tag.name for tagjunction in run.tag_junctions],
         trip_tags=[TripleTag(
                 namespace=ttagj.tag.namespace,
@@ -142,14 +142,24 @@ class PoreRefinerDispatchServer(PoreRefinerBase):
         request = await stream.recv_message()
         log.debug("API call: Attach sample sheet")
         run = None
+        response = None
         try:
             run = get_run(request.id or request.name)
+            response = GenericResponse()
         except ValueError: #no run
             query = Run.get_unannotated_runs()
             if query.count() == 1:
                 run = next(query)
+                response = GenericResponse()
+            else:
+                # ambiguous, send an error back
+                response = GenericResponse(
+                    error=Error(code=0,
+                                err_message="More than one run in progress; please specify run id or name using -r option.")
+                )
+
         ss = SampleSheet.new_sheet_from_message(request.sheet, run)
-        await stream.send_message(GenericResponse())
+        await stream.send_message(response)
         log.debug("Response sent")
 
     async def RsyncRunTo(self, stream: 'grpclib.server.Stream[porerefiner_pb2.RunRsyncRequest, porerefiner_pb2.RunRsyncResponse]') -> None:

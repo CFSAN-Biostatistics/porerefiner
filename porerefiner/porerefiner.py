@@ -108,14 +108,22 @@ def start(config, demonize=False):
     "Start the PoreRefiner service."
     setproctitle.setproctitle("porerefiner")
     log = logging.getLogger('porerefiner')
-    if demonize:
-        log.info("Starting daemon...")
-        with daemon.DaemonContext():
+    try:
+        if demonize:
+            log.info("Starting daemon...")
+            with daemon.DaemonContext():
+                run(serve(config))
+        else:
+            log.info("Starting server, ctl-C to stop.")
             run(serve(config))
-    else:
-        log.info("Starting server, ctl-C to stop.")
-        run(serve(config))
-    return 0
+        return 0
+    # various errors that can prevent startup
+    except FileNotFoundError as e:
+        log.error(e)
+        click.echo(f"Porerefiner service couldn't be started because of a missing or incorrect file or directory: {e.filename}", err=True)
+        return e.errno
+    except:
+        raise
 
 
 @cli.group()

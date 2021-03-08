@@ -3,7 +3,7 @@ from flask import Flask, request, current_app
 from google.protobuf.json_format import MessageToJson
 
 import json
-
+import io
 
 from porerefiner.cli_utils import server
 from porerefiner.samplesheets import load_from_csv
@@ -19,7 +19,8 @@ def attach_to_run(run_id=None):
     if not run_id:
         run_id = request.form.get('run_id', None)
     file = request.files.get('sample_sheet')
-    message = load_from_csv(file)
+    buff = io.StringIO(file.read().decode('utf-8'))
+    message = load_from_csv(buff)
     async def attach_runner(run_id, message):
         with server(current_app.config['config_file']) as serv:
             return await serv.AttachSheetToRun(RunAttachRequest(name=run_id, sheet=message))

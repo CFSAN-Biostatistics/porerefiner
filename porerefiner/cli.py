@@ -6,7 +6,7 @@ import click
 
 from asyncio import run
 from pathlib import Path
-from functools import wraps
+from functools import wraps, partial
 
 from porerefiner.cli_utils import VALID_RUN_ID, server, hr_formatter, json_formatter, xml_formatter, handle_connection_errors
 from porerefiner.samplesheets import load_from_csv, load_from_excel
@@ -129,22 +129,28 @@ def untag(config, run_id, tag=[]):
 @cli.command()
 @handle_connection_errors
 @with_config
-@click.argument('samplesheet', type=click.File('rb'))
+@click.argument('samplesheet')
 @click.option('-r', '--run', 'run_id', type=VALID_RUN_ID, )
 @coroutine
 async def load(config, samplesheet, run_id=None):
     "Load a sample sheet to be attached to a run, or to the next run that is started."
     try:
-        if 'csv' in samplesheet.name:
-            ss = load_from_csv(samplesheet)
-        elif 'tsv' in samplesheet.name or 'txt' in samplesheet.name:
-            ss = load_from_csv(samplesheet, delimiter='\t')
-        elif 'xls' in samplesheet.name:
-            ss = load_from_excel(samplesheet)
-    except TypeError as e:
+        if '.csv' in samplesheet:
+            with open(samplesheet, 'r') as file:
+                ss = load_from_csv(file)
+        elif '.tsv' in samplesheet or '.txt' in samplesheet:
+            with open(samplesheet, 'r') as file:
+                ss = load_from_csv(file, delimiter='\t')
+        elif '.xls' in samplesheet:
+            with open(samplesheet, 'rb') as file:
+                ss = load_from_excel(file)
+    except FileNotFoundError:
+        click.echo(f"File '{samplesheet}' not found.")
+        return 2
+    except ValueError as e:
         click.echo(e, err=True)
     except ImportError:
-        click.echo(f"ERROR: OpenPyXL not installed; Excel files ({samplesheet.name}) can't be read. Use pip to install OpenPyXL.", err=True)
+        click.echo(f"ERROR: OpenPyXL not installed; Excel files ({samplesheet}) can't be read. Use pip to install OpenPyXL.", err=True)
     else:
         with server(config) as serv:
             req = RunAttachRequest(sheet=ss)
@@ -155,8 +161,64 @@ async def load(config, samplesheet, run_id=None):
             resp = await serv.AttachSheetToRun(req)
             if resp.error:
                 click.echo(resp.error.err_message, err=True)
-                quit(1)
+                return 1
 
+@cli.command("test-plugins")
+@click.argument('config_path', default='/etc/porerefiner/config.yaml')
+@coroutine
+async def test_plugins(config_path):
+    "Suite to test your configured plugins."
+    if not Path(config_path).exists():
+        raise click.BadParameter(f"No config file at {config_path}.")
+    from porerefiner.config import Config
+    config = Config(config_path)
+
+    # monkey-patch the subprocess runners plugins usually use
+    # so we can intercept output and exit codes
+
+    import subprocess, asyncio
+    _run = subprocess.run
+    _a_exec = asyncio.create_subprocess_exec
+    _a_shell = asyncio.create_subprocess_shell
+    def instrumented_run(*args, **kwargs):
+        kwargs['capture_output'] = True
+        proc = _run(*args, **kwargs)
+        click.echo(proc.stdout)
+        if proc.returncode: # prompt user if subprocess call failed; for testing purposes they can usually ignore this
+            click.echo(proc.stderr)
+            if click.confirm("Subprocess ended with non-zero exit code. Ignore failure?"):
+                proc.returncode = 0
+        return proc
+    async def instrumented_exec(_a_sub, *args, **kwargs):
+        kwargs['stdout'] = asyncio.subprocess.PIPE
+        kwargs['stderr'] = asyncio.subprocess.PIPE
+        proc = await _a_sub(*args, **kwargs)
+        stdout, stderr = await proc.communicate()
+        click.echo(stdout)
+        if proc.returncode:
+            click.echo(stderr)
+            if click.confirm("Subprocess ended with non-zero exit code. Ignore failure?"):
+                proc.returncode = 0
+        return proc
+
+    subprocess.run = instrumented_run
+    asyncio.create_subprocess_exec = partial(instrumented_exec, _a_sub=_a_exec)
+    asyncio.create_subprocess_shell = partial(instrumented_exec, _a_sub=_a_shell)
+
+    # Start up the job system with an in-memory database
+
+    from peewee import SqliteDatabase
+    from porerefiner import models, jobs, submitters
+    db = SqliteDatabase(":memory:", pragmas={'foreign_keys':1}, autoconnect=False)
+    db.bind(models.REGISTRY, bind_refs=False, bind_backrefs=False)
+    db.connect()
+    db.create_tables(models.REGISTRY)
+
+    # Create a fake run
+
+    run = models.Run()
+
+    # Run configured jobs and configured submitters
 
 
 if __name__ == "__main__":
