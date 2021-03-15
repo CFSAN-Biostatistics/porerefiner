@@ -15,7 +15,7 @@ from hachiko.hachiko import AIOEventHandler, AIOWatchdog
 from itertools import chain
 from peewee import JOIN
 from porerefiner import models
-from porerefiner.models import Run, Qa, File, Duty, SampleSheet, Sample, Tag, TagJunction
+from porerefiner.models import Run, Qa, File, Duty, SampleSheet, Sample, Tag, TagJunction, TripleTag, TTagJunction
 from porerefiner.cli_utils import relativize_path as r, absolutize_path as a, json_formatter
 from porerefiner.jobs import poll_jobs, CLASS_REGISTRY, JOBS
 from os.path import split, getmtime
@@ -107,7 +107,8 @@ async def get_run_info(run_id):
 async def list_runs(all=False, tags=[]):
     if tags:
         #implies all
-        return [make_run_msg(run) for run in Run.select().join(TagJunction).join(Tag).where(Tag.name << tags)]
+        tags = [str(tag) for tag in tags] # sanitize
+        return [make_run_msg(run) for run in Run.get_by_tags(*tags)]
     if all:
         return [make_run_msg(run) for run in Run.select()]
     #only in-progress runs
@@ -146,19 +147,22 @@ class PoreRefinerDispatchServer(PoreRefinerBase):
         try:
             run = get_run(request.id or request.name)
             response = GenericResponse()
+            SampleSheet.new_sheet_from_message(request.sheet, run)
         except ValueError: #no run
             query = Run.get_unannotated_runs()
-            if query.count() == 1:
+            if query.count() == 0:
+                response = GenericResponse()
+                SampleSheet.new_sheet_from_message(request.sheet)
+            elif query.count() == 1:
                 run = next(query)
                 response = GenericResponse()
+                SampleSheet.new_sheet_from_message(request.sheet, run)
             else:
                 # ambiguous, send an error back
                 response = GenericResponse(
                     error=Error(code=0,
                                 err_message="More than one run in progress; please specify run id or name using -r option.")
                 )
-
-        ss = SampleSheet.new_sheet_from_message(request.sheet, run)
         await stream.send_message(response)
         log.debug("Response sent")
 

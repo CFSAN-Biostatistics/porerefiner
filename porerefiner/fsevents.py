@@ -132,16 +132,21 @@ async def end_file(file):
     #     file.save()
     # except (subprocess.CalledProcessError, ValueError) as e:
     #     log.error(e)
-    async with aiofile.AIOFile(file.path, 'rb') as afile:
-        ha = hashlib.md5()
-        rdr = aiofile.Reader(afile, chunk_size=1024 * 1024)
-        async for chunk in rdr:
-            ha.update(chunk)
-    file.hash = ha.hexdigest()
-    file.save()
-    for job in JOBS.FILES:
-        log.info(f"Scheduling job {type(job).__name__} on {file.path}")
-        file.spawn(job)
+    if file.path.exists():
+        async with aiofile.AIOFile(file.path, 'rb') as afile:
+            ha = hashlib.md5()
+            rdr = aiofile.Reader(afile, chunk_size=1024 * 1024)
+            async for chunk in rdr:
+                ha.update(chunk)
+            file.hash = ha.hexdigest()
+            file.save()
+        for job in JOBS.FILES:
+            log.info(f"Scheduling job {type(job).__name__} on {file.path}")
+            file.spawn(job)
+    else:
+        TagJunction.delete().where(file==file).execute()
+        TTagJunction.delete().where(file==file).execute()
+        file.delete_instance()
 
 
 # async def send_run(run, dest):
@@ -227,8 +232,8 @@ class PoreRefinerFSEventHandler(AIOEventHandler):
         if not event.is_directory:
             fi = File.get_or_none(File.path == r(event.src_path))
             if fi:
-                TagJunction.delete().where(file==fi).execute()
-                TTagJunction.delete().where(file==fi).execute()
+                TagJunction.delete().where(TagJunction.file==fi).execute()
+                TTagJunction.delete().where(TTagJunction.file==fi).execute()
                 fi.delete_instance()
 
 
@@ -252,8 +257,8 @@ async def in_progress_run_update(*args, **kwargs):
                 file.last_modified = datetime.fromtimestamp(getmtime(a(file.path)))
                 file.save()
             else:
-                TagJunction.delete().where(file==file).execute()
-                TTagJunction.delete().where(file==file).execute()
+                TagJunction.delete().where(TagJunction.file==file).execute()
+                TTagJunction.delete().where(TTagJunction.file==file).execute()
                 file.delete_instance()
             await asyncio.sleep(0)
 

@@ -162,6 +162,8 @@ async def load(config, samplesheet, run_id=None):
             if resp.error:
                 click.echo(resp.error.err_message, err=True)
                 return 1
+            else:
+                click.echo(f"{samplesheet} loaded successfully.")
 
 @cli.command("test-plugins")
 @click.argument('config_path', default='/etc/porerefiner/config.yaml')

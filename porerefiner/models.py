@@ -127,10 +127,14 @@ def taggable(cls):
             ta = TripleTag.get_or_none(namespace=namespace, name=name)
             if ta:
                 TTagJunction.delete().where(getattr(TTagJunction, clsname)==self, TTagJunction.tag==ta).execute()
+        
+        @classmethod
+        def get_by_tags(self, *tags):
+            return self.select().join(TagJunction).join(Tag).where(Tag.name << tags) | self.select().join(TTagJunction).join(TripleTag).where(TripleTag.value << tags)
 
-        return tags, tag, untag, ttag, unttag
+        return tags, tag, untag, ttag, unttag, get_by_tags
 
-    cls.tags, cls.tag, cls.untag, cls.ttag, cls.unttag = make_closures(cls.__name__.lower())
+    cls.tags, cls.tag, cls.untag, cls.ttag, cls.unttag, cls.get_by_tags = make_closures(cls.__name__.lower())
     return cls
 
 @taggable
@@ -200,6 +204,9 @@ class Qa(PorerefinerModel):
     coverage = FloatField()
     quality = FloatField()
 
+    def __str__(self):
+        return f"QA: {self.coverage:02} / {self.quality:02}"
+
 @taggable
 class Duty(PorerefinerModel):
     "A job is a scheduled HPC job, pre or post submission"
@@ -261,6 +268,10 @@ class SampleSheet(PorerefinerModel):
     sequencing_kit = CharField(null=True)
     barcoding_kit = CharField(null=True, choices=BARCODES)
     library_id = CharField(null=True)
+    path = PathField(null=True)
+
+    def __str__(self):
+        return f"SampleSheet: {self.path} | {len(self.samples)} samples."
 
     @property 
     def barcode_kit_barcodes(self):
@@ -275,6 +286,12 @@ class SampleSheet(PorerefinerModel):
 
     @classmethod
     def new_sheet_from_message(cls, sheet, run=None, log=logging.getLogger('porerefiner.models'), sample_accession_prefix=None):
+        for ss in cls.get_unused_sheets():
+            # clear out any previously unassigned sample sheets
+            # there should only ever be one unassigned sheet
+            for sam in ss.samples:
+                sam.delete_instance()
+            ss.delete_instance
         ss = cls.create(date=sheet.date.ToDatetime(),
                         barcoding_kit=sheet.sequencing_kit,
                         library_id=sheet.library_id)

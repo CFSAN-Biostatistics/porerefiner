@@ -2,9 +2,13 @@
 from unittest import TestCase, skip
 from unittest.mock import Mock, patch
 
-from tests import paths, with_database, TestBase, sql_ints, Model, jobs as _jobs
+from tests import _run
+from tests import *
 
-from porerefiner import models, jobs
+_jobs = jobs
+
+from porerefiner import models, jobs, fsevents
+from porerefiner.fsevents import PoreRefinerFSEventHandler as Handler
 
 from hypothesis import given, strategies as strat, example, seed, settings, HealthCheck
 #from hypothesis_fspaths import fspaths, _PathLike
@@ -18,6 +22,30 @@ import sys
 # safe_paths = lambda: fspaths().filter(lambda x: isinstance(x, str) or isinstance(x, _PathLike))
 class TestJobDefinition(jobs.AbstractJob):
     pass
+
+class TestTaggableModels(TestCase):
+
+    @given(
+        tag=names(),
+        run=Model.Runs(),
+        qa=Model.Qas(),
+        duty=Model.Duties(),
+        ss=Model.Samplesheets(),
+        sam=Model.Samples(),
+        fi=Model.Files())
+    @with_database
+    def test_taggable_models_are_taggable(self, tag, run, qa, duty, ss, sam, fi):
+        for obj in (run, qa, duty, ss, sam, fi):
+            cls = type(obj)
+            try:
+                for attr in ("tags", "tag", "untag", "ttag", "unttag", "get_by_tags"):
+                    try:
+                        self.assertTrue(hasattr(cls, attr))
+                    except Exception as e:
+                        raise Exception(attr) from e
+            except Exception as e:
+                raise Exception(cls.__name__) from e
+
 
 
 class TestModels(TestCase):
@@ -39,14 +67,6 @@ class TestModels(TestCase):
 
     def test_models_registered(self):
         self.assertEqual(len(models.REGISTRY), 11)
-
-    def test_taggable_models_are_taggable(self):
-        for cls in (models.Run, models.Qa, models.Duty, models.SampleSheet, models.Sample, models.File):
-            self.assertTrue(hasattr(cls, "tags"))
-            self.assertTrue(hasattr(cls, "tag"))
-            self.assertTrue(hasattr(cls, "untag"))
-            self.assertTrue(hasattr(cls, "ttag"))
-            self.assertTrue(hasattr(cls, "unttag"))
 
     # @skip('broken')
     @given(tag=strat.text().filter(lambda x: x))
@@ -168,7 +188,7 @@ class TestSampleSheet(TestCase):
         self.assertEqual(models.SampleSheet.get_unused_sheets().count(), 1)
 
     # @skip('broken')
-    @given(ss=Model.Samplesheets())
+    @given(ss=Message.Samplesheets())
     @with_database
     def test_new_sheet_from_message(self, ss):
         # flow = models.Flowcell.create(consumable_id="TEST|TEST|TEST", consumable_type="TEST|TEST|TEST", path="TEST/TEST/TEST")
@@ -215,3 +235,76 @@ class TestFile(TestCase):
 
 
     
+class TestTags(TestBase):
+
+    "Tests for a bunch of tag-related bugs"
+
+    @skip("broken")
+    def test_complex_query(self):
+        from porerefiner.models import Run, Tag, TagJunction, TripleTag, TTagJunction
+        tags = ("TEST", "another tag")
+        self.assertFalse(Run.select().join(TagJunction).join(Tag).where(Tag.name << tags).switch(Run).join(TTagJunction).join(TripleTag).where(TripleTag.value << tags))
+
+    @skip("old approach")
+    def test_tagging_assumptions(self):
+        from porerefiner.models import Run, Tag, TagJunction, TripleTag, TTagJunction
+        tags = ("TEST", "another tag")
+        run = Run.create(name="TEST", path="/dev/null")
+        self.assertEqual(len(Run.select().join(TagJunction).join(Tag).where(Tag.name << tags)), 0) # test simple query no tags
+        run.tag(tags[0])
+        self.assertEqual(len(Run.select().join(TagJunction).join(Tag).where(Tag.name << tags)), 1) # test simple query, one tag
+        self.assertEqual(len(Run.select().join(TagJunction).join(Tag).where(Tag.name << tags).switch(Run).join(TTagJunction).join(TripleTag).where(TripleTag.value << tags)), 1) #test complicated query with simple tag
+        run.ttag(namespace="TEST", name="TEST", value=tags[0])
+        self.assertEqual(len(Run.select().join(TagJunction).join(Tag).where(Tag.name << tags).switch(Run).join(TTagJunction).join(TripleTag).where(TripleTag.value << tags)), 1) # complicated query with two tags but one result
+
+    def test_lookup_by_tags(self):
+        from porerefiner.models import Run, Tag, TagJunction, TripleTag, TTagJunction
+        tags = ("TEST", "another tag")
+        run = Run.create(name="TEST", path="/dev/null")
+        run.tag(tags[0])
+        self.assertEqual(len(Run.get_by_tags(*tags)), 1)
+        run.ttag(namespace="TEST", name="TEST", value=tags[0])
+        self.assertEqual(len(Run.get_by_tags(*tags)), 1)
+
+    @given(
+        tags=strat.lists(names(), min_size=1, unique=True),
+        run=Model.Runs())
+    def test_tags_dont_bump_each_other(self, tags, run):
+        run.save()
+        for tag in tags:
+            run.tag(tag)
+        self.assertEqual(len(list(run.tags)), len(tags))
+
+    # @skip("")
+    @settings(deadline=None)
+    @given(tag=names(), run=Model.Runs())
+    def test_tags_arent_deleted_on_run_end(self, tag, run):
+        run.save()
+        ta = run.tag(tag)
+        tta = run.ttag(tag, tag, tag)
+        _run(fsevents.end_run(run))
+        fin = models.Tag.get(name="finished")
+        self.assertIn(ta, run.tags)
+        self.assertIn(fin, run.tags)
+        self.assertIn(tta, run.tags)
+
+    # @skip("")
+    @given(
+        tag=names(),
+        file_event=file_events(),
+        run=Model.Runs()
+    )
+    def test_tags_arent_deleted_on_file_deletion(self, tag, file_event, run):
+        file, event = file_event
+        assert file.path == event.src_path
+        file.save()
+        models.File.get(file.id)
+        file.tag(tag)
+        run.save()
+        tag = run.tag(tag)
+        self.assertEqual(len(list(run.tags)), 1)
+        self.assertEqual(len(list(file.tags)), 1)
+        _run(Handler(event.src_path.parts[0]).on_deleted(event))
+        self.assertFalse(models.File.get_or_none(models.File.path==event.src_path)) # check file record is gone
+        self.assertEqual(len(list(run.tags)), 1)
+        self.assertIn(tag, run.tags)

@@ -12,9 +12,12 @@ class GenericFileJob(FileJob):
     hints: dict = field(default_factory=dict)
 
     def run(self, run, file, datadir, remotedir):
-        locals().update(environ)
+        namespace = {}
+        namespace.update(globals())
+        namespace.update(locals())
+        namespace.update(environ)
         for command in self.commands:
-            yield command.format(**locals())
+            yield command.format(**namespace)
 
 @dataclass
 class GenericRunJob(RunJob):
@@ -23,6 +26,9 @@ class GenericRunJob(RunJob):
     hints: dict = field(default_factory=dict)
 
     def run(self, run, datadir, remotedir):
-        locals().update(environ)
+        namespace = {}
+        namespace.update(globals())
+        namespace.update(locals())
+        namespace.update(environ)
         for command in self.commands:
-            yield command.format(**locals())
+            yield command.format(**namespace)

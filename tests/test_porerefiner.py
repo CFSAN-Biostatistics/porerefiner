@@ -17,7 +17,7 @@ from porerefiner import models
 from porerefiner import config
 from porerefiner.cli_utils import absolutize_path as ap, relativize_path as rp
 from porerefiner.protocols.porerefiner.rpc import porerefiner_pb2 as messages
-from tests import paths, with_database, TestBase as DBSetupTestCase, fsevents, Model
+from tests import paths, with_database, TestBase as DBSetupTestCase, fsevents, Model, Message
 
 from shutil import rmtree
 
@@ -101,8 +101,12 @@ class TestCoreFunctions(DBSetupTestCase):
         self.assertEqual(len(_run(rpc.list_runs())), 1)
 
     def test_list_runs_tags(self):
-        tag = models.Tag.create(name='TEST')
-        models.TagJunction.create(tag=tag, run=self.run)
+        # tag = models.Tag.create(name='TEST')
+        # ttag = models.TripleTag.create(namespace="TESTEST", name="TESTEST", value="TEST")
+        # models.TagJunction.create(tag=tag, run=self.run)
+        # models.TTagJunction.create(tag=ttag, run=self.run)
+        self.run.tag("TEST")
+        self.run.ttag(namespace="TEST", name="TEST", value="TEST")
         self.assertEqual(len(_run(rpc.list_runs(tags=['TEST', 'other tag']))), 1)
 
 
@@ -231,7 +235,7 @@ class TestPoreDispatchServer(TestCase):
 
     # @skip('no test')
     @settings(deadline=500, suppress_health_check=(HealthCheck.all()))
-    @given(ss=Model.Samplesheets())
+    @given(ss=Message.Samplesheets())
     @with_database
     def test_attach_sheet_run_no_run(self, ss):
         ut = rpc.PoreRefinerDispatchServer()
@@ -241,7 +245,7 @@ class TestPoreDispatchServer(TestCase):
         strm.send_message.assert_called_once()
 
     @settings(deadline=500, suppress_health_check=(HealthCheck.all()))
-    @given(ss=Model.Samplesheets())
+    @given(ss=Message.Samplesheets())
     @with_database
     def test_attach_sheet_to_run(self, ss):
         # self.flow = flow = models.Flowcell.create(consumable_id="TEST|TEST|TEST", consumable_type="TEST|TEST|TEST", path="TEST/TEST/TEST")

@@ -4,9 +4,11 @@ from unittest import TestCase, skip
 from unittest.mock import Mock, patch, AsyncMock
 # from mock import AsyncMock
 from tempfile import NamedTemporaryFile
+from pathlib import Path
 
 from porerefiner.fsevents import PoreRefinerFSEventHandler as Handler, end_file, end_run, register_new_run
-from porerefiner.models import Run
+from porerefiner.models import Run, Tag, TripleTag, File
+from porerefiner.cli_utils import relativize_path as r
 
 from hypothesis import given, settings, note
 import hypothesis.strategies as strat
@@ -48,11 +50,23 @@ class TestPoreRefinerFSEventsHandler(TestCase):
                 _run(Handler(event.src_path.parts[0]).on_created(event))
                 file.create.assert_called()
 
+    @given(event=fsevents(min_deep=5, isDirectory=False).filter(lambda e: len(e.src_path.parts) > 4)) # run, plus one more for file
+    @with_database
+    def test_on_deleted_file(self, event):
+        _run(Handler(event.src_path.parts[0]).on_created(event))
+        fi = File.get_or_none(File.path == r(event.src_path))
+        self.assertIsNotNone(fi) # check test setup correctly
+        fi.tag("TEST")
+        fi.ttag("TEST", "TEST", "TEST")
+        _run(Handler(event.src_path.parts[0]).on_deleted(event))
+        fi = File.get_or_none(File.path == r(event.src_path))
+        self.assertIsNone(fi) # should be deleted
+
 class TestFSEventsPollingFunctions(TestCase):
 
     #@given(file=files(real=True))
     def test_end_file(self, file=Mock()):
         with NamedTemporaryFile() as tfile:
-            file.path = tfile.name
+            file.path = Path(tfile.name)
             _run(end_file(file))
             file.save.assert_called()

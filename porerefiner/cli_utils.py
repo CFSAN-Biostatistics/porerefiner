@@ -13,7 +13,7 @@ from functools import wraps, partial
 from io import TextIOWrapper
 from typing import List
 
-
+import grpclib
 from grpclib.client import Channel, GRPCError
 
 from tabulate import tabulate
@@ -56,6 +56,8 @@ class RunID:
 
 class ValidRunID(click.ParamType):
 
+    name = "valid run id"
+
     def convert(self, value, param, ctx):
         try:
             return int(value)
@@ -65,6 +67,8 @@ class ValidRunID(click.ParamType):
 VALID_RUN_ID = ValidRunID()
 
 class PathPath(click.Path):
+
+    name = "path"
 
     def convert(self, value, param, ctx):
         val = super().convert(value, param, ctx)
@@ -81,6 +85,8 @@ def handle_connection_errors(func):
         except FileNotFoundError as e:
             print(f"ERROR: Socket file not found at configured path. Has the service ever been started?", file=stderr)
             quit(e.errno)
+        except grpclib.exceptions.GRPCError:
+            print("ERROR: Porerefiner service couldn't handle request due to an internal server error. Check the porerefinerd log for details.")
     return wrapper
 
 
@@ -111,7 +117,7 @@ def hr_formatter(extend=False):
                         status=run.status,
                         samples=len(run.samples),
                         files=sum([len(sam.files) for sam in run.samples]) + len(run.files),
-                        tags=",".join(run.tags)))
+                        tags=",".join(list(run.tags) + [f"{ttag.namespace}:{ttag.name}={ttag.value}" for ttag in run.trip_tags])))
         if extend:
             rec[-1]['path'] = run.path
             rec[-1]['flowcell'] = run.flowcell_id
@@ -124,13 +130,13 @@ def hr_formatter(extend=False):
                                 comment=sample.comment,
                                 user=sample.user,
                                 files=len(sample.files),
-                                tags=",".join(sample.tags)))
+                                tags=",".join(list(sample.tags) + [f"{ttag.namespace}:{ttag.name}={ttag.value}" for ttag in sample.trip_tags])))
             for file in run.files:
                 rec.append(dict(id='-',
                                 name=file.name,
                                 path=file.path,
                                 status=('UNREADY', 'READY')[file.ready],
-                                tags=",".join(file.tags)))
+                                tags=",".join(list(file.tags) + [f"{ttag.namespace}:{ttag.name}={ttag.value}" for ttag in file.trip_tags])))
     yield print_run
     print(tabulate(rec, headers="keys"))
 
@@ -203,6 +209,8 @@ def xml_formatter(extend=False): #TODO
         t = xml.SubElement(r, 'tags')
         for tag in run.tags:
             xml.SubElement(t, 'tag').text = tag
+        for tag in run.trip_tags:
+            xml.SubElement(t, 'tag', namespace=tag.namespace, name=tag.name).text = tag.value
 
     yield print_run
     pretty = minidom.parseString(xml.tostring(rec, 'utf-8'))

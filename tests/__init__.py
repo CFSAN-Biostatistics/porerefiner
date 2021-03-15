@@ -143,13 +143,13 @@ def paths(draw, under="", min_deep=2, max_deep=None, pathlib_only=False):
 Event = namedtuple('Event', ('src_path', 'is_directory'))
 
 @composite
-def fsevents(draw, min_deep=4, isDirectory=None):
+def fsevents(draw, min_deep=4, isDirectory=None, src_path=None):
     if isDirectory is None:
         is_dir = booleans()
     else:
         is_dir = just(bool(isDirectory))
     return draw(builds(Event,
-                       src_path=paths(min_deep=min_deep, pathlib_only=True),
+                       src_path=src_path or paths(min_deep=min_deep, pathlib_only=True),
                        is_directory=is_dir))
 
 def random_name_subclass(of=object, **classdef):
@@ -158,6 +158,10 @@ def random_name_subclass(of=object, **classdef):
     new_type = type(new_typename, (of,), classdef)
     globals()[new_typename] = new_type
     return new_type
+
+@composite
+def names(draw):
+    return draw(builds(namesgenerator.get_random_name))
 
 class TestSubmitter(jobs.submitters.Submitter):
     async def test_noop(*a, **k):
@@ -205,6 +209,45 @@ def jobs(draw):
 #     return draw(builds(models.Job,
 #                        job_state=state))
 
+class Message:
+
+    @staticmethod
+    @composite
+    def Samples(draw):
+        sid = text(min_size=7, max_size=10)
+        acc = text(min_size=5, max_size=10)
+        bar = text(min_size=10, max_size=10)
+        org = text(min_size=12, max_size=12)
+        ext = text(min_size=10, max_size=10)
+        com = text()
+        use = emails()
+        return draw(builds(messages.SampleSheet.Sample,
+                        sample_id=sid,
+                        accession=acc,
+                        barcode_id=bar,
+                        organism=org,
+                        extraction_kit=ext,
+                        comment=com,
+                        user=use))
+
+    @staticmethod
+    @composite
+    def Samplesheets(draw):
+        ver = just('1.0.1')
+        dat = datetimes()
+        lib = text(min_size=12, max_size=12)
+        seq = text(min_size=12, max_size=12)
+        bar = lists(text(min_size=12, max_size=12), min_size=0, max_size=3)
+        sam = lists(Message.Samples(), min_size=1, max_size=12)
+        ss = draw(builds(messages.SampleSheet,
+                        porerefiner_ver=ver,
+                        library_id=lib,
+                        sequencing_kit=seq,
+                        barcode_kit=bar,
+                        samples=sam))
+        ss.date.FromDatetime(draw(dat))
+        return ss
+
 class Model:
 
     
@@ -240,14 +283,13 @@ class Model:
 
     @staticmethod
     @composite
-    def Files(draw, real=False):
+    def Files(draw, real=False, arg_path=None):
         if real:
             path = builds(Path, builds(lambda *a, **k: tempfile.NamedTemporaryFile().name))
         else:
             path = paths(pathlib_only=True)
         return draw(builds(models.File,
-                        pk=sql_ints(),
-                        path=path))
+                        path=arg_path or path))
 
     @staticmethod
     @composite
@@ -259,7 +301,7 @@ class Model:
         ext = text(min_size=10, max_size=10)
         com = text()
         use = emails()
-        return draw(builds(messages.SampleSheet.Sample,
+        return draw(builds(models.Sample,
                         sample_id=sid,
                         accession=acc,
                         barcode_id=bar,
@@ -271,19 +313,12 @@ class Model:
     @staticmethod
     @composite
     def Samplesheets(draw):
-        ver = just('1.0.1')
-        dat = datetimes()
-        lib = text(min_size=12, max_size=12)
         seq = text(min_size=12, max_size=12)
         bar = lists(text(min_size=12, max_size=12), min_size=0, max_size=3)
-        sam = lists(Model.Samples(), min_size=1, max_size=12)
-        ss = draw(builds(messages.SampleSheet,
-                        porerefiner_ver=ver,
-                        library_id=lib,
+        ss = draw(builds(models.SampleSheet,
                         sequencing_kit=seq,
                         barcode_kit=bar,
-                        samples=sam))
-        ss.date.FromDatetime(draw(dat))
+                        path=paths()))
         return ss
 
     @staticmethod
@@ -298,11 +333,29 @@ class Model:
         else:
             pat = just(Path(path))
         return draw(builds(models.Flowcell,
-                        #pk=pk,
-                        consumable_id=cid,
-                        consumable_name=cname,
-                        consumable_type=cty,
-                        path=pat))
+                            consumable_id=cid,
+                            consumable_name=cname,
+                            consumable_type=cty,
+                            path=pat))
+
+    @staticmethod
+    @composite
+    def Qas(draw):
+        return draw(builds(models.Qa,
+                           coverage=floats(),
+                           quality=floats()))
+
+
+@composite
+def file_events(draw):
+    "strategy to produce synchronized files and events"
+    path = builds(Path, just(tempfile.NamedTemporaryFile().name))
+    return draw(tuples(
+                       Model.Files(arg_path=path),
+                       fsevents(src_path=path, isDirectory=False)
+                       )
+    )
+
 
 class TestBase(TestCase):
 
