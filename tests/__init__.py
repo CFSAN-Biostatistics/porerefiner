@@ -193,7 +193,7 @@ def submitters(draw):
 
 class TestJob(jobs.RunJob):
 
-    def run(*a, **k):
+    def on_complete(*a, **k):
         yield "", {}
 
 @composite

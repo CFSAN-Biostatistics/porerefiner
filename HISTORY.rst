@@ -2,6 +2,13 @@
 History
 =======
 
+0.10.0 (2021-03-17)
+-------------------
+
+* Configurable jobs can now respond to creation of runs and files, as well as completion
+
+* API-breaking change: jobs will need to implement 'on_completed' and/or 'on_new' rather than 'run'.
+
 0.9.3 (2021-03-15)
 ------------------
 

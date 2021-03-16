@@ -23,36 +23,36 @@ CONFIGURED_JOB_REGISTRY = {}
 log = logging.getLogger('porerefiner.job')
 
 async def poll_active_job(job):
-    logg = log.getChild(f"poll")
-    configured_job = CONFIGURED_JOB_REGISTRY[job.job_class]
-    submitter = configured_job.submitter
-    assert isinstance(job, Duty)
-    try:
-        await submitter._poll(job)
-    except Exception as e:
-        logg.error(f"error in {type(submitter).__name__} {type(configured_job).__name__} ")
-        # logg.error(e)
-        # traceback.print_exc()
-        raise
-    return 1
+    # logg = log.getChild(f"poll")
+    # configured_job = CONFIGURED_JOB_REGISTRY[job.job_class]
+    # submitter = configured_job.submitter
+    # assert isinstance(job, Duty)
+    # try:
+    #     await submitter._poll(job)
+    # except Exception as e:
+    #     logg.error(f"error in {type(submitter).__name__} {type(configured_job).__name__} ")
+    #     # logg.error(e)
+    #     # traceback.print_exc()
+    #     raise
+    return 0
 
-async def submit_job(job):
-    logg = log.getChild(f"submit")
-    configured_job = CONFIGURED_JOB_REGISTRY[job.job_class]
-    submitter = configured_job.submitter
-    assert isinstance(job, Duty)
-    try:
-        await submitter._submit(job)
-    except Exception as e:
-        logg.error(f"error in {type(submitter).__name__} {type(configured_job).__name__} ")
-        # logg.error(e)
-        # traceback.print_exc()
-        raise
-    return 1
+async def submit_job(job, event='on_created'):
+    # logg = log.getChild(f"submit")
+    # configured_job = CONFIGURED_JOB_REGISTRY[job.job_class]
+    # submitter = configured_job.submitter
+    # assert isinstance(job, Duty)
+    # try:
+    #     await submitter._submit(job, event)
+    # except Exception as e:
+    #     logg.error(f"error in {type(submitter).__name__} {type(configured_job).__name__} ")
+    #     # logg.error(e)
+    #     # traceback.print_exc()
+    #     raise
+    return 0
 
 async def complete_job(job):
-    job.job_state.submitter._close(job)
-    return 1
+    # job.job_state.submitter._close(job)
+    return 0
 
 async def poll_jobs(ready_jobs, running_jobs):
     # jobs_submitted = 0
@@ -93,6 +93,8 @@ class _MetaRegistry(type):
     #     return the_instance
     def __call__(cls, *args, **kwargs):
         "Register new INSTANCES of jobs"
+        if not ('on_complete' in cls.__dict__ or 'on_new' in cls.__dict__):
+            raise TypeError("class of this type must implement one of 'on_complete' or 'on_new'")
         try:
             the_instance = super().__call__(*args, **kwargs)
         except TypeError as e:
@@ -135,8 +137,10 @@ class FileJob(AbstractJob):
     # def collect(self, run: Run, file: File, datadir: Path, pid: Union[str, int]) -> None:
     #     pass
 
-    @abstractmethod
-    def run(self, run: Run, file: File, datadir: Path, remotedir: Path) -> Generator[Union[str, Tuple[str, dict]], Union[CompletedProcess, int, str], None]:
+    def on_new(self, run: Run, file: File, datadir: Path, remotedir: Path) -> Generator[Union[str, Tuple[str, dict]], Union[CompletedProcess, int, str], None]:
+        pass
+
+    def on_complete(self, run: Run, file: File, datadir: Path, remotedir: Path) -> Generator[Union[str, Tuple[str, dict]], Union[CompletedProcess, int, str], None]:
         pass
 
 class RunJob(AbstractJob):
@@ -149,8 +153,10 @@ class RunJob(AbstractJob):
     # def collect(self, run: Run, datadir: Path, pid: Union[str, int]) -> None:
     #     pass
 
-    @abstractmethod
-    def run(self, run: Run, datadir: Path, remotedir: Path) -> Generator[Union[str, Tuple[str, dict]], Union[CompletedProcess, int, str], None]:
+    def on_complete(self, run: Run, datadir: Path, remotedir: Path) -> Generator[Union[str, Tuple[str, dict]], Union[CompletedProcess, int, str], None]:
+        pass
+
+    def on_complete(self, run: Run, datadir: Path, remotedir: Path) -> Generator[Union[str, Tuple[str, dict]], Union[CompletedProcess, int, str], None]:
         pass
 
 

@@ -18,7 +18,7 @@ class TestJobBaseClasses(TestCase):
         @dataclass
         class TestFileJob(jobs.FileJob):
             field: str
-            def run(*a, **k):
+            def on_complete(*a, **k):
                 yield "",{}
         t = TestFileJob(submitter=TestSubmitter(), field="")
         assert t
@@ -28,7 +28,7 @@ class TestJobBaseClasses(TestCase):
         @dataclass
         class TestRunJob(jobs.RunJob):
             field: str
-            def run(*a, **k):
+            def on_complete(*a, **k):
                 yield "",{}
                 val = yield None
                 print(val)

@@ -209,7 +209,7 @@ class Qa(PorerefinerModel):
 
 @taggable
 class Duty(PorerefinerModel):
-    "A job is a scheduled HPC job, pre or post submission"
+    "A duty is a job in progress"
     pk = AutoField()
     job_id = CharField(null=True)
     job_class = TextField(null=False)

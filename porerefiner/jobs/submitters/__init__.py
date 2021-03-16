@@ -48,7 +48,7 @@ class Submitter(metaclass=RegisteringABCMeta):
         "Submitters should translate paths to execution environment"
         pass
 
-    async def _submit(self, job):
+    async def _submit(self, job, event='on_complete'):
         "Create datadir, delegate job setup, then call subclass method to submit job"
         from porerefiner.jobs import FileJob, RunJob, CONFIGURED_JOB_REGISTRY
         assert isinstance(job, Duty)
@@ -59,6 +59,9 @@ class Submitter(metaclass=RegisteringABCMeta):
         datadir = job.datadir = Path(mkdtemp())
         job.save()
         configured_job = CONFIGURED_JOB_REGISTRY[job.job_class]
+
+        if event not in ('on_complete', 'on_new'):
+            raise ValueError("'on_complete' and 'on_new' are the only two events.")
 
         # if isinstance(configured_job, RunJob):
         #     remotedir = job.remotedir = self.reroot_path(run.path)
@@ -83,10 +86,10 @@ class Submitter(metaclass=RegisteringABCMeta):
         #         raise
         if isinstance(configured_job, RunJob):
             remotedir = job.remotedir = self.reroot_path(run.path)
-            g = configured_job.run(run=run, datadir=datadir, remotedir=remotedir)
+            g = getattr(configured_job, event)(run=run, datadir=datadir, remotedir=remotedir)
         elif isinstance(configured_job, FileJob):
             remotedir = job.remotedir = self.reroot_path(file.path.parent)
-            g = configured_job.run(run=file.run, file=file, datadir=datadir, remotedir=remotedir)
+            g = getattr(configured_job, event)(run=file.run, file=file, datadir=datadir, remotedir=remotedir)
         try:
             cmd = next(g)
             while True: # execute job until completion

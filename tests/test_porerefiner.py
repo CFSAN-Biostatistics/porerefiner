@@ -73,8 +73,9 @@ class TestCoreFunctions(DBSetupTestCase):
     #     pathlib.Path(bytes.decode(path))
 
 
-    @given(strat.one_of(strat.text(max_size=30), strat.integers(min_value=-2**16, max_value=2**16)))
+    @given(strat.one_of(strat.text(max_size=30), strat.integers(min_value=-2**16, max_value=2**16)).filter(lambda n: n not in (RUN_NAME, RUN_PK)))
     def test_fail_get_run(self, runid):
+        "Looking up nonexistent runs should raise valueerror"
         with self.assertRaises(ValueError):
             run = rpc.get_run(runid)
 
@@ -89,6 +90,7 @@ class TestCoreFunctions(DBSetupTestCase):
             strat.integers(min_value=-2**16, max_value=2**16).filter(lambda n: n != RUN_PK)
             ))
     def test_fail_get_run_info(self, run_id):
+        "Getting info for nonexistent run should raise valuerror"
         with self.assertRaises(ValueError):
             _run(rpc.get_run_info(run_id))
 
