@@ -2,6 +2,11 @@
 History
 =======
 
+0.9.4 (2021-03-18)
+------------------
+
+* Option in `prfr` to connect to remote Porerefiner hosts.
+
 0.9.3 (2021-03-15)
 ------------------
 

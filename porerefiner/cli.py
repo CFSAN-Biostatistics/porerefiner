@@ -26,7 +26,8 @@ def default_config():
 
 
 
-with_config = click.option('--config', default=default_config(), help='Path to PoreRefiner config', show_default=True)
+with_config = click.option('--config', default=default_config(), help='Path to PoreRefiner config', show_default=True, metavar="PATH")
+with_remote = click.option('-c', '--connect-to', 'remote', default=None, help="Connect to specified remote host instead of configured local host.", metavar="HOST:PORT")
 
 def coroutine(func):
     "Coroutine runner"
@@ -44,6 +45,7 @@ def cli():
 @cli.command()
 @handle_connection_errors
 @with_config
+@with_remote
 @click.option('-a', '--all', is_flag=True, default=False, help="Show finished and ongoing runs.")
 @click.option('-h', '--human-readable', 'output_format', flag_value=hr_formatter, help='Output in a human-readable table.', default=hr_formatter)
 @click.option('-j', '--json', 'output_format', flag_value=json_formatter, help='Output in JSON.')
@@ -51,9 +53,9 @@ def cli():
 @click.option('-t', '--tag', 'tags', multiple=True)
 @click.option('-e', '--extended', 'extend', default=False, is_flag=True, help="Extended output format.")
 @coroutine
-async def ps(config, output_format, extend, all=False, tags=[]):
+async def ps(config, remote, output_format, extend, all=False, tags=[]):
     "Show runs in progress, or every tracked run (--all), or with a particular tag (--tag)."
-    with server(config) as serv:
+    with server(config, remote) as serv:
         with output_format(extend) as formatter:
             resp = await serv.GetRuns(RunListRequest(all=all, tags=tags))
             for run in resp.runs.runs:
@@ -61,14 +63,16 @@ async def ps(config, output_format, extend, all=False, tags=[]):
 
 @cli.command()
 @handle_connection_errors
+@with_config
+@with_remote
 @click.option('-h', '--human-readable', 'output_format', flag_value=hr_formatter, help='Output in a human-readable table.', default=hr_formatter)
 @click.option('-j', '--json', 'output_format', flag_value=json_formatter, help='Output in JSON.')
 @click.option('-x', '--xml', 'output_format', flag_value=xml_formatter, help='Output in schemaless XML.')
 @click.argument('run_id', type=VALID_RUN_ID)
 @coroutine
-async def info(output_format, run_id, config=default_config()):
+async def info(config, remote, output_format, run_id):
     "Return information about a run, historical or in progress."
-    with server(config) as serv:
+    with server(config, remote) as serv:
         with output_format(extend=True) as formatter:
             req = RunRequest()
             if isinstance(run_id, str):
@@ -92,8 +96,8 @@ barcode_kits,
 sample_id,accession,barcode_id,organism,extraction_kit,comment,user
 """)
 
-async def tag_runner(config, run_id, tags=[], untag=False):
-    with server(config) as serv:
+async def tag_runner(config, remote, run_id, tags=[], untag=False):
+    with server(config, remote) as serv:
         req = RunRequest()
         if isinstance(run_id, str):
             req.name = run_id
@@ -110,29 +114,32 @@ async def tag_runner(config, run_id, tags=[], untag=False):
 @cli.command()
 @handle_connection_errors
 @with_config
+@with_remote
 @click.argument('run_id', type=VALID_RUN_ID)
 @click.argument('tag', type=click.STRING, nargs=-1)
-def tag(config, run_id, tag=[]):
+def tag(config, remote, run_id, tag=[]):
     "Add one or more tags to a run."
-    run(tag_runner(config, run_id, tag))
+    run(tag_runner(config, remote, run_id, tag))
 
 
 @cli.command()
 @handle_connection_errors
 @with_config
+@with_remote
 @click.argument('run_id', type=VALID_RUN_ID)
 @click.argument('tag', type=click.STRING, nargs=-1)
-def untag(config, run_id, tag=[]):
+def untag(config, remote, run_id, tag=[]):
     "Remove one or more tags from a run."
-    run(tag_runner(config, run_id, tag, untag=True))
+    run(tag_runner(config, remote, run_id, tag, untag=True))
 
 @cli.command()
 @handle_connection_errors
 @with_config
+@with_remote
 @click.argument('samplesheet')
 @click.option('-r', '--run', 'run_id', type=VALID_RUN_ID, )
 @coroutine
-async def load(config, samplesheet, run_id=None):
+async def load(config, remote, samplesheet, run_id=None):
     "Load a sample sheet to be attached to a run, or to the next run that is started."
     try:
         if '.csv' in samplesheet:
@@ -152,7 +159,7 @@ async def load(config, samplesheet, run_id=None):
     except ImportError:
         click.echo(f"ERROR: OpenPyXL not installed; Excel files ({samplesheet}) can't be read. Use pip to install OpenPyXL.", err=True)
     else:
-        with server(config) as serv:
+        with server(config, remote) as serv:
             req = RunAttachRequest(sheet=ss)
             if isinstance(run_id, int):
                 req.id = run_id

@@ -73,7 +73,7 @@ class TestCoreFunctions(DBSetupTestCase):
     #     pathlib.Path(bytes.decode(path))
 
 
-    @given(strat.one_of(strat.text(max_size=30), strat.integers(min_value=-2**16, max_value=2**16)))
+    @given(strat.one_of(strat.text(max_size=30), strat.integers(min_value=-2**16, max_value=2**16)).filter(lambda n: n not in (RUN_NAME, RUN_PK)))
     def test_fail_get_run(self, runid):
         with self.assertRaises(ValueError):
             run = rpc.get_run(runid)

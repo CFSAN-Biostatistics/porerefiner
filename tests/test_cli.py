@@ -6,7 +6,7 @@ from unittest.mock import patch
 from porerefiner import cli
 from click.testing import CliRunner
 
-class TestCli(TestCase):
+class TestCliBasicChecks(TestCase):
 
     def help_runner(self, command):
         "Run the command with help flag and no arguments."
@@ -34,3 +34,17 @@ class TestCli(TestCase):
 
     def test_test_plugins_h(self):
        self.help_runner(cli.test_plugins)
+
+
+class TestPS(TestCase):
+
+    def ps(self, *args):
+        runner = CliRunner()
+        return runner.invoke(cli.ps, args)
+        # self.assertEqual(result.exit_code, 0)
+
+    @patch("porerefiner.cli.server")
+    def test_ps_remote(self, mock):
+        result = self.ps("-c", "localhost:8080")
+        print(result.stdout)
+        self.assertTrue(mock.called, result)
