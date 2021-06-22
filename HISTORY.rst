@@ -2,6 +2,11 @@
 History
 =======
 
+0.9.5 (2021-06-22)
+------------------
+
+* prfr CLI client now no longer tries to load service config.yaml; it has its own or you can give socket/host/ssl arguments at the command line.
+
 0.9.4 (2021-03-18)
 ------------------
 
