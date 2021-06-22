@@ -122,6 +122,15 @@ def start(config, demonize=False):
         log.error(e)
         click.echo(f"Porerefiner service couldn't be started because of a missing or incorrect file or directory: {e.filename}", err=True)
         return e.errno
+    except TypeError as e:
+        log.error(e)
+        if 'RegisteringABCMeta' in str(e):
+            click.echo(f"Error in config: check that your config.yaml file is complete")
+        elif 'missing 4 required positional arguments' in str(e):
+            click.echo(f"Incomplete submitter or job config")
+        else:
+            pass
+        return 100
     except:
         raise
 

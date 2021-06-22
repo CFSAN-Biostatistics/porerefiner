@@ -48,3 +48,4 @@ class TestPS(TestCase):
         result = self.ps("-c", "localhost:8080")
         print(result.stdout)
         self.assertTrue(mock.called, result)
+

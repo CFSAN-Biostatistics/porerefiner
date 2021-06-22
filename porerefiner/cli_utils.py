@@ -93,10 +93,8 @@ def handle_connection_errors(func):
 # Channel context manager for CLI utils
 
 @contextmanager
-def server(config_file, remote=None, use_ssl=False):
-    from porerefiner.config import Config
-    config = Config(config_file, client_only=True).config
-    channel = Channel(path=remote or config['server']['socket'], ssl=use_ssl or config['server']['use_ssl'])
+def server(socket, use_ssl=False):
+    channel = Channel(path=socket, ssl=use_ssl)
     client = PoreRefinerStub(channel)
     try:
         yield client
