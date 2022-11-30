@@ -1,5 +1,8 @@
 import peewee
-from peewee import *
+from peewee import Model, SqliteDatabase
+from peewee import CharField, BareField, Field, FloatField, TextField, AutoField
+from peewee import  IntegerField, ForeignKeyField, ManyToManyField, DateField
+from peewee import DeferredForeignKey, DateTimeField, Check, JOIN
 #from porerefiner.config import config
 
 import asyncio

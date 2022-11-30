@@ -11,22 +11,21 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = ['Click~=7.0',
-                'flask~=1.1.1',
-                'peewee~=3.13.3',
-                'gunicorn~=19.9.0',
-                'watchdog~=0.9.0',
-                'hachiko~=0.2.0',
-                'aiohttp~=3.6.1',
-                'aiofile~=3.0.0',
-                'namesgenerator~=0.3',
-                'python-daemon~=2.2.3',
-                'protobuf~=3.17',
-                'grpclib~=0.4.1',
-                'tabulate~=0.8.5',
-                'asyncssh~=2.0.1',
-                'setproctitle~=1.1.10',
-                'pyyaml~=5.3'
+requirements = ['Click',
+                'flask',
+                'peewee',
+                'gunicorn',
+                'hachiko',
+                'aiohttp',
+                'aiofile',
+                'namesgenerator',
+                'python-daemon',
+                'protobuf',
+                'grpclib',
+                'tabulate',
+                'asyncssh',
+                'setproctitle',
+                'pyyaml'
                 ]
 
 setup_requirements = [ ]
