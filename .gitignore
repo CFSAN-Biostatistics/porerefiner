@@ -100,12 +100,10 @@ ENV/
 
 # mypy
 .mypy_cache/
-Pipfile
-*.lock
-config.yml
-config.yaml
-docs
-debian
-config.yaml
+
+# IDE settings
+.vscode/.DS_Store
+.lock
 .DS_Store
-.vscode
+.lock
+*.lock

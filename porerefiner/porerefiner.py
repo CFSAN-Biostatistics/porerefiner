@@ -13,6 +13,7 @@ import sys, os
 import yaml
 
 from asyncio import run, gather, wait
+
 from porerefiner import models, samplesheets, jobs
 from porerefiner.models import Duty, Run, SampleSheet
 import porerefiner.cli_utils as cli_utils
@@ -26,15 +27,7 @@ from porerefiner.daemon import daemon
 
 log = logging.getLogger('porerefiner.service')
 
-# Load plugins, if any
 
-import pkg_resources
-
-discovered_plugins = {
-    entry_point.name: entry_point.load()
-    for entry_point
-    in pkg_resources.iter_entry_points('porerefiner.plugins')
-}
 
 
 async def serve(config_file, db_path=None, db_pragmas=None, wdog_settings=None, server_settings=None, system_settings=None):
@@ -231,7 +224,7 @@ def database(config):
             Path(db_path).unlink()
         models._db.init(db_path, db_pragmas)
         models._db.connect()
-        models._db.create_tables(models.REGISTRY)
+        models._db.create_tables(models.BaseModel.REGISTRY)
 
 
 @reset.command(name='samplesheets')
@@ -293,9 +286,9 @@ def _jobs(sample_sheet, data_file):
     # create an in-mem database
     from peewee import SqliteDatabase
     db = SqliteDatabase(":memory:", pragmas={'foreign_keys':1}, autoconnect=False)
-    db.bind(models.REGISTRY, bind_refs=True, bind_backrefs=True)
+    db.bind(models.BaseModel.REGISTRY, bind_refs=True, bind_backrefs=True)
     db.connect()
-    db.create_tables(models.REGISTRY)
+    db.create_tables(models.BaseModel.REGISTRY)
 
     from porerefiner.config import Config
     Config['nanopore']['path'] = data_file.parent
@@ -362,8 +355,6 @@ def _notifiers():
             click.echo(f"Running {type(notifier).__name__}")
             await notifier.notify(None)
     run(test_all())
-
-
 
 
 if __name__ == '__main__':
