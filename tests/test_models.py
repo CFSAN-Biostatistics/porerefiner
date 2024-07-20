@@ -90,6 +90,12 @@ class TestModels(TestCase):
         self.assertNotIn(ttag, ut.tags)
         #peewee.logger.debug = lambda msg, *a, **k: peewee.logger.log(logging.DEBUG - 5, msg, *a, **k)
 
+    @with_database
+    def test_extended_tag_interfaces(self):
+        ut = models.Run.create(name="TEST", path="TEST")
+        ttag = ut.ttag("TEST", "TEST", "TEST")
+        self.assertEqual(ut.tags["TEST"]['TEST'], "TEST")
+        self.assertEqual(ut.tags.TEST.TEST, "TEST")
 
 
     @with_database

@@ -16,6 +16,7 @@ import tempfile
 
 from copy import copy, deepcopy
 from itertools import chain
+from types import SimpleNamespace
 
 logging.addLevelName(logging.DEBUG - 5, 'TRACE')
 
@@ -93,6 +94,26 @@ def create_readable_name():
     "Docker-style random name from namesgenerator"
     return namesgenerator.get_random_name()
 
+class TagCollection:
+
+    def __init__(self, tagged):
+        self.tagged = tagged
+
+    def __iter__(self):
+        return chain(Tag.select()
+                            .join(TagJunction)
+                            .join(type(self.tagged))
+                            .where(type(self.tagged).pk == self.tagged.pk),
+                    TripleTag.select()
+                            .join(TTagJunction)
+                            .join(type(self.tagged))
+                            .where(type(self.tagged).pk == self.tagged.pk))
+
+    def __getitem__(self, space: str):
+        return {ttag.name:ttag.value for ttag in self.tagged.ttag_junctions.join(TripleTag).where(TripleTag.namespace == space)}
+
+    def __getattr__(self, name: str):
+        return SimpleNamespace(**self.__getitem__(name))
 
 def taggable(cls):
     "Class decorator to insert the tag creation and deletion methods"
@@ -102,14 +123,7 @@ def taggable(cls):
         def tags(self):
             # query = Tag.select().join(TagJunction).join(Tag)
             # return [tag_j.tag for tag_j in self.tag_junctions]
-            return chain(Tag.select()
-                            .join(TagJunction)
-                            .join(type(self))
-                            .where(type(self).pk == self.pk),
-                        TripleTag.select()
-                            .join(TTagJunction)
-                            .join(type(self))
-                            .where(type(self).pk == self.pk))
+            return TagCollection(self)
 
         def tag(self, tag):
             ta, _ = Tag.get_or_create(name=tag)
@@ -221,6 +235,7 @@ class Duty(PorerefinerModel):
     outputdir = PathField(null=True)
     run = ForeignKeyField(Run, null=True, backref='duties')
     file = DeferredForeignKey('File', backref='_duties_with_this_file_as_primary', null=True)
+    samplesheet = DeferredForeignKey('SampleSheet', backref='duties')
     attempts = IntegerField(default=0)
 
 
@@ -234,6 +249,8 @@ class Duty(PorerefinerModel):
             return self.run.alt_name
         if self.file:
             return self.file.path
+        if self.samplesheet:
+            return str(self.samplesheet)
 
     @property
     def job_state(self):
@@ -321,6 +338,9 @@ class SampleSheet(PorerefinerModel):
             run.sample_sheet = ss
             run.save()
         return ss
+    
+    def spawn(self, job_config):
+        return Duty.create(status='READY', job_class=job_config.__class__.__name__, datadir=pathlib.Path(tempfile.mkdtemp()), samplesheet=self)
 
 @taggable
 class Sample(PorerefinerModel):

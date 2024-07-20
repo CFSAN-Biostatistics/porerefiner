@@ -4,7 +4,7 @@ from collections import namedtuple
 from dataclasses import dataclass
 
 from .submitters import Submitter
-from porerefiner.models import Duty, File, Run
+from porerefiner.models import Duty, File, Run, SampleSheet
 from porerefiner.cli_utils import render_dataclass, Email, Url, PathStr
 from pathlib import Path
 from subprocess import CompletedProcess
@@ -12,9 +12,10 @@ from typing import Union, Tuple, Generator
 
 import logging
 import pkgutil
+import importlib
 import traceback
 
-JOBS = namedtuple('JOBS', ('FILES', 'RUNS'), defaults=([], []))() #configured (reified) job instances
+JOBS = namedtuple('JOBS', ('FILES', 'RUNS', 'SAMPLESHEETS'), defaults=([], [], []))() #configured (reified) job instances
 
 CLASS_REGISTRY = {} # available job classes
 
@@ -105,6 +106,9 @@ class _MetaRegistry(type):
         if isinstance(the_instance, RunJob):
             JOBS.RUNS.append(the_instance)
             log.getChild('runs').debug(cls.__name__)
+        if isinstance(the_instance, SampleSheetJob):
+            JOBS.SAMPLESHEETS.append(the_instance)
+            log.getChild('samplesheets').debug(cls.__name__)
         CONFIGURED_JOB_REGISTRY[cls.__name__] = the_instance
         assert the_instance
         return the_instance
@@ -153,8 +157,14 @@ class RunJob(AbstractJob):
     def run(self, run: Run, datadir: Path, remotedir: Path) -> Generator[Union[str, Tuple[str, dict]], Union[CompletedProcess, int, str], None]:
         pass
 
+class SampleSheetJob(AbstractJob):
+
+    @abstractmethod
+    def run(self, sheet: SampleSheet) -> Generator[Union[str, Tuple[str, dict]], Union[CompletedProcess, int, str], None]:
+        pass
 
 
-for loader, module_name, is_pkg in  pkgutil.walk_packages(__path__):
-    _module = loader.find_module(module_name).load_module(module_name)
+
+for module_finder, name, ispkg in  pkgutil.walk_packages(__path__):
+    log.getChild('import').info(name)
     # globals()[module_name] = _module

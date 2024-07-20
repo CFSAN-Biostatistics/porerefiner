@@ -22,7 +22,7 @@ from os.path import split, getmtime
 from os import remove
 from pathlib import Path
 
-from porerefiner.protocols.minknow.rpc.manager_grpc import ManagerServiceStub
+# from porerefiner.protocols.minknow.rpc.manager_grpc import ManagerServiceStub
 from porerefiner.protocols.porerefiner.rpc.porerefiner_pb2 import Run as RunMessage, RunList, RunResponse, Error, GenericResponse, RunRsyncResponse, RunListResponse, TripleTag
 from porerefiner.protocols.porerefiner.rpc.porerefiner_grpc import PoreRefinerBase
 from porerefiner.notifiers import NOTIFIERS
