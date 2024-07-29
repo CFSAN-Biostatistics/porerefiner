@@ -1,9 +1,7 @@
-from unittest import TestCase, skip
+from pytest import mark
 
 
 
-class TestHpcSubmitter(TestCase):
-
-    @skip('not yet implemented')
-    def test_hpc(self):
-        assert False
+@mark.skip('not yet implemented')
+def test_hpc():
+    assert False

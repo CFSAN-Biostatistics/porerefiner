@@ -6,6 +6,8 @@
 
 #safe_paths = lambda: fspaths().filter(lambda x: isinstance(x, str) or hasattr(x, '__fspath__'))
 
+from pytest import fixture
+
 import asyncio
 import tempfile
 import logging
@@ -35,10 +37,6 @@ logging.basicConfig(stream=sys.stdout,
 
 # SQLite can't accept a 32-bit integer
 sql_ints = lambda: integers(min_value=-2**16, max_value=2**16)
-
-def _run(task):
-    loop = asyncio.get_event_loop()
-    return loop.run_until_complete(task)
 
 @composite
 def paths(draw, under="", min_deep=2, max_deep=None, pathlib_only=False):
@@ -152,6 +150,10 @@ def fsevents(draw, min_deep=4, isDirectory=None, src_path=None):
                        src_path=src_path or paths(min_deep=min_deep, pathlib_only=True),
                        is_directory=is_dir))
 
+@fixture
+def event():
+    return Event(Path("/data/this/is/a/test"), False)
+
 def random_name_subclass(of=object, **classdef):
     classdef['__module__'] = __name__
     new_typename = namesgenerator.get_random_name(sep=' ').title().replace(' ', '') + of.__name__
@@ -163,7 +165,7 @@ def random_name_subclass(of=object, **classdef):
 def names(draw):
     return draw(builds(namesgenerator.get_random_name))
 
-class TestSubmitter(jobs.submitters.Submitter):
+class Submitter(jobs.submitters.Submitter):
     async def test_noop(*a, **k):
         return None
     def reroot_path(*a, **k):
@@ -174,6 +176,10 @@ class TestSubmitter(jobs.submitters.Submitter):
         return False
     async def closeout_job(*a, **k):
         return None
+
+@fixture
+def SubmitterClass():
+    return Submitter
 
 @composite
 def submitters(draw):
@@ -189,18 +195,22 @@ def submitters(draw):
     #                                         begin_job=fake_begin,
     #                                         poll_job=fake_poll,
     #                                         closeout_job=lambda *a, **k: None)))
-    return draw(just(TestSubmitter()))
+    return draw(just(SubmitterClass()))
 
-class TestJob(jobs.RunJob):
+class Job(jobs.RunJob):
 
     def run(*a, **k):
         yield "", {}
+
+@fixture
+def JobClass():
+    return Job
 
 @composite
 def jobs(draw):
     # return draw(builds(random_name_subclass(of=subclass_of, **classdef),
     #                    submitter=submitters()))
-    return draw(just(TestJob(submitter=TestSubmitter())))
+    return draw(just(Job(submitter=Submitter())))
 
 
 
@@ -276,9 +286,9 @@ class Model:
     @staticmethod
     @composite
     def Duties(draw, state=jobs()):
-        TestJob(TestSubmitter())
+        Job(Submitter())
         return draw(builds(models.Duty,
-                       job_class=just(TestJob.__name__),
+                       job_class=just(Job.__name__),
                        datadir=just("/dev/null")))
 
     @staticmethod
@@ -289,7 +299,7 @@ class Model:
         else:
             path = paths(pathlib_only=True)
         return draw(builds(models.File,
-                        path=arg_path or path))
+                    path=arg_path or path))
 
     @staticmethod
     @composite
@@ -357,34 +367,46 @@ def file_events(draw):
     )
 
 
-class TestBase(TestCase):
+# class TestBase(TestCase):
 
-    def setUp(self):
-        self.db = SqliteDatabase(":memory:", pragmas={'foreign_keys':1}, autoconnect=False)
-        self.db.bind(models.REGISTRY, bind_refs=False, bind_backrefs=False)
-        self.db.connect()
-        self.db.create_tables(models.REGISTRY)
+#     def setUp(self):
+#         self.db = SqliteDatabase(":memory:", pragmas={'foreign_keys':1}, autoconnect=False)
+#         self.db.bind(models.REGISTRY, bind_refs=False, bind_backrefs=False)
+#         self.db.connect()
+#         self.db.create_tables(models.REGISTRY)
 
-    def tearDown(self):
-        #[cls.delete().where(True).execute() for cls in models.REGISTRY]
-        self.db.drop_tables(models.REGISTRY)
-        self.db.close()
+#     def tearDown(self):
+#         #[cls.delete().where(True).execute() for cls in models.REGISTRY]
+#         self.db.drop_tables(models.REGISTRY)
+#         self.db.close()
 
-from functools import wraps
+# from functools import wraps
 
-def with_database(func):
-    @wraps(func)
-    def wrapped_test_function(*a, **k):
-        db = SqliteDatabase(":memory:", pragmas={'foreign_keys':1}, autoconnect=False)
-        db.bind(models.REGISTRY, bind_refs=True, bind_backrefs=True)
-        db.connect()
-        db.create_tables(models.REGISTRY)
-        try:
-            return func(*a, **k)
-        finally:
-            db.drop_tables(models.REGISTRY)
-            db.close()
-    return wrapped_test_function
+# def with_database(func):
+#     @wraps(func)
+#     def wrapped_test_function(*a, **k):
+#         db = SqliteDatabase(":memory:", pragmas={'foreign_keys':1}, autoconnect=False)
+#         db.bind(models.REGISTRY, bind_refs=True, bind_backrefs=True)
+#         db.connect()
+#         db.create_tables(models.REGISTRY)
+#         try:
+#             return func(*a, **k)
+#         finally:
+#             db.drop_tables(models.REGISTRY)
+#             db.close()
+#     return wrapped_test_function
+
+# this is the better way to do this, via pytest fixtures
+
+@fixture
+def db():
+    db = SqliteDatabase(":memory:", pragmas={'foreign_keys':1}, autoconnect=False)
+    db.bind(models.REGISTRY, bind_refs=True, bind_backrefs=True)
+    db.connect()
+    db.create_tables(models.REGISTRY)
+    yield db
+    db.drop_tables(models.REGISTRY)
+    db.close()
 
 if __name__ == '__main__':
     symbol = None

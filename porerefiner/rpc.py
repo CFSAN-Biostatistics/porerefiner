@@ -33,13 +33,13 @@ log = logging.getLogger('porerefiner.rpc')
 
 
 def get_run(run_id):
-    run = Run.get_or_none(Run.pk == run_id) or Run.get_or_none(Run.name == run_id) or Run.get_or_none(Run.alt_name == run_id)
+    run = Run.get_or_none(Run.id == run_id) or Run.get_or_none(Run.name == run_id) or Run.get_or_none(Run.alt_name == run_id)
     if not run:
         raise ValueError(f"Run id or name '{run_id}' not found.")
     return run
 
 def make_run_msg(run):
-    return RunMessage(id=run.pk,
+    return RunMessage(id=run.id,
         name=run.name,
         mnemonic_name=run.alt_name,
         library_id=run.library_id,

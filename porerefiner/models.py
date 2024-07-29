@@ -103,14 +103,14 @@ class TagCollection:
         return chain(Tag.select()
                             .join(TagJunction)
                             .join(type(self.tagged))
-                            .where(type(self.tagged).pk == self.tagged.pk),
+                            .where(type(self.tagged).id == self.tagged.id),
                     TripleTag.select()
                             .join(TTagJunction)
                             .join(type(self.tagged))
-                            .where(type(self.tagged).pk == self.tagged.pk))
+                            .where(type(self.tagged).id == self.tagged.id))
 
     def __getitem__(self, space: str):
-        return {ttag.name:ttag.value for ttag in self.tagged.ttag_junctions.join(TripleTag).where(TripleTag.namespace == space)}
+        return {ttagj.tag.name:ttagj.tag.value for ttagj in self.tagged.ttag_junctions.join(TripleTag).where(TripleTag.namespace == space)}
 
     def __getattr__(self, name: str):
         return SimpleNamespace(**self.__getitem__(name))
@@ -161,7 +161,7 @@ class Run(PorerefinerModel):
     basecallers = [('DNA', 'DNA Basecaller'),
                    ('RNA', 'RNA Basecaller')]
 
-    pk = AutoField()
+    # pk = AutoField()
 
     flowcell = CharField(null=True)
     _sample_sheet = DeferredForeignKey('SampleSheet', null=True, backref='runs')
@@ -177,7 +177,7 @@ class Run(PorerefinerModel):
     basecalling_model = CharField(default='DNA', choices=basecallers, null=True)
 
     def __str__(self):
-        return f"{self.pk} {self.alt_name} ({self.path}) ({dict(self.statuses)[self.status]})"
+        return f"{self.id} {self.alt_name} ({self.path}) ({dict(self.statuses)[self.status]})"
 
     @property
     def all_files(self):
@@ -217,7 +217,7 @@ class Run(PorerefinerModel):
 class Qa(PorerefinerModel):
     "A QA is a set of quality-control analysis metrics"
 
-    pk = AutoField()
+    # pk = AutoField()
     coverage = FloatField()
     quality = FloatField()
 
@@ -227,7 +227,7 @@ class Qa(PorerefinerModel):
 @taggable
 class Duty(PorerefinerModel):
     "A job is a scheduled HPC job, pre or post submission"
-    pk = AutoField()
+    # pk = AutoField()
     job_id = CharField(null=True)
     job_class = TextField(null=False)
     status = StatusField(default='QUEUED')
@@ -235,12 +235,12 @@ class Duty(PorerefinerModel):
     outputdir = PathField(null=True)
     run = ForeignKeyField(Run, null=True, backref='duties')
     file = DeferredForeignKey('File', backref='_duties_with_this_file_as_primary', null=True)
-    samplesheet = DeferredForeignKey('SampleSheet', backref='duties')
+    samplesheet = DeferredForeignKey('SampleSheet', null=True, backref='duties')
     attempts = IntegerField(default=0)
 
 
     def __str__(self):
-        return f"{self.pk} ({self.job_class} for {self.purpose}) ({dict(self.statuses)[self.status]})"
+        return f"{self.id} ({self.job_class} for {self.purpose}) ({dict(self.statuses)[self.status]})"
 
 
     @property
@@ -283,7 +283,7 @@ class SampleSheet(PorerefinerModel):
                 ('SQK-RPB004','Rapid PCR Barcoding Kit SQK-RPB004')]
 
 
-    pk = AutoField()
+    # pk = AutoField()
     date = DateField(null=True, default=datetime.datetime.now())
     sequencing_kit = CharField(null=True)
     barcoding_kit = CharField(null=True, choices=BARCODES)
@@ -302,7 +302,7 @@ class SampleSheet(PorerefinerModel):
         return (cls.select()
                    .join(Run, JOIN.LEFT_OUTER)
                    .switch()
-                   .where(Run.pk.is_null()))
+                   .where(Run.id.is_null()))
 
     @classmethod
     def new_sheet_from_message(cls, sheet, run=None, log=logging.getLogger('porerefiner.models'), sample_accession_prefix=None):
@@ -348,7 +348,7 @@ class Sample(PorerefinerModel):
 
 
 
-    pk = AutoField()
+    # pk = AutoField()
     sample_id = CharField(null=False)
     accession = CharField(default="")
     barcode_id = CharField(null=False)
@@ -372,10 +372,10 @@ class File(PorerefinerModel):
     "A file is a path on the filesystem"
 
 
-    pk = AutoField()
+    # pk = AutoField()
     run = ForeignKeyField(Run, backref='files', null=True)
     sample = ForeignKeyField(Sample, backref='files', null=True)
-    path = PathField(index=True, unique=True)
+    path = PathField(index=True, unique=False)
     checksum = CharField(index=True, null=True)
     last_modified = DateTimeField(default=datetime.datetime.now)
     exported = IntegerField(default=0)
