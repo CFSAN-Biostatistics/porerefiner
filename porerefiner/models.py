@@ -260,7 +260,7 @@ class Duty(PorerefinerModel):
 
 @taggable
 class SampleSheet(PorerefinerModel):
-    "A samplesheet is a particular file, eventually attached to a run"
+    "A samplesheet is a particular file, eventually attached to a run, describing the contents of the library being run"
 
     BARCODES = [('SQK-16S024','16S Barcoding Kit 1-24 SQK-16S024'),
                 ('EXP-NBD104','Native Barcoding Expansion 1-12 EXP-NBD104'),
