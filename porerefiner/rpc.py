@@ -50,7 +50,7 @@ def make_run_msg(run):
         basecalling_model=run.basecalling_model,
         sequencing_kit=run.sample_sheet.barcoding_kit,
         samples=[
-            RunMessage.Sample(id=sample.pk,
+            RunMessage.Sample(id=sample.id,
                     name=sample.sample_id,
                     accession=sample.accession,
                     barcode_id=sample.barcode_id,
@@ -175,16 +175,16 @@ class PoreRefinerDispatchServer(PoreRefinerBase):
     async def Tag(self, stream):
         request = await stream.recv_message()
         log.debug(f"API call: tag run {request.id} with tags '{request.tags}'")
-        run = Run.get_or_none(pk=request.id)
-        resp = GenericResponse()
+        run = Run.get_or_none(Run.id == request.id)
         if run:
+            resp = GenericResponse()
             for tag in request.tags:
                 if request.untag:
                     run.untag(tag)
                 else:
                     run.tag(tag)
         else:
-            resp.error = Error(type="NoSuchRun", err_message=f"run id {request.id} not found.")
+            resp = GenericResponse(error=Error(type="NoSuchRun", err_message=f"run id {request.id} not found."))
         await stream.send_message(resp)
         log.info("Response sent")
 

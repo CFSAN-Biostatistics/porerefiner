@@ -137,7 +137,7 @@ class Config(metaclass=DictLikeClass):
 
         defaults = c(defaults)
 
-        makedirs(config_file.parent, exist_ok=True)
+        makedirs(porerefiner_dir, exist_ok=True)
 
         # defaults['']['']
         with open(config_file, 'w') as conf:

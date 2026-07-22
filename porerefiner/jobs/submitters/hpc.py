@@ -22,15 +22,17 @@ class HpcSubmitter(Submitter):
     remote_root: str = "~"
 
     async def send(self, cmd):
+        "Run a command over SSH and return its stdout as a stripped string."
         async with connect(self.login_host,
                         username=self.username,
                         client_keys=[self.private_key_path],
                         known_hosts=self.known_hosts_path) as conn:
-            return await conn.run(cmd)
+            result = await conn.run(cmd, check=True)
+            return str(result.stdout).strip()
 
     async def test_noop(self):
         subprocess.run(['rsync', '--version']).check_returncode()
-        self.remote_root = Path((await self.send('python -c "import tempfile; print(tempfile.gettempdir())"')).strip())
+        self.remote_root = Path(await self.send('python -c "import tempfile; print(tempfile.gettempdir())"'))
 
 
     def reroot_path(self, path):
@@ -41,7 +43,11 @@ class HpcSubmitter(Submitter):
         return await self.send(f'''echo "{hints} {command}" | qsub -q {self.queue}''')
 
     async def poll_job(self, job):
-        result = await self.send(f"qacct")
+        "Return the job's scheduler status. qstat lists active jobs; absence => completed."
+        active = await self.send("qstat")
+        if job.job_id and job.job_id in active:
+            return 'RUNNING'
+        return 'DONE'
 
-    def closeout_job(self, job, datadir, remotedir):
+    async def closeout_job(self, job, datadir, remotedir):
         pass

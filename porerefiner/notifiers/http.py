@@ -10,13 +10,14 @@ from porerefiner.notifiers import Notifier
 @dataclass
 class HttpCallbackNotifier(Notifier):
 
-    sample_name: str = "http://sample.url/api/"
+    name: str = "HttpCallbackNotifier"
+    url: str = "http://sample.url/api/"
 
 
-    async def notify(self, run, state, message): #TODO
+    async def notify(self, run, state, message):
         "Send a message to the configured URL via http-form POST"
-        log.info(f"Notifying {self.name}...")
+        log.info(f"Notifying {self.name} at {self.url}...")
         async with aiohttp.ClientSession() as session:
-            async with self.session.post(self.name, data=dict(run=run, state=state, message=message)) as response:
+            async with session.post(self.url, data=dict(run=str(run), state=str(state), message=message)) as response:
                 log.info(response.status)
-                log.info(response.text)
+                log.info(await response.text())

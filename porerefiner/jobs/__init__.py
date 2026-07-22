@@ -165,6 +165,6 @@ class SampleSheetJob(AbstractJob):
 
 
 
-for module_finder, name, ispkg in  pkgutil.walk_packages(__path__):
+for module_finder, name, ispkg in pkgutil.walk_packages(__path__):
     log.getChild('import').info(name)
-    # globals()[module_name] = _module
+    importlib.import_module(f"{__name__}.{name}")

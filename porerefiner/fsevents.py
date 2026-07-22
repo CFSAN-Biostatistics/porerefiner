@@ -63,28 +63,24 @@ async def register_new_run(run, nanopore_api=None):
 
 async def attach_samplesheet_to_run(sheet, run_id=None):
     "Determine file format of sample sheet and load"
+    from porerefiner.samplesheets import load_from_csv, load_from_excel
+    sheet = str(sheet)
     if '.xls' in sheet:
-        sheet = await SampleSheet.from_excel(sheet)
+        with open(sheet, 'rb') as fh:
+            message = load_from_excel(fh)
     else:
-        sheet = await SampleSheet.from_csv(sheet)
+        with open(sheet, 'r') as fh:
+            message = load_from_csv(fh)
     if run_id:
-        # run = Run.get_or_none(Run.pk == run_id)
-        # if not run:
-        #     run = Run.get_or_none(Run.human_name == run_id)
-        # if not run:
-        #     raise ValueError(f"Run id or name '{run_id}' not found.")
         run = get_run(run_id)
-        run.sample_sheet = sheet
-        run.save()
     else:
         #find unassociated run
         query = Run.get_unannotated_runs()
         if query.count() == 1:
-            run = next(query)
-            run.sample_sheet = sheet
-            run.save()
+            run = next(iter(query))
         else:
             raise ValueError("Run not specified and there are multiple runs in progress. Please specify a run by id, name, or nickname.")
+    return SampleSheet.new_sheet_from_message(message, run)
 
 
 

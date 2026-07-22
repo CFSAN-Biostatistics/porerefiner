@@ -6,6 +6,7 @@ from pathlib import Path
 
 import logging
 import pkgutil
+import importlib
 
 from porerefiner.cli_utils import render_dataclass, Email, Url, PathStr
 from porerefiner.models import Duty
@@ -140,4 +141,9 @@ class Submitter(metaclass=RegisteringABCMeta):
     def get_configurable_options(cls):
         "Enumerate configurable options and value type as a guide to configuration."
         return render_dataclass(cls)
+
+
+# Auto-import submitter submodules so their classes self-register in REGISTRY.
+for _loader, _module_name, _is_pkg in pkgutil.walk_packages(__path__):
+    importlib.import_module(f"{__name__}.{_module_name}")
 

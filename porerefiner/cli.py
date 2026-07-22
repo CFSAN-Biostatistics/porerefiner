@@ -161,9 +161,9 @@ async def tag_runner(remote, run_id, tags=[], untag=False, use_ssl=False):
 @with_remote
 @click.argument('run_id', type=VALID_RUN_ID)
 @click.argument('tag', type=click.STRING, nargs=-1)
-def tag(config, remote, run_id, tag=[]):
+def tag(remote, run_id, tag=[], use_ssl=False):
     "Add one or more tags to a run."
-    run(tag_runner(config, remote, run_id, tag))
+    run(tag_runner(remote, run_id, tag, use_ssl=use_ssl))
 
 
 @cli.command()
@@ -172,9 +172,9 @@ def tag(config, remote, run_id, tag=[]):
 @with_remote
 @click.argument('run_id', type=VALID_RUN_ID)
 @click.argument('tag', type=click.STRING, nargs=-1)
-def untag(config, remote, run_id, tag=[]):
+def untag(remote, run_id, tag=[], use_ssl=False):
     "Remove one or more tags from a run."
-    run(tag_runner(config, remote, run_id, tag, untag=True))
+    run(tag_runner(remote, run_id, tag, untag=True, use_ssl=use_ssl))
 
 @cli.command()
 @handle_connection_errors
@@ -203,14 +203,14 @@ async def load(remote, samplesheet, run_id=None, use_ssl=False):
     except ImportError:
         click.echo(f"ERROR: OpenPyXL not installed; Excel files ({samplesheet}) can't be read. Use pip to install OpenPyXL.", err=True)
     else:
-        with server(*remote) as serv:
+        with server(remote, use_ssl) as serv:
             req = RunAttachRequest(sheet=ss)
             if isinstance(run_id, int):
                 req.id = run_id
             elif run_id:
                 req.name = run_id
             resp = await serv.AttachSheetToRun(req)
-            if resp.error:
+            if resp.HasField('error'):
                 click.echo(resp.error.err_message, err=True)
                 return 1
             else:
@@ -267,7 +267,8 @@ async def test_plugins(config_path):
     # Start up the job system with an in-memory database
 
     from peewee import SqliteDatabase
-    from porerefiner import models, jobs, submitters
+    from porerefiner import models, jobs
+    from porerefiner.jobs import submitters
     db = SqliteDatabase(":memory:", pragmas={'foreign_keys':1}, autoconnect=False)
     db.bind(models.REGISTRY, bind_refs=False, bind_backrefs=False)
     db.connect()

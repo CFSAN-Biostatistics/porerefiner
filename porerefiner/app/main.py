@@ -14,7 +14,7 @@ from porerefiner.app import app
 
 
 @app.route('/api/form/attach/submit', methods=['POST', ])
-@app.route('/api/runs/<int:run_id>/attach', methods=['POST,'])
+@app.route('/api/runs/<int:run_id>/attach', methods=['POST'])
 def attach_to_run(run_id=None):
     if not run_id:
         run_id = request.form.get('run_id', None)

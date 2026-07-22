@@ -67,3 +67,10 @@ porerefinerd = "porerefiner.porerefiner:cli"
 find = {}
 
 [tool.setuptools_scm]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore::DeprecationWarning:hypothesis.*",
+]

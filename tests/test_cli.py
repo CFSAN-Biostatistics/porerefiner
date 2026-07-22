@@ -1,7 +1,7 @@
 from tests import paths
 
 # from unittest import TestCase, skip
-from unittest.mock import patch
+from unittest.mock import patch, AsyncMock
 
 from pytest import mark
 
@@ -50,4 +50,24 @@ def test_ps_remote(mock):
     result = ps("-c", "localhost:8080")
     print(result.stdout)
     assert mock.called
+
+
+@patch("porerefiner.cli.tag_runner", new_callable=AsyncMock)
+def test_tag_invokes_runner(mock):
+    "Regression: tag command had a broken signature (config/use_ssl mismatch)."
+    runner = CliRunner()
+    result = runner.invoke(cli.tag, ["5", "sometag"])
+    assert result.exit_code == 0, result.output
+    assert mock.called
+
+
+@patch("porerefiner.cli.tag_runner", new_callable=AsyncMock)
+def test_untag_invokes_runner(mock):
+    "Regression: untag command had a broken signature."
+    runner = CliRunner()
+    result = runner.invoke(cli.untag, ["5", "sometag"])
+    assert result.exit_code == 0, result.output
+    assert mock.called
+    _, kwargs = mock.call_args
+    assert kwargs.get("untag") is True
 

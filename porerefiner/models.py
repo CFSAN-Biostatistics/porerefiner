@@ -94,6 +94,31 @@ def create_readable_name():
     "Docker-style random name from namesgenerator"
     return namesgenerator.get_random_name()
 
+
+# Known Oxford Nanopore barcode sequences, keyed by kit name then barcode id.
+# Only kits whose sequences we can vouch for are listed; unknown kits resolve
+# to an empty mapping (see SampleSheet.barcode_kit_barcodes). Extend as needed.
+_NATIVE_BARCODES_1_12 = {
+    f"NB{n:02}": seq for n, seq in enumerate((
+        "AAGAAAGTTGTCGGTGTCTTTGTG",
+        "TCGATTCCGTTTGTAGTCGTCTGT",
+        "GAGTCTTGTGTCCCAGTTACCAGG",
+        "TTCGGATTCTATCGTGTTTCCCTA",
+        "CTTGTCCAGGGTTTGTGTAACCTT",
+        "TTCTCGCAAAGGCAGAAAGTAGTC",
+        "GTGTTACCGTGGGAATGAATCCTT",
+        "TTCAGGGAACAAACCAAGTTACGT",
+        "AACTAGGCACAGCGAGTCTTGGTT",
+        "AAGCGTTGAAACCTTTGTCCTCTC",
+        "GTTTCATCTATCGGAGGGAATGGA",
+        "CAGGTAGAAAGAAGCAGAATCGGA",
+    ), start=1)
+}
+
+KNOWN_BARCODE_KITS = {
+    "EXP-NBD104": dict(_NATIVE_BARCODES_1_12),
+}
+
 class TagCollection:
 
     def __init__(self, tagged):
@@ -293,9 +318,15 @@ class SampleSheet(PorerefinerModel):
     def __str__(self):
         return f"SampleSheet: {self.path} | {len(self.samples)} samples."
 
-    @property 
+    @property
     def barcode_kit_barcodes(self):
-        return {} #TODO
+        """Map this sheet's barcoding kit to a ``{barcode_id: sequence}`` table.
+
+        Sequences come from :data:`KNOWN_BARCODE_KITS`, keyed by kit name. Kits
+        whose sequence tables have not been registered resolve to an empty dict,
+        so :attr:`Sample.barcode_seq` degrades to ``""`` rather than raising.
+        """
+        return KNOWN_BARCODE_KITS.get(self.barcoding_kit, {})
 
     @classmethod
     def get_unused_sheets(cls):
@@ -311,9 +342,10 @@ class SampleSheet(PorerefinerModel):
             # there should only ever be one unassigned sheet
             for sam in ss.samples:
                 sam.delete_instance()
-            ss.delete_instance
+            ss.delete_instance()
         ss = cls.create(date=sheet.date.ToDatetime(),
-                        barcoding_kit=sheet.sequencing_kit,
+                        sequencing_kit=sheet.sequencing_kit,
+                        barcoding_kit=(list(sheet.barcode_kit) or [None])[0],
                         library_id=sheet.library_id)
         for tag in sheet.tags:
             ss.tag(tag)

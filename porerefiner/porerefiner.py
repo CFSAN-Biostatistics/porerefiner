@@ -203,8 +203,8 @@ def runs(status, config, run_name=None):
     db_pragmas=config['database']['pragmas']
     models._db.init(db_path, db_pragmas)
     if run_name:
-        if click.confirm("This will set run {run_name} to {status} status. Are you sure?"):
-            Run.update(status=status).where(alt_name=run_name).execute()
+        if click.confirm(f"This will set run {run_name} to {status} status. Are you sure?"):
+            Run.update(status=status).where(Run.alt_name == run_name).execute()
             click.echo(f"Run {run_name} set to {status}.")
     else:
         if click.confirm(f"This will set all runs to {status} status, triggering notifiers and jobs in the next hour. Are you sure?"):
@@ -224,7 +224,7 @@ def database(config):
             Path(db_path).unlink()
         models._db.init(db_path, db_pragmas)
         models._db.connect()
-        models._db.create_tables(models.BaseModel.REGISTRY)
+        models._db.create_tables(models.REGISTRY)
 
 
 @reset.command(name='samplesheets')
@@ -286,9 +286,9 @@ def _jobs(sample_sheet, data_file):
     # create an in-mem database
     from peewee import SqliteDatabase
     db = SqliteDatabase(":memory:", pragmas={'foreign_keys':1}, autoconnect=False)
-    db.bind(models.BaseModel.REGISTRY, bind_refs=True, bind_backrefs=True)
+    db.bind(models.REGISTRY, bind_refs=True, bind_backrefs=True)
     db.connect()
-    db.create_tables(models.BaseModel.REGISTRY)
+    db.create_tables(models.REGISTRY)
 
     from porerefiner.config import Config
     Config['nanopore']['path'] = data_file.parent
@@ -353,7 +353,7 @@ def _notifiers():
     async def test_all():
         for notifier in NOTIFIERS:
             click.echo(f"Running {type(notifier).__name__}")
-            await notifier.notify(None)
+            await notifier.notify(None, None, "PoreRefiner notifier test message")
     run(test_all())
 
 

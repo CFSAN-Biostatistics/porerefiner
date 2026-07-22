@@ -9,9 +9,10 @@ from porerefiner.notifiers import Notifier
 log = logging.getLogger('porerefiner.sqs_notifier')
 
 @dataclass
-class SqsNotifier(Notifier): #TODO
+class SqsNotifier(Notifier):
     "Send a message to an SQS queue, requires Boto3"
 
+    name: str = "SqsNotifier"
     queue: str = "porerefiner-messages"
 
 
@@ -20,10 +21,11 @@ class SqsNotifier(Notifier): #TODO
             import boto3
             sqs = boto3.resource('sqs')
             q = sqs.get_queue_by_name(QueueName=self.queue)
-            attrs = dict(State=dict(StringVal=str(state), DataType='String'),
-                         Message=dict(StringVal=str(message), DataType='String'))
-            response = q.send_message(MessageBody=json.dumps(run), MessageAttributes=attrs)
-            log.info("SQS mesage sent.")
+            attrs = dict(State=dict(StringValue=str(state), DataType='String'),
+                         Message=dict(StringValue=str(message), DataType='String'))
+            body = json.dumps(dict(run=str(run), state=str(state), message=str(message)))
+            response = q.send_message(MessageBody=body, MessageAttributes=attrs)
+            log.info("SQS message sent.")
 
         except ImportError:
             log.error("SQS notifier enabled, but Boto3 not installed.")

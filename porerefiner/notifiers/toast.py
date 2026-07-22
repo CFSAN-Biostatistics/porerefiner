@@ -7,8 +7,10 @@ from porerefiner.notifiers import Notifier
 log = logging.getLogger('porerefiner.toast_notifier')
 
 @dataclass
-class ToastNotifier(Notifier): #TODO
+class ToastNotifier(Notifier):
     "Notifier that throws up an OS 'toast' on Windows, Ubuntu, and CentOS"
+
+    name: str = "ToastNotifier"
 
     async def notify(self, run, state, message):
         try:
